@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Filmia
 
-## Getting Started
+Filmia is a single-purpose Next.js app for sharing one sensitive document through a calm, premium room experience.
 
-First, run the development server:
+Core MVP flow:
+
+- Upload one document
+- Encrypt it in the browser with a password
+- Optionally require NDA acceptance before the encrypted bundle can be fetched
+- Share one clean link
+- Review basic access activity and revoke the room if needed
+
+## Stack
+
+- Next.js 16 App Router
+- React 19
+- Tailwind CSS 4
+- Web Crypto API for client-side AES-GCM encryption
+- Local filesystem storage in development
+- Vercel Blob-compatible storage in production when `BLOB_READ_WRITE_TOKEN` is configured
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a local env file if you want production-like behavior:
 
-## Learn More
+```bash
+cp .env.example .env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+Variables:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `FILMIA_APP_SECRET`
+  Used to sign recipient access cookies after NDA acceptance. Set this in production.
+- `BLOB_READ_WRITE_TOKEN`
+  Optional. When present, Filmia stores vault metadata and encrypted files in Vercel Blob. Without it, Filmia uses local development storage under `.filmia/`.
+- `SENDGRID_API_KEY`
+  Optional. When present, Filmia sends login codes by email via SendGrid.
+- `SENDGRID_FROM_EMAIL`
+  The verified sender email used for magic-code delivery.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Routes
 
-## Deploy on Vercel
+- `/`
+  Landing page
+- `/login`
+  Magic-code login
+- `/onboarding`
+  Workspace creation
+- `/workspace`
+  User workspace
+- `/new`
+  Create a protected Filmia room
+- `/s/[slug]`
+  Recipient access page
+- `/m/[slug]?key=...`
+  Owner management page
+- `/agent`
+  Agent-facing system overview
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm dev
+pnpm lint
+pnpm build
+pnpm start
+```
+
+## Notes
+
+- Passwords are never persisted server-side by Filmia.
+- Recipients decrypt files locally in the browser after the NDA gate, if enabled.
+- The current MVP is intentionally optimized for one-document sharing instead of a full multi-folder virtual data room.
