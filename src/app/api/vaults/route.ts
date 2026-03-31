@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { getCurrentUser, getCurrentWorkspace, recordWorkspaceRoom } from "@/lib/filmia/auth";
-import { addDays, buildDefaultNdaText, createOwnerKey, createPublicSlug } from "@/lib/filmia/helpers";
-import { getVaultStorage } from "@/lib/filmia/storage";
+import { getCurrentUser, getCurrentWorkspace, recordWorkspaceRoom } from "@/lib/dataroom/auth";
+import { addDays, buildDefaultNdaText, createOwnerKey, createPublicSlug } from "@/lib/dataroom/helpers";
+import { getVaultStorage } from "@/lib/dataroom/storage";
 import {
   createEvent,
   createVaultSchema,
   isSupportedFileType,
   type VaultRecord,
-} from "@/lib/filmia/types";
+} from "@/lib/dataroom/types";
 
 export const runtime = "nodejs";
 
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     if (!isSupportedFileType(parsed.data.mimeType)) {
       return NextResponse.json(
-        { error: "Filmia currently supports PDF, Office, image, and text files." },
+        { error: "OpenDataRoom currently supports PDF, Office, image, and text files." },
         { status: 400 },
       );
     }
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
         ? parsed.data.ndaText ||
           buildDefaultNdaText(parsed.data.senderCompany || workspace.companyName)
         : undefined,
-      ndaVersion: parsed.data.requiresNda ? "filmia-standard-v1" : "none",
+      ndaVersion: parsed.data.requiresNda ? "odr-standard-v1" : "none",
       status: "active",
       createdAt,
       expiresAt: addDays(parsed.data.expiresInDays),
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       slug,
       createEvent("created", {
         actorName: metadata.senderName,
-        note: "Secure Filmia room created",
+        note: "Secure OpenDataRoom room created",
         userAgent: request.headers.get("user-agent") ?? undefined,
       }),
     );
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     });
   } catch {
     return NextResponse.json(
-      { error: "Filmia could not create the room right now." },
+      { error: "OpenDataRoom could not create the room right now." },
       { status: 500 },
     );
   }

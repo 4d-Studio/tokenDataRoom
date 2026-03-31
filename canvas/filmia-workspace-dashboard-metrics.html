@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filmia - Dashboard with Metrics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #f6f3ee;
+      --color-card: #ffffff;
+      --color-ink: #1a1a1a;
+      --color-muted: #6b6b6b;
+      --color-accent: #f35b2d;
+      --color-accent-hover: #e04e22;
+      --color-border: #e5e2dd;
+      --color-success: #22c55e;
+      --color-warning: #f59e0b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--color-bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 260px;
+      background: var(--color-card);
+      border-right: 1px solid var(--color-border);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 40px;
+      padding: 0 8px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      background: var(--color-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-square {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      background: var(--color-accent);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-ink);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-tagline {
+      font-size: 11px;
+      color: var(--color-muted);
+    }
+
+    .nav-section {
+      margin-bottom: 8px;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-muted);
+      padding: 0 12px;
+      margin-bottom: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-ink);
+      text-decoration: none;
+      transition: background 0.15s ease;
+    }
+
+    .nav-item:hover {
+      background: var(--color-bg);
+    }
+
+    .nav-item.active {
+      background: var(--color-bg);
+      font-weight: 600;
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      color: var(--color-muted);
+    }
+
+    .nav-item.active svg {
+      color: var(--color-accent);
+    }
+
+    /* Main content */
+    .main {
+      margin-left: 260px;
+      flex: 1;
+      padding: 40px 48px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .page-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--color-ink);
+      letter-spacing: -0.03em;
+    }
+
+    .cta-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--color-accent);
+      color: white;
+      font-family: 'Manrope', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cta-button:hover {
+      background: var(--color-accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .cta-button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Metrics row */
+    .metrics-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .metric-card {
+      flex: 1;
+      background: var(--color-card);
+      border-radius: 12px;
+      border: 1px solid var(--color-border);
+      padding: 20px 24px;
+      transition: box-shadow 0.2s ease;
+    }
+
+    .metric-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .metric-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-muted);
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--color-ink);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .metric-subtext {
+      font-size: 13px;
+      color: var(--color-muted);
+      margin-top: 6px;
+    }
+
+    .metric-card.accent {
+      background: linear-gradient(135deg, var(--color-accent) 0%, #ff7a5c 100%);
+      border: none;
+    }
+
+    .metric-card.accent .metric-label,
+    .metric-card.accent .metric-value,
+    .metric-card.accent .metric-subtext {
+      color: white;
+    }
+
+    .metric-card.accent .metric-subtext {
+      opacity: 0.85;
+    }
+
+    /* Room list card */
+    .rooms-card {
+      background: var(--color-card);
+      border-radius: 12px;
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+    }
+
+    .rooms-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .rooms-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-ink);
+      margin-bottom: 4px;
+    }
+
+    .rooms-subtitle {
+      font-size: 13px;
+      color: var(--color-muted);
+    }
+
+    /* Room row */
+    .room-row {
+      display: flex;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--color-border);
+      transition: background 0.15s ease;
+      position: relative;
+    }
+
+    .room-row:last-child {
+      border-bottom: none;
+    }
+
+    .room-row:hover {
+      background: #faf9f7;
+    }
+
+    .room-row:hover .room-actions {
+      opacity: 1;
+    }
+
+    .room-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .room-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-ink);
+      margin-bottom: 4px;
+    }
+
+    .room-meta {
+      font-size: 13px;
+      color: var(--color-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .room-meta svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.7;
+    }
+
+    .room-status {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .room-status.active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .room-status.revoked {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .room-actions {
+      display: flex;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 1px solid var(--color-border);
+      background: var(--color-card);
+      color: var(--color-ink);
+      font-family: 'Manrope', sans-serif;
+    }
+
+    .action-btn:hover {
+      background: var(--color-bg);
+      border-color: #d0cdc8;
+    }
+
+    .action-btn.primary {
+      background: var(--color-ink);
+      color: white;
+      border-color: var(--color-ink);
+    }
+
+    .action-btn.primary:hover {
+      background: #2a2a2a;
+    }
+
+    .action-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar (simplified) -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">
+        <div class="brand-square"></div>
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">Filmia</div>
+        <div class="brand-tagline">Private document rooms</div>
+      </div>
+    </div>
+
+    <nav class="nav-section">
+      <div class="nav-label">Workspace</div>
+      <a href="#" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Rooms
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Activity
+      </a>
+    </nav>
+
+    <nav class="nav-section" style="margin-top: auto;">
+      <div class="nav-label">Account</div>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Settings
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main content area -->
+  <main class="main">
+    <div class="page-header">
+      <h1 class="page-title">Rooms</h1>
+      <button class="cta-button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Create room
+      </button>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="metric-label">Total rooms</div>
+        <div class="metric-value">7</div>
+        <div class="metric-subtext">Across all workspaces</div>
+      </div>
+      <div class="metric-card accent">
+        <div class="metric-label">Active</div>
+        <div class="metric-value">4</div>
+        <div class="metric-subtext">Open for access</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Pending access</div>
+        <div class="metric-value">2</div>
+        <div class="metric-subtext">Awaiting approval</div>
+      </div>
+    </div>
+
+    <!-- Room List -->
+    <div class="rooms-card">
+      <div class="rooms-header">
+        <div class="rooms-title">Recent rooms</div>
+        <div class="rooms-subtitle">Open the shared room directly. Owner controls stay on the private management link.</div>
+      </div>
+
+      <!-- Room 1 -->
+      <div class="room-row">
+        <div class="room-info">
+          <div class="room-title">Acme Corp M&A Due Diligence</div>
+          <div class="room-meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            12 files · Last accessed 2 hours ago
+          </div>
+        </div>
+        <span class="room-status active">Active</span>
+        <div class="room-actions">
+          <button class="action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy link
+          </button>
+          <button class="action-btn primary">
+            Open room
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="17" x2="17" y2="7"/>
+              <polyline points="7 7 17 7 17 17"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Room 2 -->
+      <div class="room-row">
+        <div class="room-info">
+          <div class="room-title">Startup Series A Term Sheet</div>
+          <div class="room-meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            8 files · Last accessed yesterday
+          </div>
+        </div>
+        <span class="room-status active">Active</span>
+        <div class="room-actions">
+          <button class="action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy link
+          </button>
+          <button class="action-btn primary">
+            Open room
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="17" x2="17" y2="7"/>
+              <polyline points="7 7 17 7 17 17"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Room 3 -->
+      <div class="room-row">
+        <div class="room-info">
+          <div class="room-title">Product Roadmap Q2 2026</div>
+          <div class="room-meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            24 files · Last accessed 3 days ago
+          </div>
+        </div>
+        <span class="room-status revoked">Revoked</span>
+        <div class="room-actions">
+          <button class="action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy link
+          </button>
+          <button class="action-btn primary">
+            Open room
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="17" x2="17" y2="7"/>
+              <polyline points="7 7 17 7 17 17"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Room 4 -->
+      <div class="room-row">
+        <div class="room-info">
+          <div class="room-title">Investor Presentation Deck</div>
+          <div class="room-meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            5 files · Last accessed 1 week ago
+          </div>
+        </div>
+        <span class="room-status active">Active</span>
+        <div class="room-actions">
+          <button class="action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy link
+          </button>
+          <button class="action-btn primary">
+            Open room
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="17" x2="17" y2="7"/>
+              <polyline points="7 7 17 7 17 17"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

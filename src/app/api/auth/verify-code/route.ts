@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getWorkspaceForUser, normalizeEmail, verifyLoginCode } from "@/lib/filmia/auth-store";
+import { getWorkspaceForUser, normalizeEmail, verifyLoginCode } from "@/lib/dataroom/auth-store";
 import {
   createSessionToken,
   sessionCookieName,
   sessionCookieOptions,
-} from "@/lib/filmia/session";
+} from "@/lib/dataroom/session";
 
 const schema = z.object({
   email: z.string().trim().email(),

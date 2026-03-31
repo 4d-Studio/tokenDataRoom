@@ -1,10 +1,10 @@
-# Filmia Agent Stack
+# OpenDataRoom Agent Stack
 
-This document exists for incoming agents that need to understand how Filmia is put together quickly.
+This document exists for incoming agents that need to understand how OpenDataRoom is put together quickly.
 
 ## Product model
 
-Filmia is a focused secure-sharing app for one document room at a time.
+OpenDataRoom is a focused secure-sharing app for one document room at a time.
 
 Core flow:
 
@@ -45,14 +45,21 @@ Core flow:
   Owner controls
 - `src/app/api/vaults/**`
   Secure-sharing API endpoints
-- `src/lib/filmia/client-crypto.ts`
+- `src/lib/dataroom/client-crypto.ts`
   Browser encryption and decryption helpers
-- `src/lib/filmia/storage.ts`
+- `src/lib/dataroom/storage.ts`
   Storage adapter selector
+
+## UI system
+
+- `docs/design-system.md`
+  Shared OpenDataRoom product design vocabulary and spacing rules
+- `src/components/dataroom/product-ui.tsx`
+  Reusable section, intro, metadata, metric, and list-row building blocks
 
 ## MCP integration direction
 
-Filmia does not currently expose an MCP server. If one is added, the first useful tools should be:
+OpenDataRoom does not currently expose an MCP server. If one is added, the first useful tools should be:
 
 - `request_login_code`
 - `verify_login_code`

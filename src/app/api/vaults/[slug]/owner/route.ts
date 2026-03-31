@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { syncWorkspaceRoomStatus } from "@/lib/filmia/auth";
-import { getVaultStorage } from "@/lib/filmia/storage";
-import { createEvent } from "@/lib/filmia/types";
+import { deleteWorkspaceRoom, syncWorkspaceRoomStatus } from "@/lib/dataroom/auth";
+import { getVaultStorage } from "@/lib/dataroom/storage";
+import { createEvent } from "@/lib/dataroom/types";
 
 export const runtime = "nodejs";
 
@@ -62,4 +62,35 @@ export async function POST(
     metadata: latestMetadata,
     events,
   });
+}
+
+const deleteSchema = z.object({
+  ownerKey: z.string().min(1),
+});
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> },
+) {
+  const { slug } = await params;
+  const storage = getVaultStorage();
+  const metadata = await storage.getVaultMetadata(slug);
+
+  if (!metadata) {
+    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  }
+
+  const parsed = deleteSchema.safeParse(await request.json());
+
+  if (!parsed.success || parsed.data.ownerKey !== metadata.ownerKey) {
+    return NextResponse.json({ error: "Owner access denied." }, { status: 403 });
+  }
+
+  await storage.deleteVault(slug);
+
+  if (metadata.workspaceId) {
+    await deleteWorkspaceRoom(metadata.workspaceId, metadata.id);
+  }
+
+  return NextResponse.json({ deleted: true });
 }

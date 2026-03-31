@@ -35,8 +35,13 @@ yarn-error.log*
 
 # vercel
 .vercel
-.filmia
-.filmia-data
+.dataroom
+.dataroom-data
+.filmia           # legacy data directory (keep for dev cleanup)
+.filmia-data      # legacy data directory
+
+# playwright test artifacts
+.playwright-cli/
 
 # typescript
 *.tsbuildinfo

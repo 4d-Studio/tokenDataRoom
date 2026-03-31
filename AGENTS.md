@@ -4,15 +4,16 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# Filmia
+# OpenDataRoom
 
-Filmia is a lightweight secure-sharing app for one document room at a time.
+OpenDataRoom is a lightweight secure-sharing app for sharing sensitive documents through encrypted, revocable rooms.
 
 ## Read this first
 
 1. `docs/agent-stack.md`
 2. `skills/filmia/SKILL.md`
-3. `src/lib/filmia/*`
+3. `src/lib/dataroom/*`
+4. `docs/session-memory-2026-03-31.md` (session history)
 
 ## Product rules
 
@@ -22,22 +23,65 @@ Filmia is a lightweight secure-sharing app for one document room at a time.
 - Preserve client-side encryption
 - Do not store plaintext passwords
 - Do not break owner-link management unless real auth replaces it
+- Do not claim GDPR compliance — use accurate language about encryption and user data control
+
+## Plan limits (src/lib/dataroom/auth-store.ts PLAN_LIMITS)
+
+| Plan    | Rooms | Files/room | Custom Domain | Board Minutes |
+|---------|-------|------------|---------------|---------------|
+| Free    | 3     | 10 pooled  | ❌            | ❌            |
+| Plus    | ∞     | 500        | ✅            | ❌            |
+| Unicorn | ∞     | ∞          | ✅            | ✅            |
+
+Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain included. Unicorn: unlimited + board minutes. Plan limits drive UI gates in CreateVaultForm.
 
 ## Working areas
 
-- `src/app/login/page.tsx`
-  Magic-code login
-- `src/app/onboarding/page.tsx`
-  Workspace creation
-- `src/app/workspace/page.tsx`
-  User workspace
-- `src/app/agent/page.tsx`
-  Agent-facing system overview
-- `src/app/new/page.tsx`
-  Sender creation flow
-- `src/app/s/[slug]/page.tsx`
-  Recipient access
-- `src/app/m/[slug]/page.tsx`
-  Owner controls
-- `src/app/api/vaults/*`
-  Room creation, access control, bundle delivery, and owner actions
+- `src/app/login/page.tsx` — Magic-code login
+- `src/app/onboarding/page.tsx` — Workspace creation
+- `src/app/workspace/page.tsx` — User workspace
+- `src/app/agent/page.tsx` — Agent/system overview
+- `src/app/new/page.tsx` — 3-step room creation wizard
+- `src/app/s/[slug]/page.tsx` — Recipient access (mobile share viewer in mobile-share-viewer.tsx)
+- `src/app/m/[slug]/page.tsx` — Owner controls
+- `src/app/api/vaults/*` — Room creation, access control, bundle delivery, and owner actions
+- `src/app/workspace/settings/page.tsx` — Branding, NDA template, and delete account
+- `src/app/pricing/page.tsx` — 3-tier pricing (Free / Plus $9.99 / Unicorn $99.99)
+- `src/app/privacy/page.tsx` — Privacy policy
+- `src/app/dpa/page.tsx` — Data Processing Agreement
+- `src/app/terms/page.tsx` — Terms of Service
+
+## Key files
+
+- `src/lib/dataroom/auth-store.ts` — user/workspace state, PLAN_LIMITS, deleteUserAccount()
+- `src/lib/dataroom/client-crypto.ts` — AES-256-GCM encryption (real, Web Crypto API)
+- `src/lib/dataroom/blob-storage.ts` — Vercel Blob vault storage
+- `src/lib/dataroom/local-storage.ts` — Local filesystem vault storage (`.dataroom/` dir)
+- `src/lib/dataroom/auth.ts` — high-level auth helpers
+- `src/lib/dataroom/session.ts` — session cookie management (ODR_APP_SECRET)
+- `src/lib/dataroom/storage.ts` — getVaultStorage() factory
+- `src/lib/dataroom/magic-link.ts` — SendGrid OTP email delivery
+- `src/lib/dataroom/access.ts` — vault access token management
+- `src/components/dataroom/mobile-share-viewer.tsx` — TikTok-style mobile document viewer (PdfDeckView, ImageDeckView)
+- `src/components/dataroom/share-experience.tsx` — recipient share page; uses matchMedia to detect mobile
+- `src/components/dataroom/create-vault-form.tsx` — 3-step room creation wizard
+- `src/components/dataroom/signature-canvas.tsx` — drawn or typed NDA signatures
+- `src/components/dataroom/delete-account-card.tsx` — account deletion UI (type DELETE to confirm)
+
+## Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `ODR_APP_SECRET` | Yes (prod) | HMAC signing secret for session and access cookies |
+| `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token. Without it, uses local `.dataroom/` filesystem |
+| `SENDGRID_API_KEY` | No | SendGrid API key for email OTP delivery |
+| `SENDGRID_FROM_EMAIL` | No | Verified sender email for OTP codes |
+
+## Naming conventions
+
+- **User type**: `OdrUser` (exported from auth-store.ts)
+- **Plan type**: `"free" | "plus" | "unicorn"`
+- **CSS variables**: `--odr-*` prefix (e.g., `--odr-panel-border`, `--odr-text-support`)
+- **Cookie names**: `odr_session`, `odr_access_`, `odr_ws_nda_`
+- **Data directory**: `.dataroom/` (gitignored)
+- **Encrypted file extension**: `.filmia` (legacy — for backward compat, do not change)

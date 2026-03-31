@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { createLoginCode, normalizeEmail } from "@/lib/filmia/auth-store";
-import { sendMagicCode } from "@/lib/filmia/magic-link";
+import { createLoginCode, normalizeEmail } from "@/lib/dataroom/auth-store";
+import { sendMagicCode } from "@/lib/dataroom/magic-link";
 
 const schema = z.object({
   email: z.string().trim().email(),

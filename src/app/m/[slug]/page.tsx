@@ -1,10 +1,11 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
-import { BrandMark } from "@/components/filmia/brand-mark";
-import { VaultOwnerPanel } from "@/components/filmia/vault-owner-panel";
-import { getBaseUrlFromHeaders } from "@/lib/filmia/helpers";
-import { getVaultStorage } from "@/lib/filmia/storage";
+import { BrandMark } from "@/components/dataroom/brand-mark";
+import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
+import { VaultOwnerPanel } from "@/components/dataroom/vault-owner-panel";
+import { getBaseUrlFromHeaders } from "@/lib/dataroom/helpers";
+import { getVaultStorage } from "@/lib/dataroom/storage";
 
 export default async function ManagePage({
   params,
@@ -31,11 +32,14 @@ export default async function ManagePage({
   const signedNdaBaseUrl = `${baseUrl}/api/vaults/${slug}/signed-nda?key=${metadata.ownerKey}`;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-7xl px-6 py-6 lg:px-10">
-      <header className="py-4">
+    <main className="page-shell max-w-[78rem]">
+      <header className="page-header">
         <BrandMark />
+        <ProductBreadcrumb
+          items={[{ label: "Owner controls" }, { label: metadata.title }]}
+        />
       </header>
-      <div className="pb-20 pt-6">
+      <div className="page-hero pt-2">
         <VaultOwnerPanel
           initialAcceptances={acceptances}
           initialMetadata={metadata}

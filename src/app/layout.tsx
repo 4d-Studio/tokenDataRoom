@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Manrope, Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 
 import "./globals.css";
-import { cn } from "@/lib/utils";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
-const sansFont = Manrope({
-  variable: "--font-filmia-sans",
+const sansFont = Inter({
+  variable: "--font-odr-sans",
   subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Filmia",
+  title: "OpenDataRoom",
   description:
     "Elegant private rooms for password-protected documents with optional NDA gating.",
 };
@@ -23,8 +23,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
-      <body>{children}</body>
+    <html lang="en" className={sansFont.variable}>
+      <body>
+        <TooltipProvider>{children}</TooltipProvider>
+      </body>
     </html>
   );
 }

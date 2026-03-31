@@ -2,6 +2,13 @@
 
 import { useState, useTransition } from "react";
 
+import { productFieldClass } from "@/components/dataroom/product-ui";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+
 export const WorkspaceOnboarding = ({ email }: { email: string }) => {
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -29,61 +36,73 @@ export const WorkspaceOnboarding = ({ email }: { email: string }) => {
   };
 
   return (
-    <section className="surface-panel max-w-xl p-6 sm:p-8">
-      <p className="eyebrow">Workspace first</p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-[-0.02em] text-[var(--color-ink)]">
-        Create your Filmia workspace
-      </h1>
-      <p className="mt-4 text-base leading-7 text-[var(--color-muted)]">
-        Signed in as {email}. Give your workspace a simple name so new rooms have a clean
-        home from the start.
-      </p>
+    <Card className="odr-elevated-panel rounded-2xl border border-[var(--odr-panel-border)] py-0 shadow-none ring-0">
+      <CardHeader className="gap-2 border-b px-5 py-4">
+        <p className="eyebrow">Workspace first</p>
+        <CardTitle className="text-balance text-[1.65rem] tracking-[-0.04em] text-[var(--color-ink)] sm:text-[1.8rem]">
+          Create your OpenDataRoom workspace
+        </CardTitle>
+        <CardDescription className="max-w-lg text-[0.94rem] leading-6.5">
+          Signed in as {email}. Give your workspace a simple name so new rooms have a clean
+          home from the start.
+        </CardDescription>
+      </CardHeader>
 
-      <div className="mt-8 space-y-5">
-        <label className="space-y-2">
-          <span className="label-title">Workspace name</span>
-          <input
-            className="field-input"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Northlight"
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="label-title">Company</span>
-          <input
-            className="field-input"
-            value={companyName}
-            onChange={(event) => setCompanyName(event.target.value)}
-            placeholder="Northlight Labs"
-          />
-        </label>
+      <CardContent className="px-5 py-5">
+        <FieldGroup className="gap-4">
+          <Field>
+            <FieldLabel htmlFor="workspace-name">Workspace name</FieldLabel>
+            <Input
+              id="workspace-name"
+              name="workspaceName"
+              autoComplete="off"
+              className={productFieldClass}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Northlight"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="company-name">Company</FieldLabel>
+            <Input
+              id="company-name"
+              name="companyName"
+              autoComplete="organization"
+              className={productFieldClass}
+              value={companyName}
+              onChange={(event) => setCompanyName(event.target.value)}
+              placeholder="Northlight Labs"
+            />
+          </Field>
 
-        {error ? (
-          <div className="rounded-[1rem] border border-[#f1b8ae] bg-[#fff4f2] px-4 py-3 text-sm text-[#9f3d2f]">
-            {error}
-          </div>
-        ) : null}
+          {error ? (
+            <Alert variant="destructive">
+              <AlertTitle>Could not create workspace</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
 
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() =>
-            startTransition(() => {
-              void createWorkspace().catch((caughtError: unknown) => {
-                setError(
-                  caughtError instanceof Error
-                    ? caughtError.message
-                    : "Unable to create workspace.",
-                );
-              });
-            })
-          }
-          className="hero-cta-primary"
-        >
-          Create workspace
-        </button>
-      </div>
-    </section>
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={() =>
+              startTransition(() => {
+                void createWorkspace().catch((caughtError: unknown) => {
+                  setError(
+                    caughtError instanceof Error
+                      ? caughtError.message
+                      : "Unable to create workspace.",
+                  );
+                });
+              })
+            }
+            size="lg"
+            className="w-fit"
+          >
+            Create workspace
+          </Button>
+        </FieldGroup>
+      </CardContent>
+    </Card>
   );
 };

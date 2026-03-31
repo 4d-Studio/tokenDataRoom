@@ -1,87 +1,158 @@
 import Link from "next/link";
-import { ArrowRight, Lock, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, Lock, ShieldCheck } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
-import { BrandMark } from "@/components/filmia/brand-mark";
+import { BrandMark } from "@/components/dataroom/brand-mark";
+import { ProductPageIntro } from "@/components/dataroom/product-ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-const steps = [
-  "Upload one document",
-  "Add a password and optional NDA",
-  "Share one secure link",
+const useCases = [
+  { title: "Due diligence", description: "Share sensitive documents with advisors and investors under NDA protection." },
+  { title: "Board communications", description: "Keep your board aligned with secure access, signed receipts, and minutes." },
+  { title: "Deal rooms", description: "Create password-protected rooms for every negotiation, with full audit trail." },
 ];
 
-const notes = [
-  "Password-based client-side encryption",
-  "Optional NDA acceptance before access",
-  "Owner link for activity and revocation",
+const trustItems = [
+  { icon: Lock, label: "AES-256 encrypted files" },
+  { icon: ShieldCheck, label: "Client-side encryption" },
 ];
 
 export default function Home() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-6 py-6 lg:px-10">
-      <header className="flex flex-wrap items-center justify-between gap-4 py-4">
+    <main className="page-shell">
+      <header className="page-header">
         <BrandMark />
-        <nav className="flex items-center gap-5 text-sm text-[var(--color-muted)]">
-          <Link href="/agent" className="transition hover:text-[var(--color-foreground)]">
-            Agent workspace
-          </Link>
-          <Link href="/login" className="transition hover:text-[var(--color-foreground)]">
-            Login
-          </Link>
+        <nav className="odr-support flex items-center gap-3">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/pricing">Pricing</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/login">Login</Link>
+          </Button>
         </nav>
       </header>
 
-      <section className="grid gap-14 py-16 lg:grid-cols-[minmax(0,1fr)_320px] lg:py-24">
+      <section className="page-hero max-w-4xl">
         <div className="max-w-3xl">
-          <p className="eyebrow">Get started</p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.03em] text-[var(--color-ink)] sm:text-5xl">
-            Protect a document and send it properly.
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--color-muted)] sm:text-lg">
-            Filmia gives you one clean room for one sensitive file. Add a password,
-            require an NDA if needed, and share a link that feels deliberate.
-          </p>
+          <Badge variant="secondary" className="rounded-full px-3 py-1 text-[0.78rem]">
+            Secure data rooms
+          </Badge>
+          <ProductPageIntro
+            title="Secure data rooms for deals, due diligence, and board communications."
+            description="Password-protected rooms with optional NDA gating. Track every view, collect signed agreements, and revoke access instantly — all encrypted end-to-end."
+            className="mt-3 max-w-3xl items-start py-0"
+            titleClassName="mt-0 text-[2.05rem] sm:text-[2.35rem]"
+            descriptionClassName="max-w-2xl text-[0.9375rem] leading-7 text-[var(--odr-text-support)]"
+          />
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/login" className="hero-cta-primary">
-              Login to start
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/agent" className="hero-cta-secondary">
-              Open agent workspace
-            </Link>
-          </div>
-
-          <div className="mt-12 grid gap-6 border-t border-[rgba(16,24,40,0.1)] pt-8 sm:grid-cols-3">
-            {steps.map((step, index) => (
-              <div key={step}>
-                <div className="text-sm font-semibold text-[var(--color-foreground)]">
-                  {index + 1}. {step}
-                </div>
+          {/* Trust badges */}
+          <div className="mt-5 flex flex-wrap items-center gap-4">
+            {trustItems.map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-1.5">
+                <Icon className="h-4 w-4 text-[var(--color-accent)]" />
+                <span className="text-xs text-[var(--odr-text-support)]">{label}</span>
               </div>
             ))}
           </div>
-        </div>
 
-        <aside className="surface-panel p-6">
-          <div className="text-sm font-semibold text-[var(--color-foreground)]">
-            Included right now
+          <div className="mt-6">
+            <Button asChild size="lg" className="px-4">
+              <Link href="/login">
+                Create your first room
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+            <p className="odr-fine mt-2">Free to start. No credit card.</p>
           </div>
-          <div className="mt-5 space-y-4">
-            <div className="simple-row">
-              <Lock className="h-4 w-4 text-[var(--color-accent)]" />
-              {notes[0]}
-            </div>
-            <div className="simple-row">
-              <ShieldCheck className="h-4 w-4 text-[var(--color-accent)]" />
-              {notes[1]}
-            </div>
-            <div className="simple-row">
-              <ArrowRight className="h-4 w-4 text-[var(--color-accent)]" />
-              {notes[2]}
-            </div>
-          </div>
-        </aside>
+        </div>
       </section>
+
+      {/* Use cases */}
+      <section className="mt-12 max-w-4xl">
+        <div className="label-title mb-4">Built for</div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {useCases.map((useCase) => (
+            <div key={useCase.title} className="rounded-xl border border-border bg-white p-4">
+              <div className="text-sm font-semibold text-foreground">{useCase.title}</div>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--odr-text-support)]">
+                {useCase.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <Separator className="my-10 max-w-4xl" />
+
+      {/* How it works */}
+      <section className="max-w-4xl">
+        <div className="label-title mb-5">How it works</div>
+        <div className="grid gap-5 border-y border-border py-5 md:grid-cols-3">
+          <div className="flex flex-col gap-2">
+            <div className="label-title">01</div>
+            <p className="text-[0.9375rem] font-medium leading-snug text-foreground">
+              Upload and encrypt
+            </p>
+            <p className="text-sm text-[var(--odr-text-support)]">
+              Drop a file, set a password, and choose whether recipients must sign an NDA.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="label-title">02</div>
+            <p className="text-[0.9375rem] font-medium leading-snug text-foreground">
+              Share the private link
+            </p>
+            <p className="text-sm text-[var(--odr-text-support)]">
+              Send the room link to your recipient. They'll see only what you allow.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="label-title">03</div>
+            <p className="text-[0.9375rem] font-medium leading-snug text-foreground">
+              Track and revoke
+            </p>
+            <p className="text-sm text-[var(--odr-text-support)]">
+              See who opened what, download signed NDAs, and revoke access at any moment.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA strip */}
+      <section className="mt-10 max-w-4xl rounded-2xl border border-border bg-white p-6 text-center">
+        <p className="text-sm font-semibold text-foreground">Ready to get started?</p>
+        <p className="mt-1 text-sm text-[var(--odr-text-support)]">
+          Free forever on the starter plan. No credit card required.
+        </p>
+        <Button asChild size="lg" className="mt-4">
+          <Link href="/login">
+            Create a secure room
+            <ArrowRight data-icon="inline-end" />
+          </Link>
+        </Button>
+      </section>
+
+      {/* Footer */}
+      <footer className="mt-12 max-w-4xl pb-8">
+        <Separator className="mb-6" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-xs text-[var(--odr-text-fine)]">
+            © {new Date().getFullYear()} OpenDataRoom. All rights reserved.
+          </p>
+          <nav className="flex flex-wrap gap-4 text-xs text-[var(--odr-text-fine)]">
+            <Link href="/privacy" className="hover:text-foreground">
+              Privacy Policy
+            </Link>
+            <Link href="/dpa" className="hover:text-foreground">
+              DPA
+            </Link>
+            <Link href="/terms" className="hover:text-foreground">
+              Terms
+            </Link>
+          </nav>
+        </div>
+      </footer>
     </main>
   );
 }

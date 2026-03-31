@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filmia - Empty State</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #f6f3ee;
+      --color-card: #ffffff;
+      --color-ink: #1a1a1a;
+      --color-muted: #6b6b6b;
+      --color-accent: #f35b2d;
+      --color-accent-hover: #e04e22;
+      --color-border: #e5e2dd;
+      --color-success: #22c55e;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--color-bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 260px;
+      background: var(--color-card);
+      border-right: 1px solid var(--color-border);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 40px;
+      padding: 0 8px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      background: var(--color-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-square {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      background: var(--color-accent);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-ink);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-tagline {
+      font-size: 11px;
+      color: var(--color-muted);
+    }
+
+    .nav-section {
+      margin-bottom: 8px;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-muted);
+      padding: 0 12px;
+      margin-bottom: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-ink);
+      text-decoration: none;
+      transition: background 0.15s ease;
+    }
+
+    .nav-item:hover {
+      background: var(--color-bg);
+    }
+
+    .nav-item.active {
+      background: var(--color-bg);
+      font-weight: 600;
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      color: var(--color-muted);
+    }
+
+    .nav-item.active svg {
+      color: var(--color-accent);
+    }
+
+    /* Main content */
+    .main {
+      margin-left: 260px;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+    }
+
+    /* Empty state panel */
+    .empty-state {
+      background: var(--color-card);
+      border-radius: 16px;
+      border: 1px solid var(--color-border);
+      padding: 64px 80px;
+      max-width: 520px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+    }
+
+    .empty-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 28px;
+      background: linear-gradient(135deg, #fff5f2 0%, #fff 100%);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #fde8e3;
+    }
+
+    .empty-icon svg {
+      width: 32px;
+      height: 32px;
+      color: var(--color-accent);
+    }
+
+    .empty-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--color-ink);
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+
+    .empty-description {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--color-muted);
+      margin-bottom: 32px;
+      max-width: 380px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--color-accent);
+      color: white;
+      font-family: 'Manrope', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 14px 28px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(243, 91, 45, 0.25);
+    }
+
+    .cta-button:hover {
+      background: var(--color-accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(243, 91, 45, 0.3);
+    }
+
+    .cta-button svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .free-note {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--color-muted);
+    }
+
+    .free-note svg {
+      width: 14px;
+      height: 14px;
+      vertical-align: -2px;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar (simplified) -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">
+        <div class="brand-square"></div>
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">Filmia</div>
+        <div class="brand-tagline">Private document rooms</div>
+      </div>
+    </div>
+
+    <nav class="nav-section">
+      <div class="nav-label">Workspace</div>
+      <a href="#" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Rooms
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Activity
+      </a>
+    </nav>
+
+    <nav class="nav-section" style="margin-top: auto;">
+      <div class="nav-label">Account</div>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Settings
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main content area -->
+  <main class="main">
+    <div class="empty-state">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+
+      <h1 class="empty-title">Welcome to your workspace</h1>
+
+      <p class="empty-description">
+        A secure space to share sensitive documents with legal protection.
+      </p>
+
+      <button class="cta-button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Create room
+      </button>
+
+      <p class="free-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Free to start. No credit card.
+      </p>
+    </div>
+  </main>
+</body>
+</html>

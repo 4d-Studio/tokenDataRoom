@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { CookieNotice } from "@/components/dataroom/cookie-notice";
 import { LoginFlow } from "@/components/auth/login-flow";
-import { BrandMark } from "@/components/filmia/brand-mark";
-import { getCurrentUser, getCurrentWorkspace } from "@/lib/filmia/auth";
+import { BrandMark } from "@/components/dataroom/brand-mark";
+import { ProductAuthFrame } from "@/components/dataroom/product-ui";
+import { Button } from "@/components/ui/button";
+import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
 
 export default async function LoginPage() {
   const user = await getCurrentUser();
@@ -18,16 +21,17 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-6 py-6 lg:px-10">
-      <header className="flex flex-wrap items-center justify-between gap-4 py-4">
-        <BrandMark />
-        <Link href="/" className="text-sm text-[var(--color-muted)] transition hover:text-[var(--color-foreground)]">
-          Back home
-        </Link>
-      </header>
-      <div className="py-16">
+    <main className="page-shell flex min-h-svh">
+      <ProductAuthFrame>
+        <header className="flex items-center justify-between gap-3">
+          <BrandMark />
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/">Back home</Link>
+          </Button>
+        </header>
         <LoginFlow />
-      </div>
+      </ProductAuthFrame>
+      <CookieNotice />
     </main>
   );
 }

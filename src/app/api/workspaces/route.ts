@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { createWorkspaceForUser } from "@/lib/filmia/auth-store";
-import { getCurrentUser } from "@/lib/filmia/auth";
+import { createWorkspaceForUser } from "@/lib/dataroom/auth-store";
+import { getCurrentUser } from "@/lib/dataroom/auth";
 
 const schema = z.object({
   name: z.string().trim().min(2).max(60),

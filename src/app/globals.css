@@ -5,52 +5,63 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --color-background: #f6f8fc;
+  /* Canvas blueprint (filmia-workspace-empty-state.html) alignment */
+  --odr-panel-border: #e5e2dd;
+  --odr-empty-icon-border: #fde8e3;
+  --odr-empty-icon-from: #fff5f2;
+  --color-background: #f6f3ee;
   --color-background-muted: #ffffff;
-  --color-foreground: #162033;
-  --color-muted: #5f6b7c;
-  --color-ink: #101828;
-  --color-accent: #345dff;
-  --color-border: rgba(16, 24, 40, 0.12);
-  --font-ui: var(--font-filmia-sans);
-  --font-editorial: var(--font-filmia-sans);
+  /* Body text — canvas ink */
+  --color-foreground: #1a1a1a;
+  /* Secondary text — canvas --color-muted (#6b6b6b); use --muted-foreground / text-muted-foreground, NOT --color-muted (that token is the muted surface in @theme). */
+  --color-ink: #1a1a1a;
+  --color-accent: #f35b2d;
+  --color-border: rgba(35, 31, 26, 0.09);
+  --font-ui: var(--font-odr-sans);
+  --font-editorial: var(--font-odr-sans);
   color-scheme: light;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: #f6f3ee;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #f35b2d;
+  --primary-foreground: #ffffff;
+  --secondary: #efebe4;
+  --secondary-foreground: #1a1a1a;
+  --muted: #efebe4;
+  --muted-foreground: #6b6b6b;
+  --accent: #fbefe8;
+  --accent-foreground: #1a1a1a;
+  --destructive: #c2410c;
+  --destructive-foreground: #ffffff;
+  --destructive-border: rgba(194, 65, 12, 0.2);
+  --destructive-background: #fff7ed;
+  --border: rgba(35, 31, 26, 0.09);
+  --input: rgba(35, 31, 26, 0.12);
+  --ring: rgba(243, 91, 45, 0.22);
+  --chart-1: #f35b2d;
+  --chart-2: #ff8a5b;
+  --chart-3: #ffb595;
+  --chart-4: #ffd6c4;
+  --chart-5: #ffe8dd;
+  --radius: 0.95rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #f35b2d;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f7f3ed;
+  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-border: rgba(35, 31, 26, 0.08);
+  --sidebar-ring: rgba(243, 91, 45, 0.22);
+  /* Supporting copy (one step quieter than body). Fine = ancillary only. */
+  --odr-text-support: #5a5a5a;
+  --odr-text-fine: #767676;
 }
 
 @theme inline {
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-odr-sans);
   --font-serif: var(--font-editorial);
   --color-background: var(--color-background);
   --color-foreground: var(--color-foreground);
@@ -72,6 +83,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-border: var(--destructive-border);
+  --color-destructive-background: var(--destructive-background);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -107,6 +121,23 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-ui), sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+}
+
+/* Claude-style tight heading tracking */
+h1,
+h2,
+h3,
+h4 {
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  letter-spacing: -0.035em;
 }
 
 a {
@@ -127,11 +158,68 @@ textarea {
 }
 
 .eyebrow {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--odr-text-fine);
+}
+
+/* UX hierarchy: use for non-primary paragraphs so headings/actions stand out. */
+.odr-support {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  font-weight: 400;
+  color: var(--odr-text-support);
+}
+
+.odr-fine {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--odr-text-fine);
+}
+
+.page-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 1.25rem;
+  padding-block: 0.875rem 1.25rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-block: 0.25rem;
+}
+
+.page-hero {
+  padding-block: 1.25rem 0.875rem;
+}
+
+.page-title {
+  margin-top: 0.5rem;
+  font-size: clamp(1.75rem, 2.2vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  color: var(--color-ink);
+}
+
+.page-copy {
+  margin-top: 0.625rem;
+  max-width: 34rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.page-grid {
+  display: grid;
+  gap: 1rem;
 }
 
 .surface-panel,
@@ -141,19 +229,18 @@ textarea {
 .metric-tile {
   border: 1px solid var(--color-border);
   background: #ffffff;
-  backdrop-filter: none;
   box-shadow: none;
 }
 
 .surface-panel,
 .content-panel,
 .metric-tile {
-  border-radius: 1.25rem;
+  border-radius: 0.8rem;
 }
 
 .content-panel,
 .metric-tile {
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .hero-cta-primary,
@@ -191,27 +278,28 @@ textarea {
   font-size: 0.72rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted-foreground);
 }
 
 .simple-row {
   display: flex;
   align-items: flex-start;
-  gap: 0.7rem;
-  font-size: 0.98rem;
-  line-height: 1.7;
-  color: var(--color-foreground);
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  font-weight: 400;
+  color: var(--odr-text-support);
 }
 
 .preview-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  border-radius: 0.9rem;
-  border: 1px solid rgba(16, 24, 40, 0.1);
+  border-radius: 0.8rem;
+  border: 1px solid var(--color-border);
   background: #ffffff;
-  padding: 0.8rem 0.95rem;
-  font-size: 0.92rem;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.9rem;
   color: var(--color-foreground);
 }
 
@@ -234,23 +322,23 @@ textarea {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.15rem;
+  height: 2.15rem;
   border-radius: 999px;
-  border: 1px solid rgba(52, 93, 255, 0.2);
-  background: rgba(52, 93, 255, 0.06);
+  border: 1px solid rgba(243, 91, 45, 0.16);
+  background: rgba(243, 91, 45, 0.08);
   color: var(--color-accent);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .label-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--odr-text-fine);
 }
 
 .field-input,
@@ -266,13 +354,13 @@ textarea {
 }
 
 .field-input {
-  padding: 0.9rem 1rem;
+  padding: 0.85rem 0.95rem;
 }
 
 .field-input:focus,
 .upload-zone:hover {
   outline: none;
-  border-color: rgba(52, 93, 255, 0.45);
+  border-color: rgba(255, 90, 31, 0.35);
   background: #ffffff;
 }
 
@@ -282,18 +370,23 @@ textarea {
 
 .upload-zone {
   display: flex;
-  min-height: 9rem;
+  min-height: 6.5rem;
   cursor: pointer;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.625rem;
   text-align: center;
-  padding: 1.4rem;
+  padding: 1rem;
 }
 
 .metric-tile {
-  min-height: 10rem;
+  min-height: auto;
+}
+
+.metric-tile .text-3xl {
+  font-size: 1.75rem;
+  line-height: 1.1;
 }
 
 .simple-panel {
@@ -312,11 +405,93 @@ textarea {
 }
 
 .calm-block {
-  border-top: 1px solid rgba(16, 24, 40, 0.1);
-  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.875rem;
+}
+
+.app-layout {
+  display: grid;
+  gap: 2rem;
+  align-items: start;
+}
+
+.section-heading {
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.section-copy {
+  margin-top: 0.375rem;
+  max-width: 34rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+
+.list-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.875rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.list-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.viewer-shell {
+  overflow: hidden;
+  border-radius: 0.8rem;
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+}
+
+/* Subtle elevation used by workspace empty state + auth cards (canvas blueprint). */
+.odr-elevated-panel {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.meta-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.meta-row {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.meta-row dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.meta-row dd {
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--color-foreground);
 }
 
 @media (max-width: 767px) {
+  .page-shell {
+    padding-inline: 1rem;
+    padding-block: 0.75rem 1rem;
+  }
+
+  .page-hero {
+    padding-block: 0.875rem 0.625rem;
+  }
+
   .hero-summary {
     border-left: 0;
     border-top: 1px solid rgba(16, 24, 40, 0.12);
@@ -326,37 +501,120 @@ textarea {
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --odr-text-support: #b8a89c;
+  --odr-text-fine: #9c8f86;
+  --color-foreground: #fff8f1;
+  --color-ink: #fff8f1;
+  --background: #221711;
+  --foreground: #fff8f1;
+  --card: #2c1f18;
+  --card-foreground: #fff8f1;
+  --popover: #2c1f18;
+  --popover-foreground: #fff8f1;
+  --primary: #ff7a45;
+  --primary-foreground: #ffffff;
+  --secondary: #3b2b23;
+  --secondary-foreground: #fff8f1;
+  --muted: #3b2b23;
+  --muted-foreground: #c9b6aa;
+  --accent: #3d2a1f;
+  --accent-foreground: #fff8f1;
+  --destructive: #f87171;
+  --destructive-foreground: #ffffff;
+  --destructive-border: rgba(248, 113, 113, 0.3);
+  --destructive-background: rgba(248, 113, 113, 0.1);
+  --border: rgba(255, 248, 241, 0.12);
+  --input: rgba(255, 248, 241, 0.12);
+  --ring: rgba(255, 122, 69, 0.35);
+  --chart-1: #ff7a45;
+  --chart-2: #ff9d73;
+  --chart-3: #ffc1a7;
+  --chart-4: #ffd8ca;
+  --chart-5: #ffe9df;
+  --sidebar: #2c1f18;
+  --sidebar-foreground: #fff8f1;
+  --sidebar-primary: #ff7a45;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #3d2a1f;
+  --sidebar-accent-foreground: #fff8f1;
+  --sidebar-border: rgba(255, 248, 241, 0.12);
+  --sidebar-ring: rgba(255, 122, 69, 0.35);
+}
+
+/* Tiptap rich-text editor + rendered NDA prose */
+.odr-prose h1 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-foreground);
+}
+
+.odr-prose h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  margin-top: 1rem;
+  margin-bottom: 0.375rem;
+  color: var(--color-foreground);
+}
+
+.odr-prose h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 0.875rem;
+  margin-bottom: 0.25rem;
+  color: var(--color-foreground);
+}
+
+.odr-prose p {
+  margin-top: 0;
+  margin-bottom: 0.625rem;
+}
+
+.odr-prose ul,
+.odr-prose ol {
+  padding-left: 1.25rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.625rem;
+}
+
+.odr-prose ul {
+  list-style-type: disc;
+}
+
+.odr-prose ol {
+  list-style-type: decimal;
+}
+
+.odr-prose li {
+  margin-bottom: 0.25rem;
+}
+
+.odr-prose li p {
+  margin-bottom: 0;
+}
+
+.odr-prose hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 1rem 0;
+}
+
+.odr-prose strong {
+  font-weight: 600;
+}
+
+.odr-prose > :first-child {
+  margin-top: 0;
+}
+
+.odr-prose > :last-child {
+  margin-bottom: 0;
 }
 
 @layer base {

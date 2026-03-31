@@ -1,12 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 
-import { BrandMark } from "@/components/filmia/brand-mark";
-import { CreateVaultForm } from "@/components/filmia/create-vault-form";
-import { getCurrentUser, getCurrentWorkspace } from "@/lib/filmia/auth";
-import { buildDefaultNdaText } from "@/lib/filmia/helpers";
-import { getStorageMode } from "@/lib/filmia/storage";
+import { AuthenticatedShell } from "@/components/dataroom/authenticated-shell";
+import { CreateVaultForm } from "@/components/dataroom/create-vault-form";
+import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
+import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
+import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
+import { getStorageMode } from "@/lib/dataroom/storage";
 
 export default async function NewVaultPage() {
   const user = await getCurrentUser();
@@ -21,26 +20,36 @@ export default async function NewVaultPage() {
     redirect("/onboarding");
   }
 
+  const activityEvents = await getWorkspaceActivity();
+  const rooms = await getWorkspaceRooms();
+
   return (
-    <main className="mx-auto min-h-screen w-full max-w-7xl px-6 py-6 lg:px-10">
-      <header className="flex flex-wrap items-center justify-between gap-4 py-4">
-        <BrandMark />
-        <Link
-          href="/workspace"
-          className="inline-flex items-center gap-2 text-sm text-[var(--color-muted)] transition hover:text-[var(--color-foreground)]"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back to workspace
-        </Link>
+    <AuthenticatedShell
+      current="new"
+      userEmail={user.email}
+      workspaceName={workspace.name}
+      workspaceCompany={workspace.companyName}
+      workspaceLogoUrl={workspace.logoUrl}
+      activityEvents={activityEvents}
+    >
+      <header className="page-header pb-2">
+        <ProductBreadcrumb
+          items={[
+            { href: "/workspace", label: "Rooms" },
+            { label: "New room" },
+          ]}
+        />
       </header>
-      <div className="pb-20 pt-6">
+
+      <div className="page-grid">
         <CreateVaultForm
-          defaultNdaText={buildDefaultNdaText(workspace.companyName)}
+          userPlan={user.plan}
+          currentRoomCount={rooms.length}
+          defaultNdaText={workspace.ndaTemplate || buildDefaultNdaText(workspace.companyName)}
           defaultSenderCompany={workspace.companyName}
           defaultSenderName=""
-          storageMode={getStorageMode()}
         />
       </div>
-    </main>
+    </AuthenticatedShell>
   );
 }

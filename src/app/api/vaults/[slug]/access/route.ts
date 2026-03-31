@@ -4,10 +4,11 @@ import {
   accessCookieName,
   accessCookieOptions,
   createAccessToken,
-} from "@/lib/filmia/access";
-import { createEvent, acceptanceSchema } from "@/lib/filmia/types";
-import { getClientIp, isVaultExpired } from "@/lib/filmia/helpers";
-import { getVaultStorage } from "@/lib/filmia/storage";
+} from "@/lib/dataroom/access";
+import { createEvent, acceptanceSchema } from "@/lib/dataroom/types";
+import { getWorkspaceById } from "@/lib/dataroom/auth-store";
+import { getClientIp, isVaultExpired } from "@/lib/dataroom/helpers";
+import { getVaultStorage } from "@/lib/dataroom/storage";
 
 export const runtime = "nodejs";
 
@@ -25,13 +26,26 @@ export async function POST(
 
   if (metadata.status !== "active" || isVaultExpired(metadata.expiresAt)) {
     return NextResponse.json(
-      { error: "This Filmia room is no longer accepting new access." },
+      { error: "This OpenDataRoom room is no longer accepting new access." },
       { status: 403 },
     );
   }
 
   if (!metadata.requiresNda) {
     return NextResponse.json({ success: true });
+  }
+
+  if (metadata.workspaceId) {
+    const workspace = await getWorkspaceById(metadata.workspaceId);
+    if (workspace) {
+      return NextResponse.json(
+        {
+          error:
+            "This room uses a workspace-wide confidentiality agreement. Sign once using the workspace NDA on the share page; it covers every room in this workspace.",
+        },
+        { status: 400 },
+      );
+    }
   }
 
   const parsed = acceptanceSchema.safeParse(await request.json());

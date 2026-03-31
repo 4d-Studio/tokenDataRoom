@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { accessCookieName, verifyAccessToken } from "@/lib/filmia/access";
-import { getClientIp } from "@/lib/filmia/helpers";
-import { getVaultStorage } from "@/lib/filmia/storage";
-import { createEvent } from "@/lib/filmia/types";
+import { accessCookieName, verifyAccessToken } from "@/lib/dataroom/access";
+import { getClientIp } from "@/lib/dataroom/helpers";
+import { getVaultStorage } from "@/lib/dataroom/storage";
+import { createEvent } from "@/lib/dataroom/types";
 
 export const runtime = "nodejs";
 

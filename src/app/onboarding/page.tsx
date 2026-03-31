@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 
+import { CookieNotice } from "@/components/dataroom/cookie-notice";
 import { WorkspaceOnboarding } from "@/components/auth/workspace-onboarding";
-import { BrandMark } from "@/components/filmia/brand-mark";
-import { getCurrentUser, getCurrentWorkspace } from "@/lib/filmia/auth";
+import { BrandMark } from "@/components/dataroom/brand-mark";
+import { ProductAuthFrame } from "@/components/dataroom/product-ui";
+import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
 
 export default async function OnboardingPage() {
   const user = await getCurrentUser();
@@ -18,13 +20,14 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-6 py-6 lg:px-10">
-      <header className="py-4">
-        <BrandMark />
-      </header>
-      <div className="py-16">
+    <main className="page-shell flex min-h-svh">
+      <ProductAuthFrame>
+        <header className="flex items-center gap-3">
+          <BrandMark />
+        </header>
         <WorkspaceOnboarding email={user.email} />
-      </div>
+      </ProductAuthFrame>
+      <CookieNotice />
     </main>
   );
 }

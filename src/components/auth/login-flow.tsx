@@ -1,6 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { AlertCircleIcon, KeyRoundIcon, MailIcon } from "lucide-react";
+
+import { productFieldClass } from "@/components/dataroom/product-ui";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 type VerifyPayload = {
   hasWorkspace: boolean;
@@ -16,79 +39,6 @@ export const LoginFlow = () => {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
-  const codeInputRefs = useRef<Array<HTMLInputElement | null>>([]);
-
-  useEffect(() => {
-    if (step === "code") {
-      codeInputRefs.current[0]?.focus();
-    }
-  }, [step]);
-
-  const setCodeDigit = (index: number, value: string) => {
-    const nextDigit = value.replace(/\D/g, "").slice(-1);
-    const digits = Array.from({ length: CODE_LENGTH }, (_, digitIndex) => code[digitIndex] ?? "");
-
-    digits[index] = nextDigit;
-    const nextCode = digits.join("");
-    setCode(nextCode);
-
-    if (nextDigit && index < CODE_LENGTH - 1) {
-      codeInputRefs.current[index + 1]?.focus();
-      codeInputRefs.current[index + 1]?.select();
-    }
-  };
-
-  const handleCodeKeyDown = (index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Backspace") {
-      if (code[index]) {
-        const digits = Array.from(
-          { length: CODE_LENGTH },
-          (_, digitIndex) => code[digitIndex] ?? "",
-        );
-        digits[index] = "";
-        setCode(digits.join(""));
-        return;
-      }
-
-      if (index > 0) {
-        const digits = Array.from(
-          { length: CODE_LENGTH },
-          (_, digitIndex) => code[digitIndex] ?? "",
-        );
-        digits[index - 1] = "";
-        setCode(digits.join(""));
-        codeInputRefs.current[index - 1]?.focus();
-        codeInputRefs.current[index - 1]?.select();
-      }
-      return;
-    }
-
-    if (event.key === "ArrowLeft" && index > 0) {
-      event.preventDefault();
-      codeInputRefs.current[index - 1]?.focus();
-      return;
-    }
-
-    if (event.key === "ArrowRight" && index < CODE_LENGTH - 1) {
-      event.preventDefault();
-      codeInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleCodePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
-    event.preventDefault();
-
-    const pastedDigits = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, CODE_LENGTH);
-
-    if (!pastedDigits) {
-      return;
-    }
-
-    setCode(pastedDigits);
-    const focusIndex = Math.min(pastedDigits.length, CODE_LENGTH - 1);
-    codeInputRefs.current[focusIndex]?.focus();
-    codeInputRefs.current[focusIndex]?.select();
-  };
 
   const requestCode = async () => {
     setError("");
@@ -115,8 +65,8 @@ export const LoginFlow = () => {
     setDebugCode(payload.debugCode ?? null);
     setMessage(
       payload.delivery === "local"
-        ? "Local dev mode: use the code shown below."
-        : "Check your email for the Filmia code.",
+        ? "Local dev mode is active for this workspace."
+        : "Check your inbox for the OpenDataRoom sign-in code.",
     );
     setStep("code");
   };
@@ -142,128 +92,151 @@ export const LoginFlow = () => {
   };
 
   return (
-    <section className="surface-panel max-w-xl p-6 sm:p-8">
-      <p className="eyebrow">Login first</p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-[-0.02em] text-[var(--color-ink)]">
-        Sign in with a magic code
-      </h1>
-      <p className="mt-4 text-base leading-7 text-[var(--color-muted)]">
-        We’ll use email codes so there’s no password to remember. After login, the first
-        step is creating your workspace.
-      </p>
+    <Card className="odr-elevated-panel w-full rounded-2xl border border-[var(--odr-panel-border)] py-0 shadow-none ring-0">
+      <CardHeader className="gap-2 border-b px-5 py-4">
+        <div className="eyebrow">Login first</div>
+        <CardTitle className="text-balance text-[1.65rem] tracking-[-0.04em] text-[var(--color-ink)] sm:text-[1.8rem]">
+          Sign in with a magic code
+        </CardTitle>
+        <CardDescription className="max-w-lg text-[0.94rem] leading-6.5">
+          We’ll email a one-time code so there’s no password to manage. After login,
+          the first step is creating your workspace.
+        </CardDescription>
+      </CardHeader>
 
-      <div className="mt-8 space-y-5">
-        <label className="space-y-2">
-          <span className="label-title">Work email</span>
-          <input
-            className="field-input"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@company.com"
-          />
-        </label>
-
-        {step === "code" ? (
-          <div className="space-y-3">
-            <span className="label-title">Magic code</span>
-            <div className="grid grid-cols-6 gap-2 sm:gap-3">
-              {Array.from({ length: CODE_LENGTH }, (_, index) => (
-                <input
-                  key={index}
-                  ref={(element) => {
-                    codeInputRefs.current[index] = element;
-                  }}
-                  aria-label={`Digit ${index + 1}`}
-                  autoComplete={index === 0 ? "one-time-code" : "off"}
-                  className="h-14 rounded-[1rem] border border-[rgba(16,24,40,0.12)] bg-white text-center text-xl font-semibold tracking-[0.08em] text-[var(--color-ink)] outline-none transition focus:border-[rgba(52,93,255,0.45)]"
-                  inputMode="numeric"
-                  maxLength={1}
-                  pattern="[0-9]*"
-                  value={code[index] ?? ""}
-                  onChange={(event) => setCodeDigit(index, event.target.value)}
-                  onKeyDown={(event) => handleCodeKeyDown(index, event)}
-                  onFocus={(event) => event.currentTarget.select()}
-                  onPaste={handleCodePaste}
-                />
-              ))}
+      <CardContent className="px-5 py-5">
+        <FieldGroup className="gap-4">
+          <Field>
+            <FieldLabel htmlFor="login-email">Work email</FieldLabel>
+            <div className="relative">
+              <MailIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="login-email"
+                name="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                inputMode="email"
+                className={`${productFieldClass} pl-10`}
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@company.com"
+              />
             </div>
-            <p className="text-sm text-[var(--color-muted)]">
-              Enter the 6-digit code we sent to {email}.
-            </p>
-          </div>
-        ) : null}
+          </Field>
 
-        {message ? (
-          <div className="rounded-[1rem] border border-[rgba(52,93,255,0.2)] bg-[rgba(52,93,255,0.05)] px-4 py-3 text-sm text-[var(--color-foreground)]">
-            {message}
-            {debugCode ? <div className="mt-2 font-semibold">Code: {debugCode}</div> : null}
-          </div>
-        ) : null}
+          {step === "code" ? (
+            <Field>
+              <FieldLabel>Magic code</FieldLabel>
+              <div className="flex flex-col gap-2">
+                <InputOTP
+                  autoFocus
+                  maxLength={CODE_LENGTH}
+                  value={code}
+                  onChange={(value) => setCode(value.replace(/\D/g, "").slice(0, CODE_LENGTH))}
+                  containerClassName="justify-start"
+                >
+                  <InputOTPGroup className="gap-2 border-0 bg-transparent">
+                    {Array.from({ length: CODE_LENGTH }, (_, index) => (
+                      <InputOTPSlot
+                        key={index}
+                        index={index}
+                        className="size-11 rounded-xl border border-border bg-white text-base font-semibold text-[var(--color-ink)] first:rounded-xl first:border last:rounded-xl"
+                      />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+                <p className="text-[0.9rem] leading-6 text-muted-foreground">
+                  Enter the 6-digit code we sent to {email}.
+                </p>
+              </div>
+            </Field>
+          ) : null}
 
-        {error ? (
-          <div className="rounded-[1rem] border border-[#f1b8ae] bg-[#fff4f2] px-4 py-3 text-sm text-[#9f3d2f]">
-            {error}
-          </div>
-        ) : null}
+          {message ? (
+            <Alert className="border-border bg-accent/50">
+              <KeyRoundIcon />
+              <AlertTitle>Code ready</AlertTitle>
+              <AlertDescription>
+                {message}
+                {debugCode ? (
+                  <div className="mt-2 font-semibold text-foreground">Code: {debugCode}</div>
+                ) : null}
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
-        <div className="flex flex-wrap gap-3">
-          {step === "email" ? (
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() =>
-                startTransition(() => {
-                  void requestCode().catch((caughtError: unknown) => {
-                    setError(
-                      caughtError instanceof Error
-                        ? caughtError.message
-                        : "Unable to send code.",
-                    );
-                  });
-                })
-              }
-              className="hero-cta-primary"
-            >
-              Send code
-            </button>
-          ) : (
-            <>
-              <button
+          {error ? (
+            <Alert variant="destructive">
+              <AlertCircleIcon />
+              <AlertTitle>Something went wrong</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            {step === "email" ? (
+              <Button
                 type="button"
-                disabled={isPending || code.length !== CODE_LENGTH}
+                size="lg"
+                className="min-w-36"
+                disabled={isPending}
                 onClick={() =>
                   startTransition(() => {
-                    void verifyCode().catch((caughtError: unknown) => {
+                    void requestCode().catch((caughtError: unknown) => {
                       setError(
                         caughtError instanceof Error
                           ? caughtError.message
-                          : "Unable to verify code.",
+                          : "Unable to send code.",
                       );
                     });
                   })
                 }
-                className="hero-cta-primary"
               >
-                Continue
-              </button>
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={() => {
-                  setStep("email");
-                  setCode("");
-                  setMessage("");
-                  setError("");
-                }}
-                className="hero-cta-secondary"
-              >
-                Change email
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </section>
+                Send sign-in code
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="min-w-32"
+                  disabled={isPending || code.length !== CODE_LENGTH}
+                  onClick={() =>
+                    startTransition(() => {
+                      void verifyCode().catch((caughtError: unknown) => {
+                        setError(
+                          caughtError instanceof Error
+                            ? caughtError.message
+                            : "Unable to verify code.",
+                        );
+                      });
+                    })
+                  }
+                >
+                  Continue
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="min-w-32"
+                  disabled={isPending}
+                  onClick={() => {
+                    setStep("email");
+                    setCode("");
+                    setMessage("");
+                    setError("");
+                  }}
+                >
+                  Change email
+                </Button>
+              </>
+            )}
+          </div>
+        </FieldGroup>
+      </CardContent>
+    </Card>
   );
 };

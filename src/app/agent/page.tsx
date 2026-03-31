@@ -1,13 +1,19 @@
-import Link from "next/link";
-
-import { BrandMark } from "@/components/filmia/brand-mark";
+import { BrandMark } from "@/components/dataroom/brand-mark";
+import {
+  ProductBreadcrumb,
+  ProductPageIntro,
+  ProductListRow,
+  ProductSectionCard,
+  ProductSectionBody,
+  ProductSectionHeader,
+} from "@/components/dataroom/product-ui";
 
 const routes = [
   ["/", "Minimal get-started landing page"],
   ["/login", "Magic-code login"],
   ["/onboarding", "Workspace creation"],
   ["/workspace", "User workspace"],
-  ["/new", "Create a Filmia room"],
+  ["/new", "Create an OpenDataRoom room"],
   ["/s/[slug]", "Recipient access page"],
   ["/m/[slug]?key=...", "Owner controls and activity"],
 ];
@@ -17,60 +23,63 @@ const apiRoutes = [
   ["POST /api/auth/verify-code", "Verify code and create session cookie"],
   ["POST /api/workspaces", "Create workspace for the logged-in user"],
   ["POST /api/vaults", "Create room and store encrypted payload"],
-  ["POST /api/vaults/[slug]/access", "Record NDA acceptance and issue access cookie"],
+  ["POST /api/vaults/[slug]/access", "Record per-room NDA acceptance and issue access cookie"],
+  [
+    "POST /api/vaults/[slug]/workspace-nda",
+    "Workspace-wide NDA + vault cookie + workspace cookie (rooms with workspaceId)",
+  ],
+  [
+    "POST /api/vaults/[slug]/bootstrap-workspace-access",
+    "Mint vault access cookie from existing workspace NDA cookie (other rooms)",
+  ],
   ["GET /api/vaults/[slug]/bundle", "Return encrypted bundle after access checks"],
 ];
 
 export default function AgentPage() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-6 py-6 lg:px-10">
-      <header className="flex flex-wrap items-center justify-between gap-4 py-4">
+    <main className="page-shell">
+      <header className="page-header">
         <BrandMark />
-        <nav className="flex items-center gap-5 text-sm text-[var(--color-muted)]">
-          <Link href="/" className="transition hover:text-[var(--color-foreground)]">
-            Back home
-          </Link>
-          <Link href="/workspace" className="transition hover:text-[var(--color-foreground)]">
-            User workspace
-          </Link>
-        </nav>
+        <ProductBreadcrumb
+          items={[
+            { href: "/", label: "Home" },
+            { href: "/workspace", label: "Workspace" },
+            { label: "Agent docs" },
+          ]}
+        />
       </header>
 
-      <section className="py-12">
-        <p className="eyebrow">Agent workspace</p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[var(--color-ink)] sm:text-4xl">
-          Filmia system overview
-        </h1>
-        <p className="mt-5 max-w-3xl text-base leading-7 text-[var(--color-muted)]">
-          This route is for incoming agents. It summarizes the product flow, API surface,
-          and the repo docs that matter before making changes.
-        </p>
-      </section>
+      <ProductPageIntro
+        eyebrow="Agent workspace"
+        title="OpenDataRoom system overview"
+        description="This route is for incoming agents. It summarizes the product flow, API surface, and the repo docs that matter before making changes."
+        className="page-hero"
+      />
 
-      <section className="grid gap-8 lg:grid-cols-2">
-        <div className="surface-panel p-6">
-          <h2 className="text-lg font-semibold text-[var(--color-foreground)]">Routes</h2>
-          <div className="mt-5 space-y-4">
+      <section className="grid gap-5 lg:grid-cols-2">
+        <ProductSectionCard className="odr-elevated-panel rounded-2xl border border-[var(--odr-panel-border)] ring-0">
+          <ProductSectionHeader title="Routes" />
+          <ProductSectionBody className="pt-0">
             {routes.map(([path, description]) => (
-              <div key={path} className="border-b border-[rgba(16,24,40,0.08)] pb-4 last:border-b-0 last:pb-0">
+              <ProductListRow key={path}>
                 <div className="text-sm font-semibold text-[var(--color-ink)]">{path}</div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">{description}</div>
-              </div>
+                <div className="mt-1 text-sm text-muted-foreground">{description}</div>
+              </ProductListRow>
             ))}
-          </div>
-        </div>
+          </ProductSectionBody>
+        </ProductSectionCard>
 
-        <div className="surface-panel p-6">
-          <h2 className="text-lg font-semibold text-[var(--color-foreground)]">API surface</h2>
-          <div className="mt-5 space-y-4">
+        <ProductSectionCard className="odr-elevated-panel rounded-2xl border border-[var(--odr-panel-border)] ring-0">
+          <ProductSectionHeader title="API surface" />
+          <ProductSectionBody className="pt-0">
             {apiRoutes.map(([path, description]) => (
-              <div key={path} className="border-b border-[rgba(16,24,40,0.08)] pb-4 last:border-b-0 last:pb-0">
+              <ProductListRow key={path}>
                 <div className="text-sm font-semibold text-[var(--color-ink)]">{path}</div>
-                <div className="mt-1 text-sm text-[var(--color-muted)]">{description}</div>
-              </div>
+                <div className="mt-1 text-sm text-muted-foreground">{description}</div>
+              </ProductListRow>
             ))}
-          </div>
-        </div>
+          </ProductSectionBody>
+        </ProductSectionCard>
       </section>
     </main>
   );
