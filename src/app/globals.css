@@ -180,6 +180,56 @@ textarea {
   color: var(--tkn-text-fine);
 }
 
+/* In-app navigation progress (see navigation-progress.tsx) */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes tkn-nav-indeterminate {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(calc(100vw + 100%));
+    }
+  }
+}
+
+.tkn-nav-progress-indeterminate {
+  height: 100%;
+  width: min(42%, 12rem);
+  background: var(--color-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tkn-nav-progress-indeterminate {
+    animation: tkn-nav-indeterminate 0.95s ease-in-out infinite;
+  }
+}
+
+.tkn-nav-progress-complete {
+  height: 100%;
+  width: 100%;
+  background: var(--color-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-accent) 45%, transparent);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tkn-nav-progress-complete {
+    animation: tkn-nav-complete 0.32s ease-out forwards;
+  }
+
+  @keyframes tkn-nav-complete {
+    from {
+      transform: scaleX(0.35);
+      opacity: 0.85;
+    }
+    to {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+  }
+}
+
 .page-shell {
   margin-inline: auto;
   width: 100%;

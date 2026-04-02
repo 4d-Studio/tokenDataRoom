@@ -12,7 +12,6 @@ export type AuthStateSnapshot = {
 const TABLE = "tkn_auth_state";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __tknPgPool: Pool | undefined;
 }
 
@@ -39,7 +38,7 @@ const normalizeRow = (raw: unknown): AuthStateSnapshot => {
   };
 };
 
-const useSsl = (url: string) =>
+const connectionStringNeedsSsl = (url: string) =>
   !url.includes("localhost") && !url.includes("127.0.0.1") && !url.includes("socket");
 
 /** Railway / hosts vary: prefer DATABASE_URL, then common aliases. */
@@ -69,7 +68,9 @@ export const getPgPool = (): Pool => {
       max: 10,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 15_000,
-      ssl: useSsl(connectionString) ? { rejectUnauthorized: false } : undefined,
+      ssl: connectionStringNeedsSsl(connectionString)
+        ? { rejectUnauthorized: false }
+        : undefined,
     });
   }
   return globalThis.__tknPgPool;

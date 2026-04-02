@@ -26,7 +26,7 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <main className="page-shell flex min-h-svh">
+    <main className="page-shell flex min-h-svh flex-col">
       <ProductAuthFrame>
         <header className="flex items-center gap-3">
           <BrandMark />

@@ -27,7 +27,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="page-shell flex min-h-svh">
+    <main className="page-shell flex min-h-svh flex-col">
       <ProductAuthFrame>
         <header className="flex items-center justify-between gap-3">
           <BrandMark />

@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 
 import { AuthenticatedShell } from "@/components/dataroom/authenticated-shell";
+import { CreateVaultFormSkeleton } from "@/components/dataroom/route-loading";
+import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
+import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
+import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
 
 export const metadata: Metadata = {
   title: "New room",
   description: "Create a new encrypted Token dataroom with optional NDA and access controls.",
 };
-import { CreateVaultForm } from "@/components/dataroom/create-vault-form";
-import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
-import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
-import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
-import { getStorageMode } from "@/lib/dataroom/storage";
+
+const CreateVaultForm = dynamic(
+  () =>
+    import("@/components/dataroom/create-vault-form").then((m) => m.CreateVaultForm),
+  { loading: () => <CreateVaultFormSkeleton /> },
+);
 
 export default async function NewVaultPage() {
   const user = await getCurrentUser();

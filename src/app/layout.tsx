@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
 import "./globals.css";
+import { NavigationProgress } from "@/components/dataroom/navigation-progress";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const sansFont = Inter({
@@ -60,7 +61,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={sansFont.variable}>
       <body>
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          <NavigationProgress />
+          {children}
+        </TooltipProvider>
       </body>
     </html>
   );

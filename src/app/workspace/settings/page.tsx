@@ -1,19 +1,26 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 
 import { AuthenticatedShell } from "@/components/dataroom/authenticated-shell";
-
-export const metadata: Metadata = {
-  title: "Settings",
-  description: "Workspace branding, NDA template, and account options for Token.",
-};
 import { DeleteAccountCard } from "@/components/dataroom/delete-account-card";
-import { NdaTemplateEditor } from "@/components/dataroom/nda-template-editor";
+import { NdaTemplateEditorSkeleton } from "@/components/dataroom/route-loading";
 import { SettingsSection } from "@/components/dataroom/settings-section";
 import { WorkspaceLogoUploader } from "@/components/dataroom/workspace-logo-uploader";
 import { ProductPageIntro } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity } from "@/lib/dataroom/auth";
 import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
+
+export const metadata: Metadata = {
+  title: "Settings",
+  description: "Workspace branding, NDA template, and account options for Token.",
+};
+
+const NdaTemplateEditor = dynamic(
+  () =>
+    import("@/components/dataroom/nda-template-editor").then((m) => m.NdaTemplateEditor),
+  { loading: () => <NdaTemplateEditorSkeleton /> },
+);
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
