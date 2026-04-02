@@ -5,7 +5,7 @@ import { Check, ShieldCheck, Lock } from "lucide-react";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Token dataroom plans: Free, Plus, and Unicorn. Encrypted rooms, NDAs, and optional custom domain.",
+    "Token dataroom plans. New accounts include Plus during launch; paid upgrades coming soon.",
 };
 import { Separator } from "@/components/ui/separator";
 
@@ -13,17 +13,18 @@ import { BrandMark } from "@/components/dataroom/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-const annualNote = "Save 20% with annual billing";
+const annualNote = "Paid tiers: coming soon — new accounts include Plus today";
 
 const plans = [
   {
     name: "Free",
+    comingSoon: false,
     priceMonthly: "$0",
     priceAnnual: "$0",
     period: "forever",
-    description: "Enough to get started and share your first deal.",
+    description: "Reference tier. New sign-ups currently receive Plus limits at no charge.",
     badge: null,
-    cta: "Start free",
+    cta: "Get started",
     ctaHref: "/login",
     accent: false,
     features: {
@@ -40,12 +41,14 @@ const plans = [
   },
   {
     name: "Plus",
+    comingSoon: true,
     priceMonthly: "$9.99",
     priceAnnual: "$7.99",
     period: "/month",
-    description: "For professionals who share sensitive documents regularly.",
-    badge: null,
-    cta: "Start 14-day trial",
+    description:
+      "For professionals who share sensitive documents regularly. Checkout coming soon — included for new accounts now.",
+    badge: "Coming soon",
+    cta: "Get started",
     ctaHref: "/login",
     accent: false,
     features: {
@@ -62,12 +65,13 @@ const plans = [
   },
   {
     name: "Unicorn",
+    comingSoon: true,
     priceMonthly: "$99.99",
     priceAnnual: "$79.99",
     period: "/month",
     description: "For teams that run decisions on consensus and board quorum.",
-    badge: "Most popular",
-    cta: "Start 14-day trial",
+    badge: "Coming soon",
+    cta: "Get started",
     ctaHref: "/login",
     accent: true,
     features: {
@@ -99,7 +103,7 @@ const allFeatures = [
 const faq = [
   {
     q: "Can I change plans later?",
-    a: "Yes. Upgrade or downgrade at any time. When you downgrade, your current feature access continues until the end of the billing period.",
+    a: "Yes. When paid checkout launches, you will be able to move between tiers. Today, new accounts receive Plus-level limits while billing is not yet enabled.",
   },
   {
     q: "What counts as a viewer?",
@@ -122,8 +126,8 @@ const faq = [
     a: "You do. All files and content you upload remain yours. You can export or permanently delete all your data at any time from your workspace settings.",
   },
   {
-    q: "Is there a free trial for Plus and Unicorn?",
-    a: "Yes — both paid plans start with a 14-day trial. No credit card required to start.",
+    q: "When can I pay for Plus or Unicorn?",
+    a: "Paid plans are coming soon. Until then, new accounts are on Plus limits at no charge so you can use Token without a credit card.",
   },
 ];
 
@@ -155,7 +159,8 @@ export default function PricingPage() {
             Simple, honest pricing.
           </h1>
           <p className="mt-4 text-lg text-[var(--tkn-text-support)]">
-            Start free. No credit card. Upgrade when you need more.
+            New accounts get Plus limits today. Paid checkout for Plus and Unicorn is coming soon — no credit card
+            required.
           </p>
 
           {/* Trust row */}
@@ -170,7 +175,7 @@ export default function PricingPage() {
             </div>
             <div className="flex items-center gap-1.5">
               <Check className="h-4 w-4 text-[var(--color-accent)]" />
-              <span className="text-xs text-[var(--tkn-text-support)]">GDPR compliant</span>
+              <span className="text-xs text-[var(--tkn-text-support)]">You control your data</span>
             </div>
           </div>
         </div>
@@ -201,16 +206,36 @@ export default function PricingPage() {
 
               <div>
                 <div className="label-title">{plan.name}</div>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-4xl font-bold tracking-tight text-foreground">
-                    {plan.priceMonthly}
-                  </span>
-                  <span className="text-sm text-[var(--tkn-text-support)]">{plan.period}</span>
-                </div>
-                {plan.priceAnnual !== plan.priceMonthly && (
-                  <div className="mt-0.5 text-xs text-[var(--tkn-text-fine)]">
-                    {plan.priceAnnual}/mo billed annually
+                {plan.comingSoon ? (
+                  <div className="mt-3">
+                    <p className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                      Coming soon
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--tkn-text-fine)]">
+                      Planned from {plan.priceMonthly}
+                      {plan.period}
+                      {plan.priceAnnual !== plan.priceMonthly ? (
+                        <span>
+                          {" "}
+                          · {plan.priceAnnual}/mo billed annually
+                        </span>
+                      ) : null}
+                    </p>
                   </div>
+                ) : (
+                  <>
+                    <div className="mt-3 flex items-baseline gap-1">
+                      <span className="text-4xl font-bold tracking-tight text-foreground">
+                        {plan.priceMonthly}
+                      </span>
+                      <span className="text-sm text-[var(--tkn-text-support)]">{plan.period}</span>
+                    </div>
+                    {plan.priceAnnual !== plan.priceMonthly && (
+                      <div className="mt-0.5 text-xs text-[var(--tkn-text-fine)]">
+                        {plan.priceAnnual}/mo billed annually
+                      </div>
+                    )}
+                  </>
                 )}
                 <p className="mt-2 text-sm text-[var(--tkn-text-support)]">{plan.description}</p>
               </div>
@@ -305,10 +330,17 @@ export default function PricingPage() {
                   <td className="py-3 pl-5 text-foreground">Monthly price</td>
                   {plans.map((plan) => (
                     <td key={plan.name} className="py-3 text-center text-foreground">
-                      {plan.priceMonthly}
-                      <span className="font-normal text-[var(--tkn-text-fine)]">
-                        {" "}{plan.period}
-                      </span>
+                      {plan.comingSoon ? (
+                        <span className="text-sm font-medium text-[var(--tkn-text-support)]">Coming soon</span>
+                      ) : (
+                        <>
+                          {plan.priceMonthly}
+                          <span className="font-normal text-[var(--tkn-text-fine)]">
+                            {" "}
+                            {plan.period}
+                          </span>
+                        </>
+                      )}
                     </td>
                   ))}
                 </tr>

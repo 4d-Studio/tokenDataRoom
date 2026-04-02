@@ -164,11 +164,15 @@ export const verifyLoginCode = async (email: string, code: string) => {
       email: normalizedEmail,
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
-      plan: "free",
+      plan: "plus",
     };
     state.users.push(user);
   } else {
     user.lastLoginAt = new Date().toISOString();
+    /* Launch: everyone on legacy Free gets Plus limits on next sign-in. */
+    if (user.plan === "free") {
+      user.plan = "plus";
+    }
   }
 
   await writeState(state);

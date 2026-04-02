@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Lock, ShieldCheck } from "lucide-react";
+import { ArrowRight, Lock, ShieldCheck } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 import { BrandMark } from "@/components/dataroom/brand-mark";
 import { ProductPageIntro } from "@/components/dataroom/product-ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
 
 const useCases = [
   { title: "Due diligence", description: "Share sensitive documents with advisors and investors under NDA protection." },
@@ -18,18 +19,38 @@ const trustItems = [
   { icon: ShieldCheck, label: "Client-side encryption" },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const user = await getCurrentUser();
+  const workspace = user ? await getCurrentWorkspace() : null;
+  const isAuthed = Boolean(user);
+  const hasWorkspace = Boolean(workspace);
+
   return (
     <main className="page-shell">
       <header className="page-header">
         <BrandMark />
-        <nav className="tkn-support flex items-center gap-3">
+        <nav className="tkn-support flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Button asChild variant="ghost" size="sm">
             <Link href="/pricing">Pricing</Link>
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/login">Login</Link>
-          </Button>
+          {hasWorkspace ? (
+            <>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/workspace">Workspace</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/new">New room</Link>
+              </Button>
+            </>
+          ) : isAuthed ? (
+            <Button asChild size="sm">
+              <Link href="/onboarding">Continue setup</Link>
+            </Button>
+          ) : (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/login">Login</Link>
+            </Button>
+          )}
         </nav>
       </header>
 
@@ -57,13 +78,35 @@ export default function Home() {
           </div>
 
           <div className="mt-6">
-            <Button asChild size="lg" className="px-4">
-              <Link href="/login">
-                Create your first room
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <p className="tkn-fine mt-2">Free to start. No credit card.</p>
+            {hasWorkspace ? (
+              <Button asChild size="lg" className="px-4">
+                <Link href="/workspace">
+                  Go to workspace
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            ) : isAuthed ? (
+              <Button asChild size="lg" className="px-4">
+                <Link href="/onboarding">
+                  Finish workspace setup
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild size="lg" className="px-4">
+                <Link href="/login">
+                  Create your first room
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            )}
+            <p className="tkn-fine mt-2">
+              {hasWorkspace
+                ? "You are signed in — open your data rooms or create a new one."
+                : isAuthed
+                  ? "Complete onboarding to create your first room."
+                  : "Free to start. No credit card."}
+            </p>
           </div>
         </div>
       </section>
@@ -104,7 +147,7 @@ export default function Home() {
               Share the private link
             </p>
             <p className="text-sm text-[var(--tkn-text-support)]">
-              Send the room link to your recipient. They'll see only what you allow.
+              Send the room link to your recipient. They will see only what you allow.
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -123,14 +166,34 @@ export default function Home() {
       <section className="mt-10 max-w-4xl rounded-2xl border border-border bg-white p-6 text-center">
         <p className="text-sm font-semibold text-foreground">Ready to get started?</p>
         <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
-          Free forever on the starter plan. No credit card required.
+          {hasWorkspace
+            ? "Jump back into your workspace or create another room."
+            : isAuthed
+              ? "Finish setup to create your first secure room."
+              : "New accounts include Plus limits while paid checkout rolls out. No credit card required."}
         </p>
-        <Button asChild size="lg" className="mt-4">
-          <Link href="/login">
-            Create a secure room
-            <ArrowRight data-icon="inline-end" />
-          </Link>
-        </Button>
+        {hasWorkspace ? (
+          <Button asChild size="lg" className="mt-4">
+            <Link href="/workspace">
+              Open workspace
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        ) : isAuthed ? (
+          <Button asChild size="lg" className="mt-4">
+            <Link href="/onboarding">
+              Continue setup
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        ) : (
+          <Button asChild size="lg" className="mt-4">
+            <Link href="/login">
+              Create a secure room
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        )}
       </section>
 
       {/* Footer */}

@@ -57,6 +57,7 @@ export default async function WorkspacePage() {
     <AuthenticatedShell
       current="workspace"
       userEmail={user.email}
+      userPlan={user.plan}
       workspaceName={workspace.name}
       workspaceCompany={workspace.companyName}
       workspaceLogoUrl={workspace.logoUrl}

@@ -441,7 +441,7 @@ export const CreateVaultForm = ({
           Your Free plan allows 3 rooms. Upgrade to create more.
         </p>
         <Button asChild size="sm" className="mt-4">
-          <Link href="/pricing">See Plus plan — $9.99/month</Link>
+          <Link href="/pricing">View plans</Link>
         </Button>
       </Card>
     );

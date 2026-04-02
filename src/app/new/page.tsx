@@ -39,6 +39,7 @@ export default async function NewVaultPage() {
     <AuthenticatedShell
       current="new"
       userEmail={user.email}
+      userPlan={user.plan}
       workspaceName={workspace.name}
       workspaceCompany={workspace.companyName}
       workspaceLogoUrl={workspace.logoUrl}

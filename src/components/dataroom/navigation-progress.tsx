@@ -50,7 +50,7 @@ function NavigationProgressInner() {
     if (routeKey === prevRouteKey.current) return;
     prevRouteKey.current = routeKey;
 
-    let idleAfterFinish: ReturnType<typeof setTimeout> | undefined;
+    let idleAfterFinish: number | undefined;
 
     if (phaseRef.current === "loading") {
       const startFinish = window.setTimeout(() => {
@@ -58,13 +58,13 @@ function NavigationProgressInner() {
         idleAfterFinish = window.setTimeout(() => setPhase("idle"), 380);
       }, 0);
       return () => {
-        window.clearTimeout(startFinish);
-        if (idleAfterFinish) window.clearTimeout(idleAfterFinish);
+        clearTimeout(startFinish);
+        if (idleAfterFinish !== undefined) clearTimeout(idleAfterFinish);
       };
     }
 
     const reset = window.setTimeout(() => setPhase("idle"), 0);
-    return () => window.clearTimeout(reset);
+    return () => clearTimeout(reset);
   }, [routeKey]);
 
   useEffect(() => {

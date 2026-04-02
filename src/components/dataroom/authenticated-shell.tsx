@@ -31,11 +31,27 @@ import {
 } from "@/components/ui/sidebar";
 import type { WorkspaceActivityRow } from "@/components/dataroom/workspace-activity-feed";
 import { ActivityFeedList } from "@/components/dataroom/workspace-activity-feed";
+import type { TknUser } from "@/lib/dataroom/auth-store";
+import { Badge } from "@/components/ui/badge";
+
+import { cn } from "@/lib/utils";
+
+function planNavLabel(plan: TknUser["plan"]): string {
+  switch (plan) {
+    case "free":
+      return "Starter";
+    case "plus":
+      return "Plus";
+    case "unicorn":
+      return "Unicorn";
+  }
+}
 
 type AuthenticatedShellProps = {
   children: ReactNode;
   current: "workspace" | "new" | "settings" | "agent";
   userEmail: string;
+  userPlan: TknUser["plan"];
   workspaceName?: string;
   workspaceCompany?: string;
   workspaceLogoUrl?: string;
@@ -63,7 +79,7 @@ const navItems = [
   },
   {
     href: "/pricing",
-    label: "Upgrade plan",
+    label: "Plans",
     icon: CreditCard,
     key: "pricing",
   },
@@ -73,6 +89,7 @@ export function AuthenticatedShell({
   children,
   current,
   userEmail,
+  userPlan,
   workspaceName,
   workspaceCompany,
   workspaceLogoUrl,
@@ -104,6 +121,14 @@ export function AuthenticatedShell({
               ) : null}
             </div>
           ) : null}
+          <div className="px-1 pt-1">
+            <Badge
+              variant="secondary"
+              className="rounded-md px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.06em] text-sidebar-foreground"
+            >
+              {planNavLabel(userPlan)} plan
+            </Badge>
+          </div>
         </SidebarHeader>
 
         <SidebarSeparator />
@@ -152,7 +177,16 @@ export function AuthenticatedShell({
 
       <SidebarInset className="bg-transparent shadow-none">
         {activityEvents ? (
-          <header className="flex h-12 items-center justify-end border-b border-border px-4">
+          <header className="flex h-12 items-center justify-end gap-3 border-b border-border px-4">
+            <Badge
+              variant="outline"
+              className={cn(
+                "mr-auto hidden sm:inline-flex",
+                "rounded-md px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.06em]",
+              )}
+            >
+              {planNavLabel(userPlan)}
+            </Badge>
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
