@@ -4,9 +4,9 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# OpenDataRoom
+# Token.fyi
 
-OpenDataRoom is a lightweight secure-sharing app for sharing sensitive documents through encrypted, revocable rooms.
+Token.fyi is a lightweight secure-sharing app for sharing sensitive documents through encrypted, revocable rooms.
 
 ## Read this first
 
@@ -58,7 +58,8 @@ Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain include
 - `src/lib/dataroom/blob-storage.ts` — Vercel Blob vault storage
 - `src/lib/dataroom/local-storage.ts` — Local filesystem vault storage (`.dataroom/` dir)
 - `src/lib/dataroom/auth.ts` — high-level auth helpers
-- `src/lib/dataroom/session.ts` — session cookie management (ODR_APP_SECRET)
+- `src/lib/dataroom/postgres-auth-state.ts` — optional Postgres persistence for auth/workspace index (`DATABASE_URL`)
+- `src/lib/dataroom/session.ts` — session cookie management (TKN_APP_SECRET)
 - `src/lib/dataroom/storage.ts` — getVaultStorage() factory
 - `src/lib/dataroom/magic-link.ts` — SendGrid OTP email delivery
 - `src/lib/dataroom/access.ts` — vault access token management
@@ -72,16 +73,17 @@ Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain include
 
 | Variable | Required | Description |
 |---|---|---|
-| `ODR_APP_SECRET` | Yes (prod) | HMAC signing secret for session and access cookies |
+| `TKN_APP_SECRET` | Yes (prod) | HMAC signing secret for session and access cookies |
+| `DATABASE_URL` | No | PostgreSQL URL. Also accepts `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `RAILWAY_DATABASE_URL`. When any is set, auth/workspace index persists in `tkn_auth_state` instead of `.dataroom/auth/state.json` |
 | `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token. Without it, uses local `.dataroom/` filesystem |
 | `SENDGRID_API_KEY` | No | SendGrid API key for email OTP delivery |
 | `SENDGRID_FROM_EMAIL` | No | Verified sender email for OTP codes |
 
 ## Naming conventions
 
-- **User type**: `OdrUser` (exported from auth-store.ts)
+- **User type**: `TknUser` (exported from auth-store.ts)
 - **Plan type**: `"free" | "plus" | "unicorn"`
-- **CSS variables**: `--odr-*` prefix (e.g., `--odr-panel-border`, `--odr-text-support`)
-- **Cookie names**: `odr_session`, `odr_access_`, `odr_ws_nda_`
+- **CSS variables**: `--tkn-*` prefix (e.g., `--tkn-panel-border`, `--tkn-text-support`)
+- **Cookie names**: `tkn_session`, `tkn_access_`, `tkn_ws_nda_`
 - **Data directory**: `.dataroom/` (gitignored)
 - **Encrypted file extension**: `.filmia` (legacy — for backward compat, do not change)
