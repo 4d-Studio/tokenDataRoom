@@ -1,5 +1,5 @@
 import { formatBytes } from "@/lib/dataroom/helpers";
-import type { VaultRecord } from "@/lib/dataroom/types";
+import { vaultHasEncryptedDocument, type VaultRecord } from "@/lib/dataroom/types";
 
 export type RoomFsNode = {
   id: string;
@@ -43,13 +43,14 @@ export function formatMimeLabel(mimeType: string) {
 }
 
 export function summarizeRoomData(metadata: VaultRecord) {
+  const hasDoc = vaultHasEncryptedDocument(metadata);
   const tree = buildRoomFileTree(metadata);
   const primary = tree.children?.[0];
   return {
     tree,
-    fileCount: tree.children?.length ?? 0,
-    totalBytes: primary?.sizeBytes ?? metadata.fileSize,
-    totalSizeLabel: formatBytes(metadata.fileSize),
-    mimeLabel: formatMimeLabel(metadata.mimeType),
+    fileCount: hasDoc ? (tree.children?.length ?? 0) : 0,
+    totalBytes: hasDoc ? (primary?.sizeBytes ?? metadata.fileSize) : 0,
+    totalSizeLabel: hasDoc ? formatBytes(metadata.fileSize) : "—",
+    mimeLabel: hasDoc ? formatMimeLabel(metadata.mimeType) : "Not uploaded yet",
   };
 }

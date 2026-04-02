@@ -349,6 +349,22 @@ export const updateWorkspaceRoomStatus = async (
   }
 };
 
+export const updateWorkspaceRoomFile = async (
+  workspaceId: string,
+  roomId: string,
+  patch: { fileName: string },
+) => {
+  const state = await readState();
+  const room = state.rooms.find(
+    (entry) => entry.workspaceId === workspaceId && entry.id === roomId,
+  );
+
+  if (room) {
+    room.fileName = patch.fileName;
+    await writeState(state);
+  }
+};
+
 export const deleteUserAccount = async (userId: string) => {
   const state = await readState();
   const user = state.users.find((u) => u.id === userId);

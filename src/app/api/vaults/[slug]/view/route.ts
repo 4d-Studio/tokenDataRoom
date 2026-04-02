@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { accessCookieName, verifyAccessToken } from "@/lib/dataroom/access";
+import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
 import { getClientIp } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { createEvent } from "@/lib/dataroom/types";
+import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,9 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
@@ -21,10 +25,7 @@ export async function POST(
   }
 
   const cookieStore = await cookies();
-  const access = verifyAccessToken(
-    cookieStore.get(accessCookieName(slug))?.value,
-    slug,
-  );
+  const access = readVaultAccessFromCookies(cookieStore, slug);
 
   await storage.appendEvent(
     slug,

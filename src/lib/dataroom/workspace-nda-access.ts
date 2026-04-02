@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { getAppSecret, requireAppSecretForTokens } from "@/lib/dataroom/app-secret";
+
 const COOKIE_PREFIX = "tkn_ws_nda_";
 const WORKSPACE_NDA_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 
@@ -15,23 +17,19 @@ export type WorkspaceNdaPayload = {
   acceptedAt: string;
 };
 
-const getSecret = () =>
-  process.env.TKN_APP_SECRET ??
-  process.env.NEXTAUTH_SECRET ??
-  "token-local-dev-secret";
-
 const encode = (value: string) => Buffer.from(value).toString("base64url");
 const decode = (value: string) => Buffer.from(value, "base64url").toString("utf8");
 
-const sign = (value: string) =>
-  createHmac("sha256", getSecret()).update(value).digest("base64url");
+const sign = (secret: string, value: string) =>
+  createHmac("sha256", secret).update(value).digest("base64url");
 
 export const workspaceNdaCookieName = (workspaceId: string) =>
   `${COOKIE_PREFIX}${workspaceId}`;
 
 export const createWorkspaceNdaToken = (payload: WorkspaceNdaPayload) => {
+  const secret = requireAppSecretForTokens();
   const body = encode(JSON.stringify(payload));
-  const signature = sign(body);
+  const signature = sign(secret, body);
   return `${body}.${signature}`;
 };
 
@@ -41,11 +39,14 @@ export const verifyWorkspaceNdaToken = (
 ) => {
   if (!token) return null;
 
+  const secret = getAppSecret();
+  if (!secret) return null;
+
   const [body, signature] = token.split(".");
 
   if (!body || !signature) return null;
 
-  const expectedSignature = sign(body);
+  const expectedSignature = sign(secret, body);
   const signatureBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expectedSignature);
 

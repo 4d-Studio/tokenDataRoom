@@ -26,6 +26,7 @@ import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import type { VaultAcceptanceRecord, VaultRecord } from "@/lib/dataroom/types";
 
 type Props = {
+  hasDocument: boolean;
   metadata: VaultRecord;
   initialAcceptance: VaultAcceptanceRecord | null;
   initialAccessGranted: boolean;
@@ -50,6 +51,7 @@ type Props = {
 };
 
 export function MobileShareViewer({
+  hasDocument,
   metadata,
   initialAcceptance,
   initialAccessGranted,
@@ -83,9 +85,10 @@ export function MobileShareViewer({
 
   const isNdaDone = !metadata.requiresNda || initialAccessGranted;
   const previewable =
-    metadata.mimeType.startsWith("image/") ||
-    metadata.mimeType === "application/pdf" ||
-    metadata.mimeType.startsWith("text/");
+    hasDocument &&
+    (metadata.mimeType.startsWith("image/") ||
+      metadata.mimeType === "application/pdf" ||
+      metadata.mimeType.startsWith("text/"));
 
   const handleUnlock = useCallback(async () => {
     if (!password) return;
@@ -115,9 +118,11 @@ export function MobileShareViewer({
             <FileText className="size-4 text-white/70" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">{metadata.fileName}</p>
+            <p className="truncate text-sm font-semibold text-white">
+              {hasDocument ? metadata.fileName : "No document yet"}
+            </p>
             <p className="text-xs text-white/40">
-              {formatBytes(metadata.fileSize)}
+              {hasDocument ? formatBytes(metadata.fileSize) : "Waiting for sender"}
             </p>
           </div>
         </div>
@@ -139,7 +144,19 @@ export function MobileShareViewer({
 
       {/* ── Document viewport ── */}
       <div className="relative flex-1 overflow-hidden">
-        {decrypted ? (
+        {!hasDocument ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+            <Clock className="size-10 text-white/30" />
+            <p className="text-sm font-medium text-white/80">No file in this room yet</p>
+            <p className="text-xs text-white/45">
+              The sender will add a document from owner controls. Pull up the sheet to complete the
+              NDA if required.
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
+              Open room steps
+            </Button>
+          </div>
+        ) : decrypted ? (
           <MobileDocumentView
             src={objectUrl}
             mimeType={metadata.mimeType}
@@ -272,7 +289,20 @@ export function MobileShareViewer({
               )}
 
               {/* Unlock card */}
-              {isNdaDone && !decrypted && (
+              {isNdaDone && !decrypted && !hasDocument && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Clock className="size-4 text-amber-700" />
+                    <span className="text-sm font-semibold text-amber-950">Document not ready</span>
+                  </div>
+                  <p className="text-sm text-amber-900/80">
+                    The sender hasn&apos;t uploaded a file yet. Refresh after they add one from
+                    owner controls.
+                  </p>
+                </div>
+              )}
+
+              {isNdaDone && !decrypted && hasDocument && (
                 <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <div className="flex size-7 items-center justify-center rounded-full bg-black/10">
@@ -330,10 +360,12 @@ export function MobileShareViewer({
                     <p className="mt-0.5 text-xs text-neutral-400">
                       {decrypted
                         ? "Scroll to view the document below."
-                        : "Enter the password to view the document."}
+                        : hasDocument
+                          ? "Enter the password to view the document."
+                          : "The sender still needs to upload a file."}
                     </p>
                   </div>
-                  {!decrypted && (
+                  {!decrypted && hasDocument ? (
                     <Button
                       variant="outline"
                       onClick={() => setSheetOpen(false)}
@@ -341,7 +373,7 @@ export function MobileShareViewer({
                     >
                       Enter password
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               )}
 

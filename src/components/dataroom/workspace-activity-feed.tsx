@@ -9,6 +9,7 @@ import {
   LayoutPanelTop,
   Lock,
   RefreshCw,
+  Upload,
 } from "lucide-react";
 
 import {
@@ -70,6 +71,12 @@ const EVENT_CONFIG: Record<
     color: "text-[var(--color-accent)]",
     label: "Reactivated",
     action: "reactivated",
+  },
+  document_attached: {
+    icon: Upload,
+    color: "text-[var(--color-accent)]",
+    label: "File added",
+    action: "uploaded a document to",
   },
 };
 

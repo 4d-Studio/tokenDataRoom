@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { getAppSecret, requireAppSecretForTokens } from "@/lib/dataroom/app-secret";
+
 export type UserSession = {
   userId: string;
   email: string;
@@ -8,16 +10,11 @@ export type UserSession = {
 const SESSION_COOKIE_NAME = "tkn_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 
-const getSecret = () =>
-  process.env.TKN_APP_SECRET ??
-  process.env.NEXTAUTH_SECRET ??
-  "token-local-dev-secret";
-
 const encode = (value: string) => Buffer.from(value).toString("base64url");
 const decode = (value: string) => Buffer.from(value, "base64url").toString("utf8");
 
-const sign = (value: string) =>
-  createHmac("sha256", getSecret()).update(value).digest("base64url");
+const sign = (secret: string, value: string) =>
+  createHmac("sha256", secret).update(value).digest("base64url");
 
 export const sessionCookieName = SESSION_COOKIE_NAME;
 
@@ -30,12 +27,18 @@ export const sessionCookieOptions = {
 };
 
 export const createSessionToken = (payload: UserSession) => {
+  const secret = requireAppSecretForTokens();
   const body = encode(JSON.stringify(payload));
-  return `${body}.${sign(body)}`;
+  return `${body}.${sign(secret, body)}`;
 };
 
 export const verifySessionToken = (token: string | undefined) => {
   if (!token) {
+    return null;
+  }
+
+  const secret = getAppSecret();
+  if (!secret) {
     return null;
   }
 
@@ -45,7 +48,7 @@ export const verifySessionToken = (token: string | undefined) => {
     return null;
   }
 
-  const expected = sign(body);
+  const expected = sign(secret, body);
   const signatureBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expected);
 

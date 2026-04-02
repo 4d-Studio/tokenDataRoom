@@ -10,7 +10,7 @@ import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
 
 export const metadata: Metadata = {
   title: "New room",
-  description: "Create a new encrypted Token dataroom with optional NDA and access controls.",
+  description: "Set up a Token room with NDA and password, then add documents from owner controls.",
 };
 
 const CreateVaultForm = dynamic(

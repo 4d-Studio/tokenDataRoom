@@ -20,10 +20,8 @@ import {
   ArrowRight,
   CheckCircle2,
   CheckSquare,
-  FileText,
   Lock,
   ShieldCheck,
-  Upload,
   Users,
 } from "lucide-react";
 
@@ -33,8 +31,7 @@ import {
   productFieldClass,
   productTextareaClass,
 } from "@/components/dataroom/product-ui";
-import { encryptFile } from "@/lib/dataroom/client-crypto";
-import { DEFAULT_EXPIRATION_DAYS, FILE_SIZE_LIMIT_BYTES } from "@/lib/dataroom/types";
+import { DEFAULT_EXPIRATION_DAYS } from "@/lib/dataroom/types";
 
 type CreationResult = {
   slug: string;
@@ -49,9 +46,8 @@ const EXPIRATION_OPTIONS = [
 ];
 
 const STEPS = [
-  { id: "upload", label: "Upload", icon: Upload },
-  { id: "protect", label: "Protect", icon: Lock },
-  { id: "details", label: "Details", icon: Users },
+  { id: "protect", label: "Room & password", icon: Lock },
+  { id: "details", label: "Details & NDA", icon: Users },
 ];
 
 // ─── Step indicator ─────────────────────────────────────────────────────────────
@@ -92,51 +88,7 @@ function StepIndicator({ current, completed }: { current: number; completed: Set
   );
 }
 
-// ─── Step 1: Upload ────────────────────────────────────────────────────────────
-function UploadStep({
-  file,
-  onFileChange,
-}: {
-  file: File | null;
-  onFileChange: (f: File | null) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Add a document</h2>
-        <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
-          Upload the file you want to share. PDFs, decks, images, and contracts all work.
-        </p>
-      </div>
-
-      <label className="upload-zone flex h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border bg-muted/30 text-center transition-colors hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5">
-        <Upload className="size-8 text-[var(--tkn-text-fine)]" />
-        <div>
-          <p className="text-sm font-medium text-[var(--color-foreground)]">
-            {file ? file.name : "Drop your file here"}
-          </p>
-          {file && (
-            <p className="mt-0.5 text-xs text-[var(--tkn-text-support)]">
-              {(file.size / 1024 / 1024).toFixed(1)} MB
-            </p>
-          )}
-          {!file && (
-            <p className="mt-0.5 text-xs text-[var(--tkn-text-support)]">
-              PDF, deck, image — up to 25 MB
-            </p>
-          )}
-        </div>
-        <input
-          className="sr-only"
-          type="file"
-          onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-        />
-      </label>
-    </div>
-  );
-}
-
-// ─── Step 2: Protect ──────────────────────────────────────────────────────────
+// ─── Step 1: Protect ──────────────────────────────────────────────────────────
 function ProtectStep({
   title,
   password,
@@ -151,9 +103,10 @@ function ProtectStep({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Protect the room</h2>
+        <h2 className="text-lg font-semibold text-foreground">Room title and password</h2>
         <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
-          Give the room a title and set a password. Only recipients with the password can open the file.
+          Name the room and set a password. You&apos;ll use the same password when you add files from
+          owner controls. Recipients need it to decrypt the document.
         </p>
       </div>
 
@@ -187,15 +140,15 @@ function ProtectStep({
       <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/20 p-4">
         <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[var(--color-accent)]" />
         <p className="text-sm text-[var(--tkn-text-support)]">
-          Your file is encrypted with AES-256 in this browser before it reaches our servers.
-          We never see the password or the plaintext file.
+          When you add a document from owner controls, it is encrypted with AES-256 in your browser
+          before upload. We never see the password or the plaintext file.
         </p>
       </div>
     </div>
   );
 }
 
-// ─── Step 3: Details ─────────────────────────────────────────────────────────
+// ─── Step 2: Details ─────────────────────────────────────────────────────────
 function DetailsStep({
   senderName,
   senderCompany,
@@ -349,7 +302,6 @@ export const CreateVaultForm = ({
 }) => {
   const [step, setStep] = useState(0);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
-  const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [password, setPassword] = useState("");
   const [senderName, setSenderName] = useState(defaultSenderName);
@@ -365,8 +317,7 @@ export const CreateVaultForm = ({
   const isFree = userPlan === "free" && currentRoomCount >= 3;
 
   const canNext = () => {
-    if (step === 0) return file !== null;
-    if (step === 1) return title.trim().length > 0 && password.length >= 8;
+    if (step === 0) return title.trim().length > 0 && password.length >= 8;
     return true;
   };
 
@@ -381,8 +332,6 @@ export const CreateVaultForm = ({
   };
 
   const submit = async () => {
-    if (!file) return;
-
     setError("");
     const effSenderName = senderName.trim() || defaultSenderName || "Token workspace";
     const effSenderCompany = senderCompany.trim() || defaultSenderCompany;
@@ -390,15 +339,7 @@ export const CreateVaultForm = ({
 
     startTransition(async () => {
       try {
-        const encryptionResult = await encryptFile(file, password);
-
         const formData = new FormData();
-        formData.append(
-          "encryptedFile",
-          new File([encryptionResult.encryptedBytes], `${file.name}.filmia`, {
-            type: "application/octet-stream",
-          }),
-        );
         formData.append(
           "metadata",
           JSON.stringify({
@@ -409,12 +350,6 @@ export const CreateVaultForm = ({
             requiresNda,
             ndaText: effNdaText,
             expiresInDays,
-            fileName: file.name,
-            mimeType: file.type || "application/octet-stream",
-            fileSize: file.size,
-            salt: encryptionResult.salt,
-            iv: encryptionResult.iv,
-            pbkdf2Iterations: encryptionResult.pbkdf2Iterations,
           }),
         );
 
@@ -457,7 +392,8 @@ export const CreateVaultForm = ({
             <div>
               <p className="font-semibold text-foreground">Room created</p>
               <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
-                Share the link and password separately. Keep the management link private.
+                Open owner controls to drag and drop your document (use the same room password).
+                Share the recipient link and password separately. Keep the management link private.
               </p>
             </div>
           </div>
@@ -481,8 +417,8 @@ export const CreateVaultForm = ({
             <code className="flex-1 truncate text-sm">{result.manageUrl}</code>
             <CopyButton value={result.manageUrl} />
           </div>
-          <Button asChild variant="outline" size="sm" className="mt-3">
-            <Link href={result.manageUrl}>Open room controls →</Link>
+          <Button asChild size="sm" className="mt-3">
+            <Link href={result.manageUrl}>Add files (owner controls) →</Link>
           </Button>
         </Card>
       </div>
@@ -496,8 +432,7 @@ export const CreateVaultForm = ({
 
       <Card className="rounded-2xl border border-border bg-white">
         <CardContent className="p-6">
-          {step === 0 && <UploadStep file={file} onFileChange={setFile} />}
-          {step === 1 && (
+          {step === 0 && (
             <ProtectStep
               title={title}
               password={password}
@@ -505,7 +440,7 @@ export const CreateVaultForm = ({
               onPasswordChange={setPassword}
             />
           )}
-          {step === 2 && (
+          {step === 1 && (
             <DetailsStep
               senderName={senderName}
               senderCompany={senderCompany}
@@ -556,9 +491,10 @@ export const CreateVaultForm = ({
           )}
         </div>
 
-        {step < STEPS.length - 1 && (
+        {step < STEPS.length - 1 ? (
           <CreateRoomPreviewSheet
-            fileName={file?.name ?? null}
+            fileName={null}
+            documentLater
             title={title}
             senderName={senderName}
             senderCompany={senderCompany}
@@ -568,7 +504,7 @@ export const CreateVaultForm = ({
             defaultNdaText={defaultNdaText}
             ndaCustomized={!!ndaText}
           />
-        )}
+        ) : null}
       </div>
     </div>
   );

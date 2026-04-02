@@ -28,19 +28,13 @@ const readJsonBlob = async <T>(pathname: string): Promise<T | null> => {
 };
 
 export class BlobVaultStorage {
-  async saveVault(metadata: VaultRecord, encryptedFile: Buffer) {
-    await Promise.all([
+  async saveVault(metadata: VaultRecord, encryptedFile: Buffer | null) {
+    const writes: Promise<unknown>[] = [
       put(metadataPath(metadata.slug), JSON.stringify(metadata), {
         access: "private",
         allowOverwrite: true,
         addRandomSuffix: false,
         contentType: "application/json",
-      }),
-      put(payloadPath(metadata.slug), encryptedFile, {
-        access: "private",
-        allowOverwrite: true,
-        addRandomSuffix: false,
-        contentType: "application/octet-stream",
       }),
       put(eventsPath(metadata.slug), JSON.stringify([]), {
         access: "private",
@@ -54,7 +48,27 @@ export class BlobVaultStorage {
         addRandomSuffix: false,
         contentType: "application/json",
       }),
-    ]);
+    ];
+    if (encryptedFile) {
+      writes.push(
+        put(payloadPath(metadata.slug), encryptedFile, {
+          access: "private",
+          allowOverwrite: true,
+          addRandomSuffix: false,
+          contentType: "application/octet-stream",
+        }),
+      );
+    }
+    await Promise.all(writes);
+  }
+
+  async putEncryptedPayload(slug: string, encryptedFile: Buffer) {
+    await put(payloadPath(slug), encryptedFile, {
+      access: "private",
+      allowOverwrite: true,
+      addRandomSuffix: false,
+      contentType: "application/octet-stream",
+    });
   }
 
   async getVaultMetadata(slug: string) {

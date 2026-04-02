@@ -56,9 +56,12 @@ Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain include
 - `src/lib/dataroom/auth-store.ts` — user/workspace state, PLAN_LIMITS, deleteUserAccount()
 - `src/lib/dataroom/client-crypto.ts` — AES-256-GCM encryption (real, Web Crypto API)
 - `src/lib/dataroom/blob-storage.ts` — Vercel Blob vault storage
+- `src/lib/dataroom/s3-vault-storage.ts` — S3-compatible vault storage (Railway Bucket, etc.)
 - `src/lib/dataroom/local-storage.ts` — Local filesystem vault storage (`.dataroom/` dir)
 - `src/lib/dataroom/auth.ts` — high-level auth helpers
-- `src/lib/dataroom/postgres-auth-state.ts` — optional Postgres persistence for auth/workspace index (`DATABASE_URL`)
+- `src/lib/dataroom/postgres-auth-state.ts` — Postgres pool + `tkn_auth_state` reads/writes (`DATABASE_URL`)
+- `migrations/*.sql` — schema (applied by `pnpm db:migrate` / Railway release)
+- `scripts/db-migrate.mjs` — migration runner
 - `src/lib/dataroom/session.ts` — session cookie management (TKN_APP_SECRET)
 - `src/lib/dataroom/storage.ts` — getVaultStorage() factory
 - `src/lib/dataroom/magic-link.ts` — SendGrid OTP email delivery
@@ -75,8 +78,10 @@ Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain include
 |---|---|---|
 | `TKN_APP_SECRET` | Yes (prod) | HMAC signing secret for session and access cookies |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL (no trailing slash) for `metadataBase`, Open Graph, and absolute links — e.g. `https://token.fyi` or your Railway hostname |
-| `DATABASE_URL` | No | PostgreSQL URL. Also accepts `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `RAILWAY_DATABASE_URL`. When any is set, auth/workspace index persists in `tkn_auth_state` instead of `.dataroom/auth/state.json` |
-| `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token. Without it, uses local `.dataroom/` filesystem |
+| `DATABASE_URL` | No | PostgreSQL URL. Also accepts `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `RAILWAY_DATABASE_URL`. When set, auth/workspace index uses table `public.tkn_auth_state` (create with `pnpm db:migrate`; Railway `releaseCommand` runs this). |
+| `BLOB_READ_WRITE_TOKEN` | No | Optional Vercel Blob. If set, vault files use Blob (highest priority). |
+| Railway Bucket | No | Reference `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `ENDPOINT`, `REGION` from a Railway Storage Bucket onto the app service — S3-compatible vault storage when Blob token is unset. |
+| `TKN_LOCAL_VAULT_DIR` / `TKN_LOCAL_DATA_ROOT` | No | Local vault directory when neither Blob nor bucket env is configured. |
 | `SENDGRID_API_KEY` | No | SendGrid API key for email OTP delivery |
 | `SENDGRID_FROM_EMAIL` | No | Verified sender email for OTP codes |
 

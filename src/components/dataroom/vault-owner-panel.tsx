@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { CopyButton } from "@/components/dataroom/copy-button";
+import { VaultOwnerDocumentUpload } from "@/components/dataroom/vault-owner-document-upload";
 import {
   ProductListRow,
   ProductMetaBlock,
@@ -49,6 +50,7 @@ const EVENT_LABELS: Record<VaultEvent["type"], string> = {
   signed_nda_downloaded: "Signed NDA downloaded",
   revoked: "Access revoked",
   reactivated: "Access restored",
+  document_attached: "Document uploaded",
 };
 
 export const VaultOwnerPanel = ({
@@ -154,6 +156,18 @@ export const VaultOwnerPanel = ({
               <dd>{formatDateTime(metadata.expiresAt)}</dd>
             </div>
           </div>
+
+          <Separator className="my-4" />
+
+          <VaultOwnerDocumentUpload
+            slug={metadata.slug}
+            ownerKey={ownerKey}
+            metadata={metadata}
+            onUploaded={(next, nextEvents) => {
+              setMetadata(next);
+              setEvents(nextEvents);
+            }}
+          />
 
           <Separator className="my-4" />
 

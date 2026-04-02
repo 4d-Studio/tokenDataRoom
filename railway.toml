@@ -2,5 +2,7 @@
 nodeVersion = "20"
 
 [deploy]
+# Runs before new revision receives traffic; requires DATABASE_URL (or Railway Postgres variables).
+releaseCommand = "npm run db:migrate"
 startCommand = "npm run start"
 healthcheckPath = "/api/health"

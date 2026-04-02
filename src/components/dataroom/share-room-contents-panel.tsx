@@ -3,7 +3,7 @@
 import { CheckCircle2, FileText, Folder, Lock } from "lucide-react";
 
 import { formatMimeLabel, summarizeRoomData } from "@/lib/dataroom/room-contents";
-import type { VaultRecord } from "@/lib/dataroom/types";
+import { vaultHasEncryptedDocument, type VaultRecord } from "@/lib/dataroom/types";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import {
   Card,
@@ -37,7 +37,8 @@ export function ShareRoomContentsPanel({
   accessRequirementSummary,
 }: ShareRoomContentsPanelProps) {
   const { fileCount, totalSizeLabel, mimeLabel } = summarizeRoomData(metadata);
-  const primary = metadata.fileName;
+  const hasDoc = vaultHasEncryptedDocument(metadata);
+  const primary = hasDoc ? metadata.fileName : "No document yet";
 
   return (
     <Card id="room-contents" className="scroll-mt-24">
@@ -46,11 +47,13 @@ export function ShareRoomContentsPanel({
           <div className="space-y-1">
             <CardTitle className="text-base">Files in this room</CardTitle>
             <CardDescription>
-              One encrypted package. Unlock it in the preview column to decrypt locally.
+              {hasDoc
+                ? "One encrypted package. Unlock it in the preview column to decrypt locally."
+                : "The sender has not uploaded a file yet. The room and NDA are ready; check back after they add the document."}
             </CardDescription>
           </div>
           <Badge variant="secondary" className="shrink-0 tabular-nums">
-            {fileCount === 1 ? "1 file" : `${fileCount} files`}
+            {fileCount === 0 ? "0 files" : fileCount === 1 ? "1 file" : `${fileCount} files`}
           </Badge>
         </div>
       </CardHeader>

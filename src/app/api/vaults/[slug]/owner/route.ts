@@ -3,12 +3,13 @@ import { z } from "zod";
 
 import { deleteWorkspaceRoom, syncWorkspaceRoomStatus } from "@/lib/dataroom/auth";
 import { getVaultStorage } from "@/lib/dataroom/storage";
+import { verifyOwnerKey, isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 import { createEvent } from "@/lib/dataroom/types";
 
 export const runtime = "nodejs";
 
 const ownerActionSchema = z.object({
-  ownerKey: z.string().min(1),
+  ownerKey: z.string().min(32).max(128),
   action: z.enum(["revoke", "restore"]),
 });
 
@@ -17,6 +18,9 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
@@ -26,7 +30,7 @@ export async function POST(
 
   const parsed = ownerActionSchema.safeParse(await request.json());
 
-  if (!parsed.success || parsed.data.ownerKey !== metadata.ownerKey) {
+  if (!parsed.success || !verifyOwnerKey(parsed.data.ownerKey, metadata.ownerKey)) {
     return NextResponse.json({ error: "Owner access denied." }, { status: 403 });
   }
 
@@ -65,7 +69,7 @@ export async function POST(
 }
 
 const deleteSchema = z.object({
-  ownerKey: z.string().min(1),
+  ownerKey: z.string().min(32).max(128),
 });
 
 export async function DELETE(
@@ -73,6 +77,9 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
@@ -82,7 +89,7 @@ export async function DELETE(
 
   const parsed = deleteSchema.safeParse(await request.json());
 
-  if (!parsed.success || parsed.data.ownerKey !== metadata.ownerKey) {
+  if (!parsed.success || !verifyOwnerKey(parsed.data.ownerKey, metadata.ownerKey)) {
     return NextResponse.json({ error: "Owner access denied." }, { status: 403 });
   }
 

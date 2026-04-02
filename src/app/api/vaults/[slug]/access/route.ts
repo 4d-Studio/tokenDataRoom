@@ -4,11 +4,14 @@ import {
   accessCookieName,
   accessCookieOptions,
   createAccessToken,
+  vaultViewerBindingCookieName,
+  vaultViewerBindingCookieOptions,
 } from "@/lib/dataroom/access";
-import { createEvent, acceptanceSchema } from "@/lib/dataroom/types";
+import { createEvent, acceptanceWithViewerBindingSchema } from "@/lib/dataroom/types";
 import { getWorkspaceById } from "@/lib/dataroom/auth-store";
 import { getClientIp, isVaultExpired } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
+import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 
 export const runtime = "nodejs";
 
@@ -17,6 +20,9 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
@@ -48,7 +54,7 @@ export async function POST(
     }
   }
 
-  const parsed = acceptanceSchema.safeParse(await request.json());
+  const parsed = acceptanceWithViewerBindingSchema.safeParse(await request.json());
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -84,6 +90,7 @@ export async function POST(
     signatureName: parsed.data.signatureName,
     ndaVersion: metadata.ndaVersion,
     acceptedAt,
+    viewerBinding: parsed.data.viewerBinding,
   });
 
   await storage.appendEvent(
@@ -105,6 +112,11 @@ export async function POST(
     signedNdaUrl: `/api/vaults/${slug}/signed-nda`,
   });
   response.cookies.set(accessCookieName(slug), token, accessCookieOptions);
+  response.cookies.set(
+    vaultViewerBindingCookieName(slug),
+    parsed.data.viewerBinding,
+    vaultViewerBindingCookieOptions,
+  );
 
   return response;
 }

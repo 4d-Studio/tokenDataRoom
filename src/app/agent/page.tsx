@@ -30,7 +30,8 @@ const apiRoutes = [
   ["POST /api/auth/request-code", "Request magic code"],
   ["POST /api/auth/verify-code", "Verify code and create session cookie"],
   ["POST /api/workspaces", "Create workspace for the logged-in user"],
-  ["POST /api/vaults", "Create room and store encrypted payload"],
+  ["POST /api/vaults", "Create room (metadata only or with encrypted payload)"],
+  ["POST /api/vaults/[slug]/payload", "Owner attaches encrypted file (ownerKey + FormData)"],
   ["POST /api/vaults/[slug]/access", "Record per-room NDA acceptance and issue access cookie"],
   [
     "POST /api/vaults/[slug]/workspace-nda",

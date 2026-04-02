@@ -78,18 +78,21 @@ export const getPgPool = (): Pool => {
 
 let tableReady: Promise<void> | null = null;
 
+/** Table is created by migrations (see migrations/). Fails fast if missing. */
 const ensureTable = async () => {
   if (!tableReady) {
     const pool = getPgPool();
     tableReady = pool
-      .query(`
-        CREATE TABLE IF NOT EXISTS ${TABLE} (
-          id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-          state JSONB NOT NULL DEFAULT '{"users":[],"workspaces":[],"rooms":[],"codes":[],"workspaceGuestAcceptances":[]}'::jsonb,
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
-      `)
-      .then(() => undefined);
+      .query<{ reg: string | null }>(
+        `SELECT to_regclass('public.${TABLE}') AS reg`,
+      )
+      .then((res) => {
+        if (!res.rows[0]?.reg) {
+          throw new Error(
+            `PostgreSQL table public.${TABLE} is missing. Run migrations: pnpm db:migrate (Railway runs this in releaseCommand).`,
+          );
+        }
+      });
   }
   await tableReady;
 };

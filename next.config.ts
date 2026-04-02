@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  experimental: {
+    /** Large encrypted uploads from the create-room flow (server actions / app defaults). */
+    serverActions: {
+      bodySizeLimit: "64mb",
+    },
+  },
 };
 
 export default nextConfig;

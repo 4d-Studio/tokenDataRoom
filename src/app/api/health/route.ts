@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { isPostgresAuthConfigured, pingPostgres } from "@/lib/dataroom/postgres-auth-state";
+import {
+  getPgPool,
+  isPostgresAuthConfigured,
+  pingPostgres,
+} from "@/lib/dataroom/postgres-auth-state";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +17,22 @@ export async function GET() {
     return NextResponse.json({ ok: true, database: "disabled" as const });
   }
   const dbOk = await pingPostgres();
+  if (!dbOk) {
+    return NextResponse.json({ ok: true, database: "error" as const });
+  }
+  let authStateTable: "ok" | "missing" = "missing";
+  try {
+    const pool = getPgPool();
+    const r = await pool.query<{ reg: string | null }>(
+      `SELECT to_regclass('public.tkn_auth_state') AS reg`,
+    );
+    if (r.rows[0]?.reg) authStateTable = "ok";
+  } catch {
+    authStateTable = "missing";
+  }
   return NextResponse.json({
     ok: true,
-    database: dbOk ? ("connected" as const) : ("error" as const),
+    database: "connected" as const,
+    authStateTable,
   });
 }

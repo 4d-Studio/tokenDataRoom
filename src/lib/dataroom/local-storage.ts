@@ -7,9 +7,27 @@ import type {
   VaultRecord,
 } from "@/lib/dataroom/types";
 
-const dataRoot = path.join(process.cwd(), ".dataroom", "vaults");
+/**
+ * Writable directory for encrypted vault payloads when not using Vercel Blob.
+ * - Default: `<cwd>/.dataroom/vaults` (local dev)
+ * - `TKN_LOCAL_VAULT_DIR`: absolute path to the vaults root (each slug is a subfolder)
+ * - `TKN_LOCAL_DATA_ROOT`: parent of `vaults` (same layout as `.dataroom`)
+ * - On Railway without `BLOB_READ_WRITE_TOKEN`: `/tmp/token-dataroom/vaults` (ephemeral but writable)
+ */
+export function vaultDataRoot(): string {
+  const explicitVaults = process.env.TKN_LOCAL_VAULT_DIR?.trim();
+  if (explicitVaults) {
+    return path.resolve(explicitVaults);
+  }
+  const dataBase =
+    process.env.TKN_LOCAL_DATA_ROOT?.trim() ||
+    (Boolean(process.env.RAILWAY_ENVIRONMENT) && !process.env.BLOB_READ_WRITE_TOKEN?.trim()
+      ? path.join("/tmp", "token-dataroom")
+      : path.join(process.cwd(), ".dataroom"));
+  return path.join(path.resolve(dataBase), "vaults");
+}
 
-const vaultRoot = (slug: string) => path.join(dataRoot, slug);
+const vaultRoot = (slug: string) => path.join(vaultDataRoot(), slug);
 const metadataPath = (slug: string) => path.join(vaultRoot(slug), "metadata.json");
 const payloadPath = (slug: string) => path.join(vaultRoot(slug), "payload.bin");
 const eventsPath = (slug: string) => path.join(vaultRoot(slug), "events.json");
@@ -25,14 +43,22 @@ const readJson = async <T>(filePath: string): Promise<T | null> => {
 };
 
 export class LocalVaultStorage {
-  async saveVault(metadata: VaultRecord, encryptedFile: Buffer) {
+  async saveVault(metadata: VaultRecord, encryptedFile: Buffer | null) {
     await mkdir(vaultRoot(metadata.slug), { recursive: true });
-    await Promise.all([
+    const writes: Promise<void>[] = [
       writeFile(metadataPath(metadata.slug), JSON.stringify(metadata, null, 2), "utf8"),
-      writeFile(payloadPath(metadata.slug), encryptedFile),
       writeFile(eventsPath(metadata.slug), JSON.stringify([], null, 2), "utf8"),
       writeFile(acceptancesPath(metadata.slug), JSON.stringify([], null, 2), "utf8"),
-    ]);
+    ];
+    if (encryptedFile) {
+      writes.push(writeFile(payloadPath(metadata.slug), encryptedFile));
+    }
+    await Promise.all(writes);
+  }
+
+  async putEncryptedPayload(slug: string, encryptedFile: Buffer) {
+    await mkdir(vaultRoot(slug), { recursive: true });
+    await writeFile(payloadPath(slug), encryptedFile);
   }
 
   async getVaultMetadata(slug: string) {
@@ -82,9 +108,10 @@ export class LocalVaultStorage {
   }
 
   async listVaultsForWorkspace(workspaceId: string): Promise<VaultRecord[]> {
+    const root = vaultDataRoot();
     let entries: string[];
     try {
-      entries = await readdir(dataRoot);
+      entries = await readdir(root);
     } catch {
       return [];
     }

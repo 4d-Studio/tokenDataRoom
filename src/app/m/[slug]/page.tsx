@@ -7,6 +7,7 @@ import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
 import { VaultOwnerPanel } from "@/components/dataroom/vault-owner-panel";
 import { getBaseUrlFromHeaders } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
+import { isValidPublicVaultSlug, verifyOwnerKey } from "@/lib/dataroom/vault-access";
 
 export async function generateMetadata({
   params,
@@ -17,9 +18,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const { key } = await searchParams;
+  if (!isValidPublicVaultSlug(slug)) {
+    return { title: "Owner controls", robots: { index: false, follow: false } };
+  }
   const storage = getVaultStorage();
   const vault = await storage.getVaultMetadata(slug);
-  if (!vault || !key || key !== vault.ownerKey) {
+  if (!vault || !verifyOwnerKey(key, vault.ownerKey)) {
     return { title: "Owner controls", robots: { index: false, follow: false } };
   }
   return {
@@ -37,10 +41,13 @@ export default async function ManagePage({
 }) {
   const { slug } = await params;
   const { key } = await searchParams;
+  if (!isValidPublicVaultSlug(slug)) {
+    notFound();
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
-  if (!metadata || !key || key !== metadata.ownerKey) {
+  if (!metadata || !verifyOwnerKey(key, metadata.ownerKey)) {
     notFound();
   }
 

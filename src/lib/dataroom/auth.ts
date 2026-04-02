@@ -9,6 +9,7 @@ import {
   getWorkspaceForUser,
   listRoomsForWorkspace,
   removeRoomFromWorkspace,
+  updateWorkspaceRoomFile,
   updateWorkspaceRoomStatus,
   type TknUser,
   type WorkspaceRecord,
@@ -72,6 +73,12 @@ export const syncWorkspaceRoomStatus = async (
   roomId: string,
   status: WorkspaceRoomSummary["status"],
 ) => updateWorkspaceRoomStatus(workspaceId, roomId, status);
+
+export const syncWorkspaceRoomFileName = async (
+  workspaceId: string,
+  roomId: string,
+  fileName: string,
+) => updateWorkspaceRoomFile(workspaceId, roomId, { fileName });
 
 export const deleteWorkspaceRoom = async (
   workspaceId: string,

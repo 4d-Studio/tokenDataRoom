@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { accessCookieName, verifyAccessToken } from "@/lib/dataroom/access";
+import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
 import { getClientIp } from "@/lib/dataroom/helpers";
+import { isValidPublicVaultSlug, verifyOwnerKey } from "@/lib/dataroom/vault-access";
 import {
   createSignedNdaFilename,
   renderSignedNdaHtml,
@@ -17,6 +18,9 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    return NextResponse.json({ error: "Signed NDA not found." }, { status: 404 });
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
@@ -28,12 +32,9 @@ export async function GET(
   const ownerKey = url.searchParams.get("key");
   const requestedAcceptanceId = url.searchParams.get("acceptanceId");
   const cookieStore = await cookies();
-  const access = verifyAccessToken(
-    cookieStore.get(accessCookieName(slug))?.value,
-    slug,
-  );
+  const access = readVaultAccessFromCookies(cookieStore, slug);
 
-  const isOwner = ownerKey === metadata.ownerKey;
+  const isOwner = verifyOwnerKey(ownerKey, metadata.ownerKey);
   const acceptanceId = isOwner
     ? requestedAcceptanceId
     : access?.acceptanceId;

@@ -18,10 +18,15 @@ import {
 import { MobileShareViewer } from "@/components/dataroom/mobile-share-viewer";
 import { SignatureCanvas } from "@/components/dataroom/signature-canvas";
 import { decryptFile } from "@/lib/dataroom/client-crypto";
+import { getOrCreateViewerBinding } from "@/lib/dataroom/viewer-binding-client";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
 import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
-import type { VaultAcceptanceRecord, VaultRecord } from "@/lib/dataroom/types";
+import {
+  vaultHasEncryptedDocument,
+  type VaultAcceptanceRecord,
+  type VaultRecord,
+} from "@/lib/dataroom/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -82,6 +87,8 @@ export function ShareExperience({
   );
   const [isPending, startTransition] = useTransition();
 
+  const hasDocument = vaultHasEncryptedDocument(metadata);
+
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
     setIsMobile(mq.matches);
@@ -108,6 +115,10 @@ export function ShareExperience({
       try {
         const res = await fetch(`/api/vaults/${metadata.slug}/bootstrap-workspace-access`, {
           method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            viewerBinding: getOrCreateViewerBinding(metadata.slug),
+          }),
         });
         if (res.ok && !cancelled) router.refresh();
       } catch {
@@ -135,7 +146,10 @@ export function ShareExperience({
           const res = await fetch(ndaPostPath, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify(fields),
+            body: JSON.stringify({
+              ...fields,
+              viewerBinding: getOrCreateViewerBinding(metadata.slug),
+            }),
           });
           const data = (await res.json()) as AccessResponse;
           if (!res.ok) throw new Error(data.error || "Unable to accept NDA.");
@@ -180,6 +194,7 @@ export function ShareExperience({
 
     return (
       <MobileShareViewer
+        hasDocument={hasDocument}
         metadata={metadata}
         initialAcceptance={initialAcceptance}
         initialAccessGranted={initialAccessGranted}
@@ -215,6 +230,7 @@ export function ShareExperience({
             signerAddress: acceptance?.signerAddress,
             signatureName: acceptance?.signatureName,
             signatureImage,
+            viewerBinding: getOrCreateViewerBinding(metadata.slug),
           }),
         });
         const data = (await res.json()) as AccessResponse;
@@ -283,9 +299,10 @@ export function ShareExperience({
   );
 
   const previewable =
-    metadata.mimeType.startsWith("image/") ||
-    metadata.mimeType === "application/pdf" ||
-    metadata.mimeType.startsWith("text/");
+    hasDocument &&
+    (metadata.mimeType.startsWith("image/") ||
+      metadata.mimeType === "application/pdf" ||
+      metadata.mimeType.startsWith("text/"));
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -295,20 +312,26 @@ export function ShareExperience({
           <FileText className="size-5 text-muted-foreground" strokeWidth={1.5} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">{metadata.fileName}</p>
+          <p className="truncate text-sm font-medium text-foreground">
+            {hasDocument ? metadata.fileName : "No document yet"}
+          </p>
           <p className="text-xs text-muted-foreground">
-            {formatBytes(metadata.fileSize)} · {formatMimeLabel(metadata.mimeType)}
+            {hasDocument
+              ? `${formatBytes(metadata.fileSize)} · ${formatMimeLabel(metadata.mimeType)}`
+              : "The sender hasn’t added a file to this room. Check back later."}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={objectUrl ? "secondary" : "outline"} className="gap-1.5">
-            {objectUrl ? (
+            {!hasDocument ? (
+              <><Clock className="size-3" /> Waiting</>
+            ) : objectUrl ? (
               <><CheckCircle2 className="size-3" /> Unlocked</>
             ) : (
               <><Lock className="size-3" /> Encrypted</>
             )}
           </Badge>
-          {objectUrl ? (
+          {objectUrl && hasDocument ? (
             <Button asChild variant="outline" size="sm">
               <a href={objectUrl} download={downloadName}>
                 <Download className="size-4" />
@@ -537,13 +560,21 @@ export function ShareExperience({
             <div className="min-w-0 flex-1">
               <CardTitle className="text-base">Unlock and preview</CardTitle>
               <CardDescription>
-                Enter the password from the sender to decrypt this file locally in your browser.
+                {hasDocument
+                  ? "Enter the password from the sender to decrypt this file locally in your browser."
+                  : "The sender still needs to add a document from owner controls. You can complete the NDA now; unlock will work once a file is available."}
               </CardDescription>
             </div>
           </div>
           <CardAction>
             <Badge variant={objectUrl ? "secondary" : "outline"}>
-              {objectUrl ? "Open" : ndaStepComplete ? "Ready" : "Locked"}
+              {!hasDocument
+                ? "No file"
+                : objectUrl
+                  ? "Open"
+                  : ndaStepComplete
+                    ? "Ready"
+                    : "Locked"}
             </Badge>
           </CardAction>
         </CardHeader>
@@ -555,6 +586,15 @@ export function ShareExperience({
               <AlertTitle>Room inactive</AlertTitle>
               <AlertDescription>
                 This room is no longer active. Contact the sender if you still need access.
+              </AlertDescription>
+            </Alert>
+          ) : !hasDocument ? (
+            <Alert>
+              <Clock />
+              <AlertTitle>Document not ready</AlertTitle>
+              <AlertDescription>
+                This room is set up, but there is no encrypted file yet. Ask the sender to upload
+                from their management link, then refresh this page.
               </AlertDescription>
             </Alert>
           ) : (

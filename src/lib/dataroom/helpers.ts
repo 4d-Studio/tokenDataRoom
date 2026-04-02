@@ -71,3 +71,18 @@ export const getClientIp = (request: Request) =>
   request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
   request.headers.get("x-real-ip") ??
   undefined;
+
+/**
+ * Strip characters that can break Content-Disposition or inject response headers.
+ * Keeps a readable basename; falls back if nothing safe remains.
+ */
+export const toAsciiDispositionBasename = (name: string, maxLen = 120): string => {
+  const cleaned = name
+    .normalize("NFKD")
+    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/["\\\r\n\x00-\x1f\x7f]/g, "")
+    .trim()
+    .slice(0, maxLen)
+    .replace(/^\.+/, "");
+  return cleaned.length > 0 ? cleaned : "document";
+};

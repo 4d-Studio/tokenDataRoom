@@ -5,10 +5,11 @@ import { notFound } from "next/navigation";
 import { BrandMark } from "@/components/dataroom/brand-mark";
 import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
 import { ShareExperience } from "@/components/dataroom/share-experience";
-import { accessCookieName, verifyAccessToken } from "@/lib/dataroom/access";
+import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
 import { getWorkspaceById } from "@/lib/dataroom/auth-store";
 import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
+import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 import {
   verifyWorkspaceNdaToken,
   workspaceNdaCookieName,
@@ -22,6 +23,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    return { title: "Room", robots: { index: false, follow: false } };
+  }
   const storage = getVaultStorage();
   const vault = await storage.getVaultMetadata(slug);
   if (!vault) {
@@ -40,16 +44,16 @@ export default async function SharePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    notFound();
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
   if (!metadata) notFound();
 
   const cookieStore = await cookies();
-  const access = verifyAccessToken(
-    cookieStore.get(accessCookieName(slug))?.value,
-    slug,
-  );
+  const access = readVaultAccessFromCookies(cookieStore, slug);
   const acceptance = access?.acceptanceId
     ? await storage.getAcceptance(slug, access.acceptanceId)
     : null;

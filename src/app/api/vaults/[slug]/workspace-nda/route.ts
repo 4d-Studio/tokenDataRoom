@@ -5,6 +5,8 @@ import {
   accessCookieOptions,
   createAccessToken,
   vaultAcceptanceToAccessPayload,
+  vaultViewerBindingCookieName,
+  vaultViewerBindingCookieOptions,
 } from "@/lib/dataroom/access";
 import { getClientIp, isVaultExpired } from "@/lib/dataroom/helpers";
 import { saveWorkspaceGuestAcceptance } from "@/lib/dataroom/auth-store";
@@ -15,7 +17,8 @@ import {
   WORKSPACE_NDA_VERSION,
 } from "@/lib/dataroom/workspace-nda-access";
 import { getVaultStorage } from "@/lib/dataroom/storage";
-import { createEvent, acceptanceSchema } from "@/lib/dataroom/types";
+import { createEvent, acceptanceWithViewerBindingSchema } from "@/lib/dataroom/types";
+import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 
 export const runtime = "nodejs";
 
@@ -24,6 +27,9 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
@@ -45,7 +51,7 @@ export async function POST(
     );
   }
 
-  const parsed = acceptanceSchema.safeParse(await request.json());
+  const parsed = acceptanceWithViewerBindingSchema.safeParse(await request.json());
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -89,7 +95,10 @@ export async function POST(
 
   await storage.saveAcceptance(slug, vaultAcceptance);
 
-  const vaultToken = createAccessToken(vaultAcceptanceToAccessPayload(slug, vaultAcceptance));
+  const vaultToken = createAccessToken({
+    ...vaultAcceptanceToAccessPayload(slug, vaultAcceptance),
+    viewerBinding: parsed.data.viewerBinding,
+  });
 
   const workspaceToken = createWorkspaceNdaToken({
     workspaceId: metadata.workspaceId,
@@ -122,6 +131,11 @@ export async function POST(
     signedNdaUrl: `/api/vaults/${slug}/signed-nda`,
   });
   response.cookies.set(accessCookieName(slug), vaultToken, accessCookieOptions);
+  response.cookies.set(
+    vaultViewerBindingCookieName(slug),
+    parsed.data.viewerBinding,
+    vaultViewerBindingCookieOptions,
+  );
   response.cookies.set(
     workspaceNdaCookieName(metadata.workspaceId),
     workspaceToken,

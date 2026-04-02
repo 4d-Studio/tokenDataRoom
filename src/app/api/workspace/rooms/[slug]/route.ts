@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUser, getCurrentWorkspace, deleteWorkspaceRoom } from "@/lib/dataroom/auth";
 import { getVaultStorage } from "@/lib/dataroom/storage";
+import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 
 export async function DELETE(
   _request: Request,
@@ -18,6 +19,9 @@ export async function DELETE(
   }
 
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    return NextResponse.json({ error: "Room not found" }, { status: 404 });
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 

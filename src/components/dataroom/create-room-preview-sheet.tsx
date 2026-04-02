@@ -18,6 +18,7 @@ function stripHtml(html: string): string {
 
 export function CreateRoomPreviewSheet({
   fileName,
+  documentLater,
   title,
   senderName,
   senderCompany,
@@ -28,6 +29,8 @@ export function CreateRoomPreviewSheet({
   ndaCustomized,
 }: {
   fileName: string | null;
+  /** When true, copy assumes the file is added after room creation. */
+  documentLater?: boolean;
   title: string;
   senderName: string;
   senderCompany: string;
@@ -152,7 +155,9 @@ export function CreateRoomPreviewSheet({
                   <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent)]/10 text-xs font-semibold text-[var(--color-accent)]">
                     3
                   </span>
-                  Open and download the file.
+                  {documentLater
+                    ? "Once the sender adds a file, the recipient unlocks it with the password."
+                    : "Open and download the file."}
                 </li>
               </ol>
             </div>

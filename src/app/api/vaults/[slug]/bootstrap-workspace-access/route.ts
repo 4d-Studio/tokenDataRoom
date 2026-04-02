@@ -5,8 +5,10 @@ import {
   accessCookieName,
   accessCookieOptions,
   createAccessToken,
-  verifyAccessToken,
+  readVaultAccessFromCookies,
   vaultAcceptanceToAccessPayload,
+  vaultViewerBindingCookieName,
+  vaultViewerBindingCookieOptions,
 } from "@/lib/dataroom/access";
 import { getClientIp, isVaultExpired } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
@@ -14,7 +16,8 @@ import {
   workspaceNdaCookieName,
   verifyWorkspaceNdaToken,
 } from "@/lib/dataroom/workspace-nda-access";
-import { createEvent } from "@/lib/dataroom/types";
+import { createEvent, viewerBindingOnlySchema } from "@/lib/dataroom/types";
+import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 
 export const runtime = "nodejs";
 
@@ -27,6 +30,9 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  if (!isValidPublicVaultSlug(slug)) {
+    return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  }
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
@@ -48,11 +54,23 @@ export async function POST(
     );
   }
 
+  let bodyJson: unknown = {};
+  try {
+    bodyJson = await request.json();
+  } catch {
+    /* empty body */
+  }
+  const bindingParsed = viewerBindingOnlySchema.safeParse(bodyJson);
+  if (!bindingParsed.success) {
+    return NextResponse.json(
+      { error: "Browser session binding required. Refresh the page and try again." },
+      { status: 400 },
+    );
+  }
+  const viewerBinding = bindingParsed.data.viewerBinding;
+
   const cookieStore = await cookies();
-  const existingVault = verifyAccessToken(
-    cookieStore.get(accessCookieName(slug))?.value,
-    slug,
-  );
+  const existingVault = readVaultAccessFromCookies(cookieStore, slug);
 
   if (existingVault) {
     return NextResponse.json({ success: true, alreadyGranted: true });
@@ -101,7 +119,10 @@ export async function POST(
     }),
   );
 
-  const token = createAccessToken(vaultAcceptanceToAccessPayload(slug, vaultAcceptance));
+  const token = createAccessToken({
+    ...vaultAcceptanceToAccessPayload(slug, vaultAcceptance),
+    viewerBinding,
+  });
 
   const response = NextResponse.json({
     success: true,
@@ -109,6 +130,11 @@ export async function POST(
     signedNdaUrl: `/api/vaults/${slug}/signed-nda`,
   });
   response.cookies.set(accessCookieName(slug), token, accessCookieOptions);
+  response.cookies.set(
+    vaultViewerBindingCookieName(slug),
+    viewerBinding,
+    vaultViewerBindingCookieOptions,
+  );
 
   return response;
 }
