@@ -51,7 +51,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-description"
       className={cn(
-        "mt-1.5 text-[0.8125rem] leading-relaxed font-normal text-[var(--odr-text-support)]",
+        "mt-1.5 text-[0.8125rem] leading-relaxed font-normal text-[var(--tkn-text-support)]",
         className,
       )}
       {...props}

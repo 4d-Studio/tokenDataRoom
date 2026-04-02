@@ -22,13 +22,13 @@ export function SettingsSection({
         <div className="min-w-0 flex-1">
           <div className="label-title">{title}</div>
           {description && (
-            <p className="odr-support mt-0.5">{description}</p>
+            <p className="tkn-support mt-0.5">{description}</p>
           )}
           {preview && (
-            <div className="mt-2 text-sm text-[var(--odr-text-fine)]">{preview}</div>
+            <div className="mt-2 text-sm text-[var(--tkn-text-fine)]">{preview}</div>
           )}
         </div>
-        <ChevronDown className="mt-1 size-4 shrink-0 text-[var(--odr-text-fine)] transition-transform duration-200 group-open:rotate-180" />
+        <ChevronDown className="mt-1 size-4 shrink-0 text-[var(--tkn-text-fine)] transition-transform duration-200 group-open:rotate-180" />
       </summary>
       <div className="border-t border-border px-5 pb-5 pt-4">{children}</div>
     </details>

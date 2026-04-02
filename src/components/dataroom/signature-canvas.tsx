@@ -132,7 +132,7 @@ export function SignatureCanvas({
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
             mode === "type"
               ? "bg-[var(--color-accent)] text-white"
-              : "text-[var(--odr-text-support)] hover:bg-muted"
+              : "text-[var(--tkn-text-support)] hover:bg-muted"
           }`}
         >
           <Type className="size-3.5" />
@@ -144,7 +144,7 @@ export function SignatureCanvas({
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
             mode === "draw"
               ? "bg-[var(--color-accent)] text-white"
-              : "text-[var(--odr-text-support)] hover:bg-muted"
+              : "text-[var(--tkn-text-support)] hover:bg-muted"
           }`}
         >
           <Pen className="size-3.5" />
@@ -166,7 +166,7 @@ export function SignatureCanvas({
               {previewText}
             </p>
           )}
-          <p className="text-xs text-[var(--odr-text-fine)]">
+          <p className="text-xs text-[var(--tkn-text-fine)]">
             Your typed name will appear as your signature
           </p>
         </div>
@@ -188,7 +188,7 @@ export function SignatureCanvas({
             {/* Placeholder */}
             {!hasDrawn.current && !imageValue && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <p className="text-sm text-[var(--odr-text-fine)]">Draw your signature here</p>
+                <p className="text-sm text-[var(--tkn-text-fine)]">Draw your signature here</p>
               </div>
             )}
           </div>
@@ -204,7 +204,7 @@ export function SignatureCanvas({
               Clear
             </Button>
             {imageValue && (
-              <p className="text-xs text-[var(--odr-text-fine)]">
+              <p className="text-xs text-[var(--tkn-text-fine)]">
                 Signature captured
               </p>
             )}

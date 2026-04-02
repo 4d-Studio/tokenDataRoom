@@ -2,10 +2,16 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  isPostgresAuthConfigured,
+  readAuthStateFromPostgres,
+  writeAuthStateToPostgres,
+  type AuthStateSnapshot,
+} from "@/lib/dataroom/postgres-auth-state";
 import type { WorkspaceRoomSummary } from "@/lib/dataroom/workspace-types";
 import type { VaultEvent } from "@/lib/dataroom/types";
 
-export type OdrUser = {
+export type TknUser = {
   id: string;
   email: string;
   createdAt: string;
@@ -48,8 +54,8 @@ type LoginCodeRecord = {
   requestedAt: string;
 };
 
-type AuthState = {
-  users: OdrUser[];
+export type AuthState = {
+  users: TknUser[];
   workspaces: WorkspaceRecord[];
   rooms: WorkspaceRoomSummary[];
   codes: LoginCodeRecord[];
@@ -77,6 +83,11 @@ const ensureRoot = async () => {
 };
 
 const readState = async (): Promise<AuthState> => {
+  if (isPostgresAuthConfigured()) {
+    const snap = await readAuthStateFromPostgres();
+    return snap as AuthState;
+  }
+
   await ensureRoot();
 
   try {
@@ -95,6 +106,11 @@ const readState = async (): Promise<AuthState> => {
 };
 
 const writeState = async (state: AuthState) => {
+  if (isPostgresAuthConfigured()) {
+    await writeAuthStateToPostgres(state as AuthStateSnapshot);
+    return;
+  }
+
   await ensureRoot();
   await writeFile(authStatePath, JSON.stringify(state, null, 2), "utf8");
 };
@@ -165,7 +181,7 @@ export const getUserById = async (userId: string) => {
   return state.users.find((user) => user.id === userId) ?? null;
 };
 
-export const updateUserPlan = async (userId: string, plan: OdrUser["plan"]) => {
+export const updateUserPlan = async (userId: string, plan: TknUser["plan"]) => {
   const state = await readState();
   const user = state.users.find((u) => u.id === userId);
   if (!user) return null;
@@ -183,7 +199,7 @@ export type PlanLimits = {
   customDomain: boolean;
 };
 
-export const PLAN_LIMITS: Record<OdrUser["plan"], PlanLimits> = {
+export const PLAN_LIMITS: Record<TknUser["plan"], PlanLimits> = {
   free: {
     rooms: 3,
     filesPerRoom: 10, // pooled across all rooms
@@ -210,7 +226,7 @@ export const PLAN_LIMITS: Record<OdrUser["plan"], PlanLimits> = {
   },
 };
 
-export const getPlanLimits = (plan: OdrUser["plan"]): PlanLimits => PLAN_LIMITS[plan];
+export const getPlanLimits = (plan: TknUser["plan"]): PlanLimits => PLAN_LIMITS[plan];
 
 export const getWorkspaceForUser = async (userId: string) => {
   const state = await readState();
@@ -351,12 +367,14 @@ export const deleteUserAccount = async (userId: string) => {
       (a) => a.workspaceId !== workspaceId,
     );
 
-    // Remove auth state file from disk (local only)
-    const authRoot = path.join(process.cwd(), ".dataroom", "auth");
-    try {
-      await rm(authRoot, { recursive: true, force: true });
-    } catch {
-      // ignore
+    // Remove auth state file from disk (local JSON mode only; Postgres row is updated via writeState below)
+    if (!isPostgresAuthConfigured()) {
+      const localAuthRoot = path.join(process.cwd(), ".dataroom", "auth");
+      try {
+        await rm(localAuthRoot, { recursive: true, force: true });
+      } catch {
+        // ignore
+      }
     }
   }
 

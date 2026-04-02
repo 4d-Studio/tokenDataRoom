@@ -6,7 +6,7 @@ export const buildDefaultNdaText = (companyName?: string) => {
   return `${disclosingCompany}
 MUTUAL NON-DISCLOSURE AGREEMENT
 
-This Mutual Non-Disclosure Agreement (the "Agreement") is entered into by and between ${disclosingCompany} and the reviewing party identified in the OpenDataRoom acceptance record below (the "Reviewer"). Each may be referred to individually as a "Party" and collectively as the "Parties." The Parties wish to explore a potential business opportunity of mutual interest (the "Opportunity") and exchange confidential information in connection with that Opportunity.
+This Mutual Non-Disclosure Agreement (the "Agreement") is entered into by and between ${disclosingCompany} and the reviewing party identified in the Token acceptance record below (the "Reviewer"). Each may be referred to individually as a "Party" and collectively as the "Parties." The Parties wish to explore a potential business opportunity of mutual interest (the "Opportunity") and exchange confidential information in connection with that Opportunity.
 
 "Confidential Information" means any non-public information disclosed by one Party (the "Discloser") to the other Party (the "Recipient"), whether directly or indirectly, that is marked confidential or should reasonably be understood to be confidential given the nature of the information and the circumstances of disclosure. Confidential Information does not include information that: (i) is or becomes publicly available without breach of this Agreement; (ii) was already in the Recipient's lawful possession without restriction before disclosure; or (iii) is lawfully obtained from a third party without breach of any duty of confidentiality.
 
@@ -20,7 +20,7 @@ This Agreement starts on the date the Reviewer accepts it electronically in Film
 
 This Agreement is the complete agreement between the Parties concerning the subject matter above and may be modified only in a signed writing by both Parties. If any provision is held unenforceable, the remaining provisions will remain in full force and effect. This Agreement is governed by the laws of the State of California, without regard to conflicts of law rules, and the Parties consent to the exclusive jurisdiction of the state and federal courts located in San Francisco, California.
 
-By accepting this Agreement in OpenDataRoom, the Reviewer represents that the signer is authorized to bind the reviewing party identified in the acceptance record and agrees that electronic acceptance and electronic delivery of a signed copy of this Agreement are legally effective.`;
+By accepting this Agreement in Token, the Reviewer represents that the signer is authorized to bind the reviewing party identified in the acceptance record and agrees that electronic acceptance and electronic delivery of a signed copy of this Agreement are legally effective.`;
 };
 
 export const DEFAULT_NDA_TEXT = buildDefaultNdaText();

@@ -36,11 +36,11 @@ export const WorkspaceOnboarding = ({ email }: { email: string }) => {
   };
 
   return (
-    <Card className="odr-elevated-panel rounded-2xl border border-[var(--odr-panel-border)] py-0 shadow-none ring-0">
+    <Card className="tkn-elevated-panel rounded-2xl border border-[var(--tkn-panel-border)] py-0 shadow-none ring-0">
       <CardHeader className="gap-2 border-b px-5 py-4">
         <p className="eyebrow">Workspace first</p>
         <CardTitle className="text-balance text-[1.65rem] tracking-[-0.04em] text-[var(--color-ink)] sm:text-[1.8rem]">
-          Create your OpenDataRoom workspace
+          Create your Token workspace
         </CardTitle>
         <CardDescription className="max-w-lg text-[0.94rem] leading-6.5">
           Signed in as {email}. Give your workspace a simple name so new rooms have a clean

@@ -66,7 +66,7 @@ export const LoginFlow = () => {
     setMessage(
       payload.delivery === "local"
         ? "Local dev mode is active for this workspace."
-        : "Check your inbox for the OpenDataRoom sign-in code.",
+        : "Check your inbox for the Token sign-in code.",
     );
     setStep("code");
   };
@@ -92,7 +92,7 @@ export const LoginFlow = () => {
   };
 
   return (
-    <Card className="odr-elevated-panel w-full rounded-2xl border border-[var(--odr-panel-border)] py-0 shadow-none ring-0">
+    <Card className="tkn-elevated-panel w-full rounded-2xl border border-[var(--tkn-panel-border)] py-0 shadow-none ring-0">
       <CardHeader className="gap-2 border-b px-5 py-4">
         <div className="eyebrow">Login first</div>
         <CardTitle className="text-balance text-[1.65rem] tracking-[-0.04em] text-[var(--color-ink)] sm:text-[1.8rem]">

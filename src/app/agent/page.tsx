@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
+
 import { BrandMark } from "@/components/dataroom/brand-mark";
+
+export const metadata: Metadata = {
+  title: "Route map",
+  description: "Development reference: Token app routes and API surface.",
+  robots: { index: false, follow: false },
+};
 import {
   ProductBreadcrumb,
   ProductPageIntro,
@@ -13,7 +21,7 @@ const routes = [
   ["/login", "Magic-code login"],
   ["/onboarding", "Workspace creation"],
   ["/workspace", "User workspace"],
-  ["/new", "Create an OpenDataRoom room"],
+  ["/new", "Create a Token room"],
   ["/s/[slug]", "Recipient access page"],
   ["/m/[slug]?key=...", "Owner controls and activity"],
 ];
@@ -51,13 +59,13 @@ export default function AgentPage() {
 
       <ProductPageIntro
         eyebrow="Agent workspace"
-        title="OpenDataRoom system overview"
+        title="Token system overview"
         description="This route is for incoming agents. It summarizes the product flow, API surface, and the repo docs that matter before making changes."
         className="page-hero"
       />
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <ProductSectionCard className="odr-elevated-panel rounded-2xl border border-[var(--odr-panel-border)] ring-0">
+        <ProductSectionCard className="tkn-elevated-panel rounded-2xl border border-[var(--tkn-panel-border)] ring-0">
           <ProductSectionHeader title="Routes" />
           <ProductSectionBody className="pt-0">
             {routes.map(([path, description]) => (
@@ -69,7 +77,7 @@ export default function AgentPage() {
           </ProductSectionBody>
         </ProductSectionCard>
 
-        <ProductSectionCard className="odr-elevated-panel rounded-2xl border border-[var(--odr-panel-border)] ring-0">
+        <ProductSectionCard className="tkn-elevated-panel rounded-2xl border border-[var(--tkn-panel-border)] ring-0">
           <ProductSectionHeader title="API surface" />
           <ProductSectionBody className="pt-0">
             {apiRoutes.map(([path, description]) => (

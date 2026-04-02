@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -6,6 +7,26 @@ import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
 import { VaultOwnerPanel } from "@/components/dataroom/vault-owner-panel";
 import { getBaseUrlFromHeaders } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ key?: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const { key } = await searchParams;
+  const storage = getVaultStorage();
+  const vault = await storage.getVaultMetadata(slug);
+  if (!vault || !key || key !== vault.ownerKey) {
+    return { title: "Owner controls", robots: { index: false, follow: false } };
+  }
+  return {
+    title: `${vault.title} (owner)`,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function ManagePage({
   params,

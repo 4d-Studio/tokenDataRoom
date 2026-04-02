@@ -1,6 +1,6 @@
-# OpenDataRoom Design System
+# Token Design System
 
-OpenDataRoom uses a thin product layer on top of shadcn primitives. The goal is a calm, procedural interface for secure sharing rather than dashboard theatrics.
+Token uses a thin product layer on top of shadcn primitives. The goal is a calm, procedural interface for secure sharing rather than dashboard theatrics.
 
 ## Core principles
 

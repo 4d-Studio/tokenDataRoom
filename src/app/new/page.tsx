@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AuthenticatedShell } from "@/components/dataroom/authenticated-shell";
+
+export const metadata: Metadata = {
+  title: "New room",
+  description: "Create a new encrypted Token dataroom with optional NDA and access controls.",
+};
 import { CreateVaultForm } from "@/components/dataroom/create-vault-form";
 import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";

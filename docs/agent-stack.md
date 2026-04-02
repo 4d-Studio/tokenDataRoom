@@ -1,10 +1,10 @@
-# OpenDataRoom Agent Stack
+# Token Agent Stack
 
-This document exists for incoming agents that need to understand how OpenDataRoom is put together quickly.
+This document exists for incoming agents that need to understand how Token is put together quickly.
 
 ## Product model
 
-OpenDataRoom is a focused secure-sharing app for one document room at a time.
+Token is a focused secure-sharing app for one document room at a time.
 
 Core flow:
 
@@ -53,13 +53,13 @@ Core flow:
 ## UI system
 
 - `docs/design-system.md`
-  Shared OpenDataRoom product design vocabulary and spacing rules
+  Shared Token product design vocabulary and spacing rules
 - `src/components/dataroom/product-ui.tsx`
   Reusable section, intro, metadata, metric, and list-row building blocks
 
 ## MCP integration direction
 
-OpenDataRoom does not currently expose an MCP server. If one is added, the first useful tools should be:
+Token does not currently expose an MCP server. If one is added, the first useful tools should be:
 
 - `request_login_code`
 - `verify_login_code`

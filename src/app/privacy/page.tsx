@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandMark } from "@/components/dataroom/brand-mark";
+
+export const metadata: Metadata = {
+  title: "Privacy",
+  description:
+    "How Token handles your data: encryption, retention, and your control over dataroom content.",
+};
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -20,16 +27,15 @@ export default function PrivacyPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-12">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Privacy Policy</h1>
-        <p className="odr-fine mt-2">Last updated March 2026</p>
+        <p className="tkn-fine mt-2">Last updated March 2026</p>
 
-        <div className="mt-8 space-y-8 odr-prose">
+        <div className="mt-8 space-y-8 tkn-prose">
           <section>
             <h2>1. Who we are</h2>
             <p>
-              OpenDataRoom.("we", "us", or "our") operates the website at{" "}
-              <span className="font-mono text-sm">dataroom.app</span> and related services. We provide
-              secure document sharing rooms with end-to-end encryption. We act as the data controller
-              for all personal data processed in connection with our service.
+              {`Token ("we", "us", or "our") operates the website at `}
+              <span className="font-mono text-sm">token.fyi</span>
+              {` and related services. We provide secure document sharing rooms with end-to-end encryption. We act as the data controller for all personal data processed in connection with our service.`}
             </p>
           </section>
 
@@ -93,7 +99,7 @@ export default function PrivacyPage() {
           <section>
             <h2>4. Encryption</h2>
             <p>
-              All files uploaded to OpenDataRoom.are encrypted client-side using AES-256-GCM with a key
+              All files uploaded to Token are encrypted client-side using AES-256-GCM with a key
               derived from your chosen password (PBKDF2, 250,000 iterations). This means:
             </p>
             <ul>
@@ -148,7 +154,7 @@ export default function PrivacyPage() {
             <p>
               To exercise any of these rights, log in to your account and visit your workspace
               settings, or contact us at{" "}
-              <span className="font-mono text-sm">privacy@dataroom.app</span>.
+              <span className="font-mono text-sm">privacy@token.fyi</span>.
             </p>
           </section>
 
@@ -178,7 +184,7 @@ export default function PrivacyPage() {
           <section>
             <h2>8. Third-party processors</h2>
             <p>
-              We use the following third-party services to operate OpenDataRoom. Each is a data processor
+              We use the following third-party services to operate Token. Each is a data processor
               acting only on our instructions:
             </p>
             <ul>
@@ -229,9 +235,9 @@ export default function PrivacyPage() {
           <section>
             <h2>10. Children</h2>
             <p>
-              OpenDataRoom.is not directed at individuals under the age of 16. We do not knowingly collect
+              Token is not directed at individuals under the age of 16. We do not knowingly collect
               personal data from children. If you believe a child has provided us with personal data,
-              contact us at <span className="font-mono text-sm">privacy@dataroom.app</span> and we
+              contact us at <span className="font-mono text-sm">privacy@token.fyi</span> and we
               will delete it promptly.
             </p>
           </section>
@@ -255,13 +261,13 @@ export default function PrivacyPage() {
               For any questions about this Privacy Policy or to exercise your rights, contact us at:
             </p>
             <p>
-              <span className="font-mono text-sm">privacy@dataroom.app</span>
+              <span className="font-mono text-sm">privacy@token.fyi</span>
             </p>
           </section>
         </div>
 
         {/* Footer */}
-        <div className="mt-12 flex flex-wrap gap-4 border-t border-border pt-8 text-sm text-[var(--odr-text-fine)]">
+        <div className="mt-12 flex flex-wrap gap-4 border-t border-border pt-8 text-sm text-[var(--tkn-text-fine)]">
           <Link href="/terms" className="hover:text-foreground">
             Terms of Service
           </Link>

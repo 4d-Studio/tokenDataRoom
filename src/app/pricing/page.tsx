@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, ShieldCheck, Lock } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Token dataroom plans: Free, Plus, and Unicorn. Encrypted rooms, NDAs, and optional custom domain.",
+};
 import { Separator } from "@/components/ui/separator";
 
 import { BrandMark } from "@/components/dataroom/brand-mark";
@@ -86,7 +93,7 @@ const allFeatures = [
   { key: "customDomain", label: "Custom domain" },
   { key: "boardMinutes", label: "Board room minutes" },
   { key: "emailSupport", label: "Email support" },
-  { key: "removeBranding", label: "Remove OpenDataRoom branding" },
+  { key: "removeBranding", label: "Remove Token branding" },
 ];
 
 const faq = [
@@ -147,7 +154,7 @@ export default function PricingPage() {
           <h1 className="mt-3 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
             Simple, honest pricing.
           </h1>
-          <p className="mt-4 text-lg text-[var(--odr-text-support)]">
+          <p className="mt-4 text-lg text-[var(--tkn-text-support)]">
             Start free. No credit card. Upgrade when you need more.
           </p>
 
@@ -155,15 +162,15 @@ export default function PricingPage() {
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="h-4 w-4 text-[var(--color-accent)]" />
-              <span className="text-xs text-[var(--odr-text-support)]">AES-256 encrypted</span>
+              <span className="text-xs text-[var(--tkn-text-support)]">AES-256 encrypted</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Lock className="h-4 w-4 text-[var(--odr-text-support)]" />
-              <span className="text-xs text-[var(--odr-text-support)]">Client-side encryption</span>
+              <Lock className="h-4 w-4 text-[var(--tkn-text-support)]" />
+              <span className="text-xs text-[var(--tkn-text-support)]">Client-side encryption</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Check className="h-4 w-4 text-[var(--color-accent)]" />
-              <span className="text-xs text-[var(--odr-text-support)]">GDPR compliant</span>
+              <span className="text-xs text-[var(--tkn-text-support)]">GDPR compliant</span>
             </div>
           </div>
         </div>
@@ -198,14 +205,14 @@ export default function PricingPage() {
                   <span className="text-4xl font-bold tracking-tight text-foreground">
                     {plan.priceMonthly}
                   </span>
-                  <span className="text-sm text-[var(--odr-text-support)]">{plan.period}</span>
+                  <span className="text-sm text-[var(--tkn-text-support)]">{plan.period}</span>
                 </div>
                 {plan.priceAnnual !== plan.priceMonthly && (
-                  <div className="mt-0.5 text-xs text-[var(--odr-text-fine)]">
+                  <div className="mt-0.5 text-xs text-[var(--tkn-text-fine)]">
                     {plan.priceAnnual}/mo billed annually
                   </div>
                 )}
-                <p className="mt-2 text-sm text-[var(--odr-text-support)]">{plan.description}</p>
+                <p className="mt-2 text-sm text-[var(--tkn-text-support)]">{plan.description}</p>
               </div>
 
               <div className="mt-6">
@@ -230,12 +237,12 @@ export default function PricingPage() {
                   const value = plan.features[key as keyof typeof plan.features];
                   return (
                     <div key={key} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="text-[var(--odr-text-support)]">{label}</span>
+                      <span className="text-[var(--tkn-text-support)]">{label}</span>
                       {typeof value === "boolean" ? (
                         value ? (
                           <Check className="h-4 w-4 shrink-0 text-[var(--color-accent)]" />
                         ) : (
-                          <span className="text-xs text-[var(--odr-text-fine)]">—</span>
+                          <span className="text-xs text-[var(--tkn-text-fine)]">—</span>
                         )
                       ) : (
                         <span className="text-sm font-medium text-foreground">{value}</span>
@@ -274,7 +281,7 @@ export default function PricingPage() {
               <tbody className="divide-y divide-border">
                 {allFeatures.map(({ key, label }) => (
                   <tr key={key} className="hover:bg-muted/20">
-                    <td className="py-3 pl-5 text-[var(--odr-text-support)]">{label}</td>
+                    <td className="py-3 pl-5 text-[var(--tkn-text-support)]">{label}</td>
                     {plans.map((plan) => {
                       const value = plan.features[key as keyof typeof plan.features];
                       return (
@@ -283,7 +290,7 @@ export default function PricingPage() {
                             value ? (
                               <Check className="mx-auto h-4 w-4 text-[var(--color-accent)]" />
                             ) : (
-                              <span className="text-[var(--odr-text-fine)]">—</span>
+                              <span className="text-[var(--tkn-text-fine)]">—</span>
                             )
                           ) : (
                             <span className="text-sm font-medium text-foreground">{value}</span>
@@ -299,7 +306,7 @@ export default function PricingPage() {
                   {plans.map((plan) => (
                     <td key={plan.name} className="py-3 text-center text-foreground">
                       {plan.priceMonthly}
-                      <span className="font-normal text-[var(--odr-text-fine)]">
+                      <span className="font-normal text-[var(--tkn-text-fine)]">
                         {" "}{plan.period}
                       </span>
                     </td>
@@ -319,7 +326,7 @@ export default function PricingPage() {
             {faq.map((item) => (
               <div key={item.q} className="py-5">
                 <h3 className="text-sm font-semibold text-foreground">{item.q}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--odr-text-support)]">
+                <p className="mt-2 text-sm leading-relaxed text-[var(--tkn-text-support)]">
                   {item.a}
                 </p>
               </div>
@@ -331,10 +338,10 @@ export default function PricingPage() {
         <footer className="mt-16 pb-8">
           <Separator className="mb-6" />
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="text-xs text-[var(--odr-text-fine)]">
-              © {new Date().getFullYear()} OpenDataRoom. All rights reserved.
+            <p className="text-xs text-[var(--tkn-text-fine)]">
+              © {new Date().getFullYear()} Token. All rights reserved.
             </p>
-            <nav className="flex flex-wrap gap-4 text-xs text-[var(--odr-text-fine)]">
+            <nav className="flex flex-wrap gap-4 text-xs text-[var(--tkn-text-fine)]">
               <Link href="/privacy" className="hover:text-foreground">
                 Privacy Policy
               </Link>

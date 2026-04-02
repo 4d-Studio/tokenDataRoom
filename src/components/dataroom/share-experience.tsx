@@ -380,7 +380,7 @@ export function ShareExperience({
           {!accessGranted ? (
             <CardContent className="space-y-6">
               <div
-                className="odr-prose max-h-64 overflow-y-auto rounded-lg border bg-muted/20 p-4 text-sm leading-relaxed text-foreground"
+                className="tkn-prose max-h-64 overflow-y-auto rounded-lg border bg-muted/20 p-4 text-sm leading-relaxed text-foreground"
                 tabIndex={0}
               >
                 {isRichNdaContent(ndaDocumentText) ? (
@@ -630,7 +630,7 @@ export function ShareExperience({
       </Card>
 
       <p className="text-center text-xs text-muted-foreground">
-        Room opens, NDA acceptance, and downloads are recorded by OpenDataRoom.
+        Room opens, NDA acceptance, and downloads are recorded by Token.
       </p>
     </div>
   );

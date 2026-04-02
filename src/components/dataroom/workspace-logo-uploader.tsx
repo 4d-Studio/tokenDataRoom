@@ -107,7 +107,7 @@ export function WorkspaceLogoUploader({
     <div className="space-y-4">
       <div>
         <div className="label-title">Workspace logo</div>
-        <p className="odr-support mt-1">
+        <p className="tkn-support mt-1">
           Upload a logo shown to recipients in your shared rooms. Max 2 MB — PNG, JPG, WebP, or SVG.
         </p>
       </div>

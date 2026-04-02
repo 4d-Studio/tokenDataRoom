@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Workspace",
+  description: "Your Token workspace: datarooms, activity, and quick actions.",
+};
 import { headers } from "next/headers";
 import { CalendarPlus, LayoutPanelTop, Zap } from "lucide-react";
 

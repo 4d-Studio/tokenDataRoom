@@ -65,7 +65,7 @@ export function ProductPageIntro({
         {description ? (
           <div
             className={cn(
-              "odr-support mt-2 max-w-2xl",
+              "tkn-support mt-2 max-w-2xl",
               descriptionClassName,
             )}
           >
@@ -187,11 +187,11 @@ export function ProductMetric({
       <div className="mt-3 text-[1.6rem] font-bold leading-none tracking-tight text-foreground">
         {value}
       </div>
-      <div className="mt-1.5 text-[0.8125rem] font-medium text-[var(--odr-text-support)]">
+      <div className="mt-1.5 text-[0.8125rem] font-medium text-[var(--tkn-text-support)]">
         {label}
       </div>
       {subtext ? (
-        <div className="odr-fine mt-1 max-w-[14rem]">{subtext}</div>
+        <div className="tkn-fine mt-1 max-w-[14rem]">{subtext}</div>
       ) : null}
     </div>
   );

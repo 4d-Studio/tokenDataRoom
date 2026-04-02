@@ -5,7 +5,7 @@ import Link from "next/link";
 export function CookieNotice() {
   return (
     <div className="mx-auto flex w-full max-w-[30rem] flex-col gap-4 pb-6 sm:pb-10">
-      <p className="text-center text-xs text-[var(--odr-text-fine)]">
+      <p className="text-center text-xs text-[var(--tkn-text-fine)]">
         By continuing, you agree to our{" "}
         <Link href="/terms" className="underline hover:text-foreground">
           Terms

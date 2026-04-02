@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+  description: "Sign in to Token with a one-time email code. No password to remember.",
+};
 
 import { CookieNotice } from "@/components/dataroom/cookie-notice";
 import { LoginFlow } from "@/components/auth/login-flow";

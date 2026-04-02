@@ -59,7 +59,7 @@ export function CreateRoomPreviewSheet({
       <SheetTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-[var(--odr-text-support)] transition-colors hover:bg-muted/50"
+          className="flex items-center gap-2 rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-[var(--tkn-text-support)] transition-colors hover:bg-muted/50"
         >
           <Eye className="size-4" />
           Preview recipient view
@@ -74,12 +74,12 @@ export function CreateRoomPreviewSheet({
             <SheetTitle className="text-base font-semibold">Recipient preview</SheetTitle>
             <button
               onClick={() => setOpen(false)}
-              className="flex size-8 items-center justify-center rounded-lg text-[var(--odr-text-fine)] hover:bg-muted"
+              className="flex size-8 items-center justify-center rounded-lg text-[var(--tkn-text-fine)] hover:bg-muted"
             >
               <X className="size-4" />
             </button>
           </div>
-          <p className="text-sm text-[var(--odr-text-support)]">
+          <p className="text-sm text-[var(--tkn-text-support)]">
             How the room looks before the recipient unlocks it.
           </p>
         </SheetHeader>
@@ -93,7 +93,7 @@ export function CreateRoomPreviewSheet({
                 <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
                   {previewTitle}
                 </h2>
-                <p className="mt-2 text-sm text-[var(--odr-text-support)]">
+                <p className="mt-2 text-sm text-[var(--tkn-text-support)]">
                   Shared by {effectiveSenderName}
                   {effectiveCompany ? ` · ${effectiveCompany}` : ""}
                 </p>
@@ -108,7 +108,7 @@ export function CreateRoomPreviewSheet({
               {previewChips.map(({ icon: Icon, label }) => (
                 <div
                   key={label}
-                  className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-3.5 py-2.5 text-sm text-[var(--odr-text-support)]"
+                  className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-3.5 py-2.5 text-sm text-[var(--tkn-text-support)]"
                 >
                   <Icon className="size-4 shrink-0 text-[var(--color-accent)]" />
                   {label}
@@ -122,7 +122,7 @@ export function CreateRoomPreviewSheet({
                 <Separator className="my-6" />
                 <div>
                   <p className="label-title">Note from sender</p>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--odr-text-support)]">
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--tkn-text-support)]">
                     {message}
                   </p>
                 </div>
@@ -133,7 +133,7 @@ export function CreateRoomPreviewSheet({
             <Separator className="my-6" />
             <div>
               <p className="label-title">How it works</p>
-              <ol className="mt-4 space-y-3.5 text-sm text-[var(--odr-text-support)]">
+              <ol className="mt-4 space-y-3.5 text-sm text-[var(--tkn-text-support)]">
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent)]/10 text-xs font-semibold text-[var(--color-accent)]">
                     1
@@ -163,7 +163,7 @@ export function CreateRoomPreviewSheet({
                 <Separator className="my-6" />
                 <div>
                   <p className="label-title">Confidentiality agreement</p>
-                  <div className="odr-prose mt-3 max-h-40 overflow-hidden text-sm leading-relaxed text-[var(--odr-text-support)]">
+                  <div className="tkn-prose mt-3 max-h-40 overflow-hidden text-sm leading-relaxed text-[var(--tkn-text-support)]">
                     {/<[a-z][\s\S]*>/i.test(deferredNdaText) ? (
                       <div dangerouslySetInnerHTML={{ __html: deferredNdaText }} />
                     ) : (

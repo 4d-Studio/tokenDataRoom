@@ -4,9 +4,9 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# Token.fyi
+# Token
 
-Token.fyi is a lightweight secure-sharing app for sharing sensitive documents through encrypted, revocable rooms.
+Token is a lightweight secure-sharing app for sharing sensitive documents through encrypted, revocable rooms.
 
 ## Read this first
 
@@ -74,6 +74,7 @@ Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain include
 | Variable | Required | Description |
 |---|---|---|
 | `TKN_APP_SECRET` | Yes (prod) | HMAC signing secret for session and access cookies |
+| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL (no trailing slash) for `metadataBase`, Open Graph, and absolute links — e.g. `https://token.fyi` or your Railway hostname |
 | `DATABASE_URL` | No | PostgreSQL URL. Also accepts `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `RAILWAY_DATABASE_URL`. When any is set, auth/workspace index persists in `tkn_auth_state` instead of `.dataroom/auth/state.json` |
 | `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token. Without it, uses local `.dataroom/` filesystem |
 | `SENDGRID_API_KEY` | No | SendGrid API key for email OTP delivery |

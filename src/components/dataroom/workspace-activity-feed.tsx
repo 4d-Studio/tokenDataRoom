@@ -125,7 +125,7 @@ function ActivityRelativeTime({
   }, [isoDate]);
 
   return (
-    <span className="odr-fine shrink-0 tabular-nums">
+    <span className="tkn-fine shrink-0 tabular-nums">
       {label}
     </span>
   );
@@ -142,7 +142,7 @@ function ActivityRow({ event }: { event: WorkspaceActivityRow }) {
         <ActivityIcon type={event.type} />
         <div className="min-w-0 text-[0.9rem] leading-snug">
           <span className="font-semibold text-foreground">{actor}</span>{" "}
-          <span className="text-[var(--odr-text-support)]">{config.action}</span>{" "}
+          <span className="text-[var(--tkn-text-support)]">{config.action}</span>{" "}
           <Link
             href={roomLink}
             className="font-bold text-[var(--color-accent)] hover:underline"
@@ -162,7 +162,7 @@ function ActivityRow({ event }: { event: WorkspaceActivityRow }) {
 export function ActivityFeedList({ events }: { events: WorkspaceActivityRow[] }) {
   if (events.length === 0) {
     return (
-      <div className="odr-support px-4 py-8 text-center">
+      <div className="tkn-support px-4 py-8 text-center">
         No activity yet. Events appear when recipients open rooms or sign your NDA.
       </div>
     );

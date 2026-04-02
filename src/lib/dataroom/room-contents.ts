@@ -11,7 +11,7 @@ export type RoomFsNode = {
   children?: RoomFsNode[];
 };
 
-/** OpenDataRoom rooms ship one encrypted bundle today; present it as a one-folder tree for clarity. */
+/** Token rooms ship one encrypted bundle today; present it as a one-folder tree for clarity. */
 export function buildRoomFileTree(metadata: VaultRecord): RoomFsNode {
   return {
     id: "room-root",

@@ -39,13 +39,13 @@ export function DeleteAccountCard() {
         <AlertTriangle className="mt-0.5 size-5 shrink-0 text-red-600" />
         <div className="flex-1">
           <div className="label-title text-red-600">Delete account</div>
-          <p className="odr-support mt-1">
+          <p className="tkn-support mt-1">
             Permanently delete your account and all associated data — your workspace, all rooms,
             files, access logs, and NDA records. This action cannot be undone.
           </p>
 
           <div className="mt-4">
-            <label className="odr-fine mb-1.5 block">
+            <label className="tkn-fine mb-1.5 block">
               Type <span className="font-mono font-semibold text-red-600">DELETE</span> to confirm
             </label>
             <Input

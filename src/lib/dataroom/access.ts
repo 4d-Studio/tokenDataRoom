@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import type { VaultAcceptanceRecord } from "@/lib/dataroom/types";
 
-const COOKIE_PREFIX = "odr_access_";
+const COOKIE_PREFIX = "tkn_access_";
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 export type AccessPayload = {
@@ -18,9 +18,9 @@ export type AccessPayload = {
 };
 
 const getSecret = () =>
-  process.env.ODR_APP_SECRET ??
+  process.env.TKN_APP_SECRET ??
   process.env.NEXTAUTH_SECRET ??
-  "opendataroom-local-dev-secret";
+  "token-local-dev-secret";
 
 const encode = (value: string) => Buffer.from(value).toString("base64url");
 const decode = (value: string) => Buffer.from(value, "base64url").toString("utf8");

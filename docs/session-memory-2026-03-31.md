@@ -1,4 +1,4 @@
-# OpenDataRoom — Session Memory: Tuesday March 31, 2026
+# Token — Session Memory: Tuesday March 31, 2026
 
 ## What we worked on today
 
@@ -48,10 +48,10 @@ Created in parallel:
   - Data subject rights (access, deletion, portability, correction)
   - Cookie section (session + access token only; no advertising/analytics cookies)
   - Third-party processors: Vercel, Vercel Blob, SendGrid
-  - Security measures, children policy, contact (privacy@dataroom.app)
+  - Security measures, children policy, contact (privacy@token.fyi)
 
 - **`/src/app/dpa/page.tsx`** — Data Processing Agreement:
-  - Processor (OpenDataRoom) vs Controller (user) roles
+  - Processor (Token) vs Controller (user) roles
   - Subject matter, nature, purpose, and duration of processing
   - Personal data types (recipient name/email/company/address, IP, user agent)
   - Special categories: not intentionally processed
@@ -75,7 +75,7 @@ Created in parallel:
   - Indemnification
   - Intellectual property
   - Governing law (jurisdiction TBD — placeholder)
-  - Contact: legal@dataroom.app
+  - Contact: legal@token.fyi
 
 ### 5. Landing & Pricing Page Updates
 - **`/src/app/page.tsx`**:
@@ -176,4 +176,4 @@ Created in parallel:
 - Board room minutes is in plan limits but not implemented
 - No actual Stripe billing integration (plan changes are local state only)
 - DPA page has placeholder company details (jurisdiction, legal entity name, etc.)
-- Contact email placeholder: privacy@dataroom.app, legal@dataroom.app — need real addresses
+- Contact email placeholder: privacy@token.fyi, legal@token.fyi — need real addresses

@@ -1,8 +1,8 @@
-# OpenDataRoom - Repository Analysis
+# Token - Repository Analysis
 
-## What OpenDataRoom Does
+## What Token Does
 
-OpenDataRoom is a **lightweight secure document sharing app** for sending one sensitive document through a password-protected "room" with optional NDA gating. It's designed to feel like a real data room but simpler.
+Token is a **lightweight secure document sharing app** for sending one sensitive document through a password-protected "room" with optional NDA gating. It's designed to feel like a real data room but simpler.
 
 ### Core Flow
 
@@ -80,7 +80,7 @@ src/
 - Light-mode first, calm procedural interfaces
 - Manrope font for UI
 - Orange accent for primary actions
-- shadcn primitives with OpenDataRoom product layer
+- shadcn primitives with Token product layer
 - Key primitives: `ProductAuthFrame`, `ProductPageIntro`, `ProductSectionCard`, `ProductBreadcrumb`
 
 ## Design Principles

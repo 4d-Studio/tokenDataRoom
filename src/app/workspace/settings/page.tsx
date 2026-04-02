@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AuthenticatedShell } from "@/components/dataroom/authenticated-shell";
+
+export const metadata: Metadata = {
+  title: "Settings",
+  description: "Workspace branding, NDA template, and account options for Token.",
+};
 import { DeleteAccountCard } from "@/components/dataroom/delete-account-card";
 import { NdaTemplateEditor } from "@/components/dataroom/nda-template-editor";
 import { SettingsSection } from "@/components/dataroom/settings-section";
@@ -31,7 +37,7 @@ export default async function WorkspaceSettingsPage() {
       className="h-8 w-auto rounded object-contain"
     />
   ) : (
-    <span className="text-[var(--odr-text-fine)]">No logo set</span>
+    <span className="text-[var(--tkn-text-fine)]">No logo set</span>
   );
 
   const ndaPreview = workspace.ndaTemplate ? (
@@ -40,7 +46,7 @@ export default async function WorkspaceSettingsPage() {
       {workspace.ndaTemplate.length > 100 ? "…" : ""}
     </span>
   ) : (
-    <span className="text-[var(--odr-text-fine)]">Using default NDA template</span>
+    <span className="text-[var(--tkn-text-fine)]">Using default NDA template</span>
   );
 
   return (

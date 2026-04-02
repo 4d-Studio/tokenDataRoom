@@ -53,12 +53,12 @@ export function RoomsList({ rooms, baseUrl }: RoomsListProps) {
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 shrink-0 text-[var(--odr-text-fine)]" />
+                <FileText className="h-4 w-4 shrink-0 text-[var(--tkn-text-fine)]" />
                 <span className="text-[0.95rem] font-bold text-foreground">
                   {room.title}
                 </span>
               </div>
-              <p className="odr-support mt-1 pl-6">
+              <p className="tkn-support mt-1 pl-6">
                 {room.fileName} · Created {room.createdAtFormatted}
               </p>
             </div>

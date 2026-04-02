@@ -22,7 +22,7 @@ export async function GET(
 
   if (metadata.status !== "active" || isVaultExpired(metadata.expiresAt)) {
     return NextResponse.json(
-      { error: "This OpenDataRoom room is no longer available." },
+      { error: "This Token room is no longer available." },
       { status: 403 },
     );
   }

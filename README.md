@@ -1,8 +1,8 @@
-# OpenDataRoom
+# Token
 
 > Secure, encrypted document sharing rooms for deals, due diligence, and board communications.
 
-OpenDataRoom is a lightweight web app for sharing one sensitive document at a time through a calm, premium room experience. Documents are encrypted client-side with AES-256-GCM before they leave the browser — the server never holds plaintext files or encryption keys.
+Token is a lightweight web app for sharing one sensitive document at a time through a calm, premium room experience. Documents are encrypted client-side with AES-256-GCM before they leave the browser — the server never holds plaintext files or encryption keys.
 
 ## Features
 
@@ -63,8 +63,8 @@ Browser (React 19)          Next.js 15 App Router
 ### Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/opendataroom.git
-cd opendataroom
+git clone https://github.com/Tarzelf/openDataRoom.git
+cd openDataRoom
 pnpm install
 ```
 
@@ -84,7 +84,9 @@ cp .env.example .env.local
 
 | Variable | Required | Description |
 |---|---|---|
-| `ODR_APP_SECRET` | Yes (prod) | Secret used to sign session and access cookies. Generate a long random string. |
+| `TKN_APP_SECRET` | Yes (prod) | Secret used to sign session and access cookies. Generate a long random string. |
+| `NEXT_PUBLIC_SITE_URL` | No | Canonical site URL for Open Graph / metadata (e.g. `https://token.fyi` or your Railway URL). |
+| `DATABASE_URL` | No | PostgreSQL URL for durable auth/workspace state (Railway Postgres). |
 | `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token. Enables production storage. Without it, uses local `.dataroom/` filesystem. |
 | `SENDGRID_API_KEY` | No | SendGrid API key for email delivery. Without it, magic codes print to the console. |
 | `SENDGRID_FROM_EMAIL` | No | Verified sender email for OTP delivery. |
@@ -174,19 +176,19 @@ The server stores only the encrypted blob and the key derivation parameters. Wit
 
 - **Development**: Encrypted blobs stored in `.dataroom/vaults/{slug}/` (local filesystem)
 - **Production**: Encrypted blobs stored in Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
-- **Auth state**: Stored in `.dataroom/auth/state.json` (local) — production can use the same local filesystem or be adapted for a database
-- **Session cookies**: HTTP-only, signed with HMAC-SHA256 using `ODR_APP_SECRET`
+- **Auth state**: `.dataroom/auth/state.json` locally, or PostgreSQL table `tkn_auth_state` when `DATABASE_URL` is set (e.g. Railway)
+- **Session cookies**: HTTP-only, signed with HMAC-SHA256 using `TKN_APP_SECRET`
 
 ## Deployment
 
 ### Vercel (Recommended)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/opendataroom)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Tarzelf/openDataRoom)
 
 1. Fork or clone this repository
 2. Connect to Vercel
 3. Add environment variables in Vercel project settings:
-   - `ODR_APP_SECRET` — generate with `openssl rand -hex 32`
+   - `TKN_APP_SECRET` — generate with `openssl rand -hex 32`
    - `BLOB_READ_WRITE_TOKEN` — from Vercel Blob dashboard
    - `SENDGRID_API_KEY` — from SendGrid API Keys
    - `SENDGRID_FROM_EMAIL` — your verified sender
@@ -201,12 +203,12 @@ Create a new blob store in your Vercel project dashboard and paste the token.
 ### Docker (Self-hosted)
 
 ```bash
-docker build -t opendataroom .
+docker build -t token .
 docker run -p 3000:3000 \
-  -e ODR_APP_SECRET=your-secret-here \
+  -e TKN_APP_SECRET=your-secret-here \
   -e SENDGRID_API_KEY=SG.xxx \
   -e SENDGRID_FROM_EMAIL=you@example.com \
-  opendataroom
+  token
 ```
 
 The app runs in local storage mode without `BLOB_READ_WRITE_TOKEN`.

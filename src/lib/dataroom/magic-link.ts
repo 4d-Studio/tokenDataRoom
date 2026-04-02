@@ -16,11 +16,11 @@ const buildHtmlEmail = (code: string) => `
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;background:#ffffff;border-radius:12px;border:1px solid #e4e4e7;overflow:hidden">
         <tr><td style="padding:32px 32px 24px">
-          <div style="font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#18181b">OpenDataRoom</div>
+          <div style="font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#18181b">Token</div>
         </td></tr>
         <tr><td style="padding:0 32px">
           <div style="font-size:22px;font-weight:700;color:#18181b;letter-spacing:-0.03em">Your sign-in code</div>
-          <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#71717a">Enter this code in the OpenDataRoom login screen. It expires in 10 minutes.</p>
+          <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#71717a">Enter this code in the Token login screen. It expires in 10 minutes.</p>
         </td></tr>
         <tr><td style="padding:24px 32px">
           <div style="background:#f4f4f5;border-radius:8px;padding:16px;text-align:center;font-size:32px;font-weight:700;letter-spacing:0.3em;color:#18181b;font-family:'SF Mono',SFMono-Regular,Menlo,monospace">${code}</div>
@@ -29,7 +29,7 @@ const buildHtmlEmail = (code: string) => `
           <p style="margin:0;font-size:13px;line-height:1.5;color:#a1a1aa">If you didn't request this code, you can safely ignore this email. No account will be created.</p>
         </td></tr>
       </table>
-      <p style="margin:24px 0 0;font-size:12px;color:#a1a1aa;text-align:center">OpenDataRoom · Secure document sharing</p>
+      <p style="margin:24px 0 0;font-size:12px;color:#a1a1aa;text-align:center">Token · Secure document sharing</p>
     </td></tr>
   </table>
 </body>
@@ -40,7 +40,7 @@ export const sendMagicCode = async (
   code: string,
 ): Promise<SendCodeResult> => {
   if (!isSendgridConfigured()) {
-    console.log(`[OpenDataRoom] magic code for ${email}: ${code}`);
+    console.log(`[Token] magic code for ${email}: ${code}`);
     return { delivery: "local", debugCode: code };
   }
 
@@ -50,10 +50,10 @@ export const sendMagicCode = async (
     to: email,
     from: {
       email: process.env.SENDGRID_FROM_EMAIL!,
-      name: "OpenDataRoom",
+      name: "Token",
     },
-    subject: `${code} is your OpenDataRoom sign-in code`,
-    text: `Your OpenDataRoom sign-in code is ${code}. It expires in 10 minutes. If you didn't request this, ignore this email.`,
+    subject: `${code} is your Token sign-in code`,
+    text: `Your Token sign-in code is ${code}. It expires in 10 minutes. If you didn't request this, ignore this email.`,
     html: buildHtmlEmail(code),
   });
 

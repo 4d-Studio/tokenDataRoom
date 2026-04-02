@@ -10,7 +10,7 @@ import {
   listRoomsForWorkspace,
   removeRoomFromWorkspace,
   updateWorkspaceRoomStatus,
-  type OdrUser,
+  type TknUser,
   type WorkspaceRecord,
   type WorkspaceRoomSummary,
 } from "@/lib/dataroom/auth-store";
@@ -27,7 +27,7 @@ export const getCurrentSession = async (): Promise<UserSession | null> => {
   return verifySessionToken(cookieStore.get(sessionCookieName)?.value);
 };
 
-export const getCurrentUser = async (): Promise<OdrUser | null> => {
+export const getCurrentUser = async (): Promise<TknUser | null> => {
   const session = await getCurrentSession();
 
   if (!session) {

@@ -71,7 +71,7 @@ export function RichTextEditor({ content, onChange, className }: RichTextEditorP
     },
     editorProps: {
       attributes: {
-        class: "odr-prose min-h-72 px-4 py-3 outline-none",
+        class: "tkn-prose min-h-72 px-4 py-3 outline-none",
       },
     },
   });

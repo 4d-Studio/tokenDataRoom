@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandMark } from "@/components/dataroom/brand-mark";
+
+export const metadata: Metadata = {
+  title: "Terms",
+  description: "Terms of Service for using Token secure datarooms.",
+};
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -20,16 +26,13 @@ export default function TermsPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-12">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Terms of Service</h1>
-        <p className="odr-fine mt-2">Last updated March 2026</p>
+        <p className="tkn-fine mt-2">Last updated March 2026</p>
 
-        <div className="mt-8 space-y-8 odr-prose">
+        <div className="mt-8 space-y-8 tkn-prose">
           <section>
             <h2>1. Acceptance</h2>
             <p>
-              By accessing or using OpenDataRoom.("the Service"), you agree to be bound by these Terms of
-              Service ("Terms"). If you do not agree to these Terms, do not use the Service. These
-              Terms form a binding agreement between you ("you", "User") and OpenDataRoom.("we", "us",
-              "Service Provider").
+              {`By accessing or using Token ("the Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service. These Terms form a binding agreement between you ("you", "User") and Token ("we", "us", "Service Provider").`}
             </p>
           </section>
 
@@ -38,7 +41,7 @@ export default function TermsPage() {
           <section>
             <h2>2. Description of service</h2>
             <p>
-              OpenDataRoom.provides a secure online service for sharing documents within password-protected
+              Token provides a secure online service for sharing documents within password-protected
               rooms. Core features include: end-to-end encrypted file storage, optional NDA gating,
               access logging, and the ability to revoke shared links. We reserve the right to modify,
               suspend, or discontinue any part of the Service at any time.
@@ -50,7 +53,7 @@ export default function TermsPage() {
           <section>
             <h2>3. Account registration</h2>
             <p>
-              Access to OpenDataRoom.requires account registration. You must provide a valid email address
+              Access to Token requires account registration. You must provide a valid email address
               and complete login via a one-time code. You are responsible for keeping your login
               credentials secure and for all activity that occurs under your account. You must notify
               us immediately of any unauthorised use.
@@ -80,9 +83,7 @@ export default function TermsPage() {
           <section>
             <h2>5. Your content</h2>
             <p>
-              You retain full ownership of all content you upload to OpenDataRoom.("Your Content"). By using
-              the Service, you grant us a limited licence to process, store, and transmit Your Content
-              solely as necessary to provide the Service to you.
+              {`You retain full ownership of all content you upload to Token ("Your Content"). By using the Service, you grant us a limited licence to process, store, and transmit Your Content solely as necessary to provide the Service to you.`}
             </p>
             <p>
               You are solely responsible for ensuring you have all necessary rights, consents, and
@@ -176,7 +177,7 @@ export default function TermsPage() {
           <section>
             <h2>11. Limitation of liability</h2>
             <p>
-              To the maximum extent permitted by law, OpenDataRoom.and its officers, employees, and agents
+              To the maximum extent permitted by law, Token and its officers, employees, and agents
               shall not be liable for any indirect, incidental, special, consequential, or punitive
               damages arising out of or related to your use of the Service, including but not limited
               to loss of data, loss of revenue, loss of profits, or cost of replacement services,
@@ -193,7 +194,7 @@ export default function TermsPage() {
           <section>
             <h2>12. Indemnification</h2>
             <p>
-              You agree to indemnify, defend, and hold harmless OpenDataRoom.and its officers, employees,
+              You agree to indemnify, defend, and hold harmless Token and its officers, employees,
               and agents from and against any and all claims, liabilities, damages, losses, and
               expenses (including reasonable legal fees) arising out of or related to: (a) your breach
               of these Terms; (b) your content or your use of the Service; or (c) any third-party
@@ -206,7 +207,7 @@ export default function TermsPage() {
           <section>
             <h2>13. Intellectual property</h2>
             <p>
-              OpenDataRoom, its logos, design, and all original content on the website are owned by OpenDataRoom
+              Token, its logos, design, and all original content on the website are owned by Token
               or its licensors and may not be reproduced, duplicated, or used without our written
               permission. All other trademarks mentioned are the property of their respective owners.
             </p>
@@ -218,7 +219,7 @@ export default function TermsPage() {
             <h2>14. Governing law</h2>
             <p>
               These Terms shall be governed by and construed in accordance with the laws of the
-              jurisdiction in which OpenDataRoom.is registered, without regard to its conflict of law
+              jurisdiction in which Token is registered, without regard to its conflict of law
               provisions. Any disputes arising from these Terms shall be subject to the exclusive
               jurisdiction of the courts of that jurisdiction.
             </p>
@@ -242,13 +243,13 @@ export default function TermsPage() {
             <h2>16. Contact</h2>
             <p>
               For questions about these Terms, contact us at{" "}
-              <span className="font-mono text-sm">legal@dataroom.app</span>.
+              <span className="font-mono text-sm">legal@token.fyi</span>.
             </p>
           </section>
         </div>
 
         {/* Footer */}
-        <div className="mt-12 flex flex-wrap gap-4 border-t border-border pt-8 text-sm text-[var(--odr-text-fine)]">
+        <div className="mt-12 flex flex-wrap gap-4 border-t border-border pt-8 text-sm text-[var(--tkn-text-fine)]">
           <Link href="/privacy" className="hover:text-foreground">
             Privacy Policy
           </Link>

@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Create workspace",
+  description: "Set up your Token workspace to create secure datarooms.",
+};
 
 import { CookieNotice } from "@/components/dataroom/cookie-notice";
 import { WorkspaceOnboarding } from "@/components/auth/workspace-onboarding";

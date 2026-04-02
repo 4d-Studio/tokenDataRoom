@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/dataroom/auth";
-import { updateUserPlan, type OdrUser } from "@/lib/dataroom/auth-store";
+import { updateUserPlan, type TknUser } from "@/lib/dataroom/auth-store";
 
 const schema = z.object({
   plan: z.enum(["free", "plus", "unicorn"]),
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
   }
 
-  const updated = await updateUserPlan(user.id, body.data.plan as OdrUser["plan"]);
+  const updated = await updateUserPlan(user.id, body.data.plan as TknUser["plan"]);
 
   return NextResponse.json({ plan: updated?.plan ?? null });
 }

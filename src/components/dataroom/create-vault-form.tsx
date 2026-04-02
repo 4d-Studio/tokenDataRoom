@@ -70,14 +70,14 @@ function StepIndicator({ current, completed }: { current: number; completed: Set
                   ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
                   : active
                   ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
-                  : "border-border bg-muted text-[var(--odr-text-fine)]"
+                  : "border-border bg-muted text-[var(--tkn-text-fine)]"
               }`}
             >
               {done ? <CheckSquare className="size-4" /> : <Icon className="size-4" />}
             </div>
             <span
               className={`ml-2 text-sm font-medium ${
-                active || done ? "text-foreground" : "text-[var(--odr-text-fine)]"
+                active || done ? "text-foreground" : "text-[var(--tkn-text-fine)]"
               }`}
             >
               {step.label}
@@ -104,24 +104,24 @@ function UploadStep({
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-lg font-semibold text-foreground">Add a document</h2>
-        <p className="mt-1 text-sm text-[var(--odr-text-support)]">
+        <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
           Upload the file you want to share. PDFs, decks, images, and contracts all work.
         </p>
       </div>
 
       <label className="upload-zone flex h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border bg-muted/30 text-center transition-colors hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5">
-        <Upload className="size-8 text-[var(--odr-text-fine)]" />
+        <Upload className="size-8 text-[var(--tkn-text-fine)]" />
         <div>
           <p className="text-sm font-medium text-[var(--color-foreground)]">
             {file ? file.name : "Drop your file here"}
           </p>
           {file && (
-            <p className="mt-0.5 text-xs text-[var(--odr-text-support)]">
+            <p className="mt-0.5 text-xs text-[var(--tkn-text-support)]">
               {(file.size / 1024 / 1024).toFixed(1)} MB
             </p>
           )}
           {!file && (
-            <p className="mt-0.5 text-xs text-[var(--odr-text-support)]">
+            <p className="mt-0.5 text-xs text-[var(--tkn-text-support)]">
               PDF, deck, image — up to 25 MB
             </p>
           )}
@@ -152,7 +152,7 @@ function ProtectStep({
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-lg font-semibold text-foreground">Protect the room</h2>
-        <p className="mt-1 text-sm text-[var(--odr-text-support)]">
+        <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
           Give the room a title and set a password. Only recipients with the password can open the file.
         </p>
       </div>
@@ -186,7 +186,7 @@ function ProtectStep({
 
       <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/20 p-4">
         <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[var(--color-accent)]" />
-        <p className="text-sm text-[var(--odr-text-support)]">
+        <p className="text-sm text-[var(--tkn-text-support)]">
           Your file is encrypted with AES-256 in this browser before it reaches our servers.
           We never see the password or the plaintext file.
         </p>
@@ -231,7 +231,7 @@ function DetailsStep({
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-lg font-semibold text-foreground">Room details</h2>
-        <p className="mt-1 text-sm text-[var(--odr-text-support)]">
+        <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
           Optional. Help recipients understand who sent the room and why.
         </p>
       </div>
@@ -384,7 +384,7 @@ export const CreateVaultForm = ({
     if (!file) return;
 
     setError("");
-    const effSenderName = senderName.trim() || defaultSenderName || "OpenDataRoom workspace";
+    const effSenderName = senderName.trim() || defaultSenderName || "Token workspace";
     const effSenderCompany = senderCompany.trim() || defaultSenderCompany;
     const effNdaText = ndaText ? ndaText : defaultNdaText;
 
@@ -437,7 +437,7 @@ export const CreateVaultForm = ({
     return (
       <Card className="rounded-2xl border border-border bg-white p-6">
         <p className="font-semibold text-foreground">Free plan limit reached</p>
-        <p className="mt-1 text-sm text-[var(--odr-text-support)]">
+        <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
           Your Free plan allows 3 rooms. Upgrade to create more.
         </p>
         <Button asChild size="sm" className="mt-4">
@@ -456,7 +456,7 @@ export const CreateVaultForm = ({
             <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-500" />
             <div>
               <p className="font-semibold text-foreground">Room created</p>
-              <p className="mt-1 text-sm text-[var(--odr-text-support)]">
+              <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
                 Share the link and password separately. Keep the management link private.
               </p>
             </div>
@@ -464,7 +464,7 @@ export const CreateVaultForm = ({
         </Card>
 
         <Card className="rounded-2xl border border-border bg-white p-6">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--odr-text-fine)]">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--tkn-text-fine)]">
             Share link
           </p>
           <div className="mt-2 flex items-center gap-2">
@@ -474,7 +474,7 @@ export const CreateVaultForm = ({
         </Card>
 
         <Card className="rounded-2xl border border-border bg-white p-6">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--odr-text-fine)]">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--tkn-text-fine)]">
             Management link
           </p>
           <div className="mt-2 flex items-center gap-2">

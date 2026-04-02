@@ -66,7 +66,7 @@ export function ShareOverviewCard({ metadata }: ShareOverviewCardProps) {
         <Separator />
 
         <p className="text-xs leading-normal text-muted-foreground">
-          OpenDataRoom records room opens, NDA acceptance, and downloads for the sender.
+          Token records room opens, NDA acceptance, and downloads for the sender.
         </p>
       </CardContent>
     </Card>

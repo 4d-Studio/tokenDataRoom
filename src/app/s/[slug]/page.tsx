@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -14,6 +15,24 @@ import {
 } from "@/lib/dataroom/workspace-nda-access";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const storage = getVaultStorage();
+  const vault = await storage.getVaultMetadata(slug);
+  if (!vault) {
+    return { title: "Room", robots: { index: false, follow: false } };
+  }
+  return {
+    title: vault.title,
+    description: `Shared dataroom on Token: ${vault.title}.`,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function SharePage({
   params,

@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandMark } from "@/components/dataroom/brand-mark";
+
+export const metadata: Metadata = {
+  title: "DPA",
+  description: "Data Processing Agreement for Token customers and subprocessors.",
+};
 import { Button } from "@/components/ui/button";
 
 export default function DpaPage() {
@@ -21,20 +27,20 @@ export default function DpaPage() {
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
           Data Processing Agreement
         </h1>
-        <p className="odr-fine mt-2">Last updated March 2026</p>
+        <p className="tkn-fine mt-2">Last updated March 2026</p>
 
-        <div className="mt-8 space-y-8 odr-prose">
+        <div className="mt-8 space-y-8 tkn-prose">
           <section>
             <h2>1. Parties</h2>
             <p>
               This Data Processing Agreement ("DPA") forms part of the Terms of Service between
-              OpenDataRoom ("Processor") and the user or their organisation ("Controller") and governs the
-              processing of personal data on behalf of the Controller when they use the OpenDataRoom
+              Token ("Processor") and the user or their organisation ("Controller") and governs the
+              processing of personal data on behalf of the Controller when they use the Token
               service.
             </p>
             <p>
-              For the purposes of this DPA, the Controller is the OpenDataRoom user who creates a
-              workspace and controls what data is shared through it. The Processor is OpenDataRoom.
+              For the purposes of this DPA, the Controller is the Token user who creates a
+              workspace and controls what data is shared through it. The Processor is Token.
             </p>
           </section>
 
@@ -136,7 +142,7 @@ export default function DpaPage() {
             </ul>
             <p>
               Data subjects may also contact the Processor directly at{" "}
-              <span className="font-mono text-sm">privacy@dataroom.app</span> to exercise their
+              <span className="font-mono text-sm">privacy@token.fyi</span> to exercise their
               rights.
             </p>
           </section>
@@ -155,30 +161,30 @@ export default function DpaPage() {
               <tbody className="divide-y divide-border">
                 <tr>
                   <td className="py-2 pr-4">Vercel Inc.</td>
-                  <td className="py-2 pr-4 text-[var(--odr-text-support)]">
+                  <td className="py-2 pr-4 text-[var(--tkn-text-support)]">
                     Hosting, compute, and serverless functions
                   </td>
-                  <td className="py-2 text-[var(--odr-text-support)]">United States</td>
+                  <td className="py-2 text-[var(--tkn-text-support)]">United States</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4">Vercel Blob</td>
-                  <td className="py-2 pr-4 text-[var(--odr-text-support)]">
+                  <td className="py-2 pr-4 text-[var(--tkn-text-support)]">
                     Encrypted file storage
                   </td>
-                  <td className="py-2 text-[var(--odr-text-support)]">United States</td>
+                  <td className="py-2 text-[var(--tkn-text-support)]">United States</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4">Twilio SendGrid</td>
-                  <td className="py-2 pr-4 text-[var(--odr-text-support)]">
+                  <td className="py-2 pr-4 text-[var(--tkn-text-support)]">
                     Transactional email delivery
                   </td>
-                  <td className="py-2 text-[var(--odr-text-support)]">United States</td>
+                  <td className="py-2 text-[var(--tkn-text-support)]">United States</td>
                 </tr>
               </tbody>
             </table>
-            <p className="mt-3 odr-fine">
+            <p className="mt-3 tkn-fine">
               The Controller may object to a new sub-processor by contacting{" "}
-              <span className="font-mono text-sm">privacy@dataroom.app</span> within 30 days of
+              <span className="font-mono text-sm">privacy@token.fyi</span> within 30 days of
               receiving notice of a change.
             </p>
           </section>
@@ -203,7 +209,7 @@ export default function DpaPage() {
               compliance with this DPA. Controllers may request a copy of our most recent
               security audit report (if available) or a summary of our technical and organisational
               security measures by emailing{" "}
-              <span className="font-mono text-sm">security@dataroom.app</span>.
+              <span className="font-mono text-sm">security@token.fyi</span>.
             </p>
           </section>
 
@@ -222,7 +228,7 @@ export default function DpaPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-12 flex flex-wrap gap-4 border-t border-border pt-8 text-sm text-[var(--odr-text-fine)]">
+        <div className="mt-12 flex flex-wrap gap-4 border-t border-border pt-8 text-sm text-[var(--tkn-text-fine)]">
           <Link href="/privacy" className="hover:text-foreground">
             Privacy Policy
           </Link>

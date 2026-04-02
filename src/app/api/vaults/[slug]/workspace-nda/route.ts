@@ -33,7 +33,7 @@ export async function POST(
 
   if (metadata.status !== "active" || isVaultExpired(metadata.expiresAt)) {
     return NextResponse.json(
-      { error: "This OpenDataRoom room is no longer accepting new access." },
+      { error: "This Token room is no longer accepting new access." },
       { status: 403 },
     );
   }
