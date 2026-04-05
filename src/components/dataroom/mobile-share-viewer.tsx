@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -22,15 +23,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SignatureCanvas } from "@/components/dataroom/signature-canvas";
+import { ShareMobileWelcomeLayer } from "@/components/dataroom/share-entry-welcome";
+import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-overlay";
+import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import type { VaultAcceptanceRecord, VaultRecord } from "@/lib/dataroom/types";
 
 type Props = {
   hasDocument: boolean;
+  /** Shown over in-app preview only (not burned into downloads). */
+  viewerWatermarkLabel?: string;
   metadata: VaultRecord;
   initialAcceptance: VaultAcceptanceRecord | null;
   initialAccessGranted: boolean;
   ndaCardTitle: string;
+  ndaCardDescription?: ReactNode;
   ndaDocumentText: string;
   ndaPostPath: string;
   needsBootstrapFromWorkspace: boolean;
@@ -48,14 +55,19 @@ type Props = {
   onUnlockDocument: (password: string) => void;
   onDismissError: () => void;
   objectUrl: string | null;
+  shareHostLabel?: string;
+  workspaceLogoUrl?: string | null;
+  workspaceCompanyName?: string | null;
 };
 
 export function MobileShareViewer({
   hasDocument,
+  viewerWatermarkLabel = "",
   metadata,
   initialAcceptance,
   initialAccessGranted,
   ndaCardTitle,
+  ndaCardDescription,
   ndaDocumentText,
   ndaPostPath,
   needsBootstrapFromWorkspace,
@@ -66,10 +78,11 @@ export function MobileShareViewer({
   onUnlockDocument,
   onDismissError,
   objectUrl,
+  shareHostLabel = "",
+  workspaceLogoUrl,
+  workspaceCompanyName,
 }: Props) {
-  const [sheetOpen, setSheetOpen] = useState(
-    !initialAccessGranted || !metadata.requiresNda,
-  );
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [signerName, setSignerName] = useState(initialAcceptance?.signerName ?? "");
@@ -82,6 +95,8 @@ export function MobileShareViewer({
   );
   const [decrypted, setDecrypted] = useState(false);
   const [localError, setLocalError] = useState("");
+  const [ndaSheetStep, setNdaSheetStep] = useState<1 | 2 | 3>(1);
+  const [ndaReviewChecked, setNdaReviewChecked] = useState(false);
 
   const isNdaDone = !metadata.requiresNda || initialAccessGranted;
   const previewable =
@@ -142,29 +157,35 @@ export function MobileShareViewer({
         </div>
       </div>
 
-      {/* ── Document viewport ── */}
+      {/* ── Document viewport — welcome + blurred room until decrypted ── */}
       <div className="relative flex-1 overflow-hidden">
-        {!hasDocument ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-            <Clock className="size-10 text-white/30" />
-            <p className="text-sm font-medium text-white/80">No file in this room yet</p>
-            <p className="text-xs text-white/45">
-              The sender will add a document from owner controls. Pull up the sheet to complete the
-              NDA if required.
-            </p>
-            <Button variant="secondary" size="sm" onClick={() => setSheetOpen(true)}>
-              Open room steps
-            </Button>
-          </div>
-        ) : decrypted ? (
+        {decrypted && hasDocument ? (
           <MobileDocumentView
             src={objectUrl}
             mimeType={metadata.mimeType}
             fileName={metadata.fileName}
             previewable={previewable}
+            watermarkLabel={viewerWatermarkLabel}
           />
+        ) : decrypted ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+            <Clock className="size-10 text-white/30" />
+            <p className="text-sm font-medium text-white/80">No file in this room yet</p>
+            <p className="text-xs text-white/45">
+              The room is unlocked but there&apos;s nothing to preview. Ask the sender to upload from
+              owner controls.
+            </p>
+          </div>
         ) : (
-          <MobileLockedState onOpen={() => setSheetOpen(true)} />
+          <ShareMobileWelcomeLayer
+            shareHostLabel={shareHostLabel}
+            workspaceLogoUrl={workspaceLogoUrl}
+            workspaceCompanyName={workspaceCompanyName}
+            roomTitle={metadata.title}
+            hasDocument={hasDocument}
+            fileName={metadata.fileName}
+            onContinue={() => setSheetOpen(true)}
+          />
         )}
       </div>
 
@@ -222,69 +243,146 @@ export function MobileShareViewer({
                     </div>
                     <span className="text-sm font-semibold text-foreground">{ndaCardTitle}</span>
                   </div>
+                  {ndaCardDescription ? (
+                    <p className="mb-3 text-xs leading-relaxed text-neutral-600">{ndaCardDescription}</p>
+                  ) : null}
 
-                  <div className="mb-4 max-h-28 overflow-y-auto rounded-lg border border-neutral-200 bg-white p-3 text-xs leading-relaxed text-neutral-600">
-                    <p className="whitespace-pre-wrap line-clamp-6">
-                      {ndaDocumentText.slice(0, 600)}
-                      {ndaDocumentText.length > 600 ? "…" : ""}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    <Input
-                      value={signerName}
-                      onChange={(e) => setSignerName(e.target.value)}
-                      placeholder="Full name"
-                      className="h-9 text-sm"
-                    />
-                    <Input
-                      value={signerEmail}
-                      onChange={(e) => setSignerEmail(e.target.value)}
-                      placeholder="Work email"
-                      type="email"
-                      className="h-9 text-sm"
-                    />
-                    <Input
-                      value={signerCompany}
-                      onChange={(e) => setSignerCompany(e.target.value)}
-                      placeholder="Company (optional)"
-                      className="h-9 text-sm"
-                    />
-                    <Textarea
-                      value={signerAddress}
-                      onChange={(e) => setSignerAddress(e.target.value)}
-                      placeholder="Address"
-                      rows={2}
-                      className="text-sm"
-                    />
-
-                    <div className="rounded-lg border border-neutral-200 bg-white p-3">
-                      <p className="mb-2 text-xs text-neutral-400">Your electronic signature</p>
-                      <SignatureCanvas
-                        value={signatureName}
-                        imageValue={signatureImage}
-                        onChange={(text) => setSignatureName(text)}
-                        onImageChange={(img) => setSignatureImage(img)}
-                        placeholder="Your full name"
+                  {ndaSheetStep === 1 ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-neutral-500">
+                        Step 1 of 3 — Your name and work email.
+                      </p>
+                      <Input
+                        value={signerName}
+                        onChange={(e) => setSignerName(e.target.value)}
+                        placeholder="Full name"
+                        className="h-9 text-sm"
                       />
+                      <Input
+                        value={signerEmail}
+                        onChange={(e) => setSignerEmail(e.target.value)}
+                        placeholder="Work email"
+                        type="email"
+                        className="h-9 text-sm"
+                      />
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={
+                          signerName.trim().length < 2 ||
+                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signerEmail.trim())
+                        }
+                        onClick={() => setNdaSheetStep(2)}
+                      >
+                        Continue to review NDA
+                      </Button>
                     </div>
+                  ) : null}
 
-                    <Button
-                      onClick={handleSign}
-                      disabled={
-                        isPending ||
-                        !signatureName ||
-                        !signerName ||
-                        !signerEmail ||
-                        !signerAddress
-                      }
-                      className="w-full"
-                      size="lg"
-                    >
-                      <ShieldCheck className="size-4" />
-                      Sign and continue
-                    </Button>
-                  </div>
+                  {ndaSheetStep === 2 ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-neutral-500">Step 2 of 3 — Read the agreement.</p>
+                      <div
+                        className="min-h-[min(42vh,16rem)] max-h-[min(62vh,26rem)] touch-pan-y overflow-y-auto overscroll-contain rounded-lg border border-neutral-200 bg-white p-3 text-xs leading-relaxed text-neutral-700 [-webkit-overflow-scrolling:touch]"
+                        tabIndex={0}
+                        role="region"
+                        aria-label="NDA full text"
+                      >
+                        {isRichNdaContent(ndaDocumentText) ? (
+                          <div dangerouslySetInnerHTML={{ __html: ndaDocumentText }} />
+                        ) : (
+                          <p className="whitespace-pre-wrap">{ndaDocumentText}</p>
+                        )}
+                      </div>
+                      <label className="flex cursor-pointer items-start gap-2 text-xs text-neutral-700">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 size-4 shrink-0 rounded border-neutral-300"
+                          checked={ndaReviewChecked}
+                          onChange={(e) => setNdaReviewChecked(e.target.checked)}
+                        />
+                        <span>I have read this and agree to continue to sign.</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setNdaSheetStep(1)}
+                        >
+                          Back
+                        </Button>
+                        <Button
+                          type="button"
+                          className="flex-1"
+                          disabled={!ndaReviewChecked}
+                          onClick={() => setNdaSheetStep(3)}
+                        >
+                          Continue to sign
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {ndaSheetStep === 3 ? (
+                    <div className="space-y-2.5">
+                      <p className="text-xs text-neutral-500">Step 3 of 3 — Address and signature.</p>
+                      <div className="rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-600">
+                        <span className="font-medium text-neutral-900">{signerName}</span>
+                        <span className="mx-1">·</span>
+                        {signerEmail}
+                      </div>
+                      <Input
+                        value={signerCompany}
+                        onChange={(e) => setSignerCompany(e.target.value)}
+                        placeholder="Company (optional)"
+                        className="h-9 text-sm"
+                      />
+                      <Textarea
+                        value={signerAddress}
+                        onChange={(e) => setSignerAddress(e.target.value)}
+                        placeholder="Address"
+                        rows={2}
+                        className="text-sm"
+                      />
+
+                      <div className="rounded-lg border border-neutral-200 bg-white p-3">
+                        <p className="mb-2 text-xs text-neutral-400">Your electronic signature</p>
+                        <SignatureCanvas
+                          value={signatureName}
+                          imageValue={signatureImage}
+                          onChange={(text) => setSignatureName(text)}
+                          onImageChange={(img) => setSignatureImage(img)}
+                          placeholder="Your full name"
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setNdaSheetStep(2)}
+                        >
+                          Back
+                        </Button>
+                        <Button
+                          onClick={handleSign}
+                          disabled={
+                            isPending ||
+                            !signatureName ||
+                            !signerAddress ||
+                            signerAddress.trim().length < 10
+                          }
+                          className="flex-1"
+                          size="lg"
+                        >
+                          <ShieldCheck className="size-4" />
+                          Sign and continue
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
 
@@ -405,39 +503,14 @@ export function MobileShareViewer({
   );
 }
 
-function MobileLockedState({ onOpen }: { onOpen: () => void }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-5 p-8 text-center">
-      <motion.div
-        animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        className="flex size-20 items-center justify-center rounded-3xl bg-white/5 ring-1 ring-white/10 backdrop-blur-sm"
-      >
-        <Lock className="size-8 text-white/40" />
-      </motion.div>
-      <div>
-        <p className="text-base font-semibold text-white/80">Document encrypted</p>
-        <p className="mt-1.5 text-sm text-white/40">
-          Complete the steps below to unlock and view this document.
-        </p>
-      </div>
-      <Button
-        onClick={onOpen}
-        variant="outline"
-        className="border-white/20 text-white hover:bg-white/10"
-      >
-        Open unlock panel
-      </Button>
-    </div>
-  );
-}
-
 function PdfDeckView({
   src,
   fileName,
+  watermarkLabel,
 }: {
   src: string;
   fileName: string;
+  watermarkLabel?: string;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -492,11 +565,14 @@ function PdfDeckView({
     >
       {/* PDF iframe — page params appended to trigger reload on page change */}
       <div className="relative flex-1 overflow-hidden">
+        {watermarkLabel ? (
+          <ViewerWatermarkOverlay label={watermarkLabel} variant="light" />
+        ) : null}
         <iframe
           key={`pdf-${currentPage}-${scale}`}
           ref={iframeRef}
           src={`${src}#page=${currentPage}&zoom=${Math.round(scale * 100)}`}
-          className="h-full w-full border-0"
+          className="relative z-0 h-full w-full border-0"
           title={fileName}
           onLoad={handleIframeLoad}
         />
@@ -607,9 +683,11 @@ function PdfDeckView({
 function ImageDeckView({
   src,
   fileName,
+  watermarkLabel,
 }: {
   src: string;
   fileName: string;
+  watermarkLabel?: string;
 }) {
   const [currentImage, setCurrentImage] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -628,11 +706,15 @@ function ImageDeckView({
       className="relative flex h-full w-full flex-col bg-[#111111]"
       onDoubleClick={() => setShowControls((v) => !v)}
     >
-      <div className="flex-1 overflow-y-auto">
+      <div className="relative flex-1 overflow-y-auto">
+        {watermarkLabel ? (
+          <ViewerWatermarkOverlay label={watermarkLabel} variant="light" />
+        ) : null}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={images[currentImage] ?? src}
           alt={`${fileName} — image ${currentImage + 1}`}
-          className="min-h-full w-full object-contain"
+          className="relative z-0 min-h-full w-full object-contain"
         />
       </div>
 
@@ -643,7 +725,7 @@ function ImageDeckView({
             animate={{ y: 0 }}
             exit={{ y: 80 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-2 bg-gradient-to-t from-black/90 to-transparent pt-10 pb-5 px-4"
+            className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/90 to-transparent pt-10 pb-5 px-4"
           >
             <div className="flex items-center justify-center gap-3">
               <button
@@ -693,11 +775,13 @@ function MobileDocumentView({
   mimeType,
   fileName,
   previewable,
+  watermarkLabel = "",
 }: {
   src: string | null;
   mimeType: string;
   fileName: string;
   previewable: boolean;
+  watermarkLabel?: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollPct, setScrollPct] = useState(0);
@@ -731,25 +815,44 @@ function MobileDocumentView({
   }
 
   if (mimeType === "application/pdf") {
-    return <PdfDeckView src={src} fileName={fileName} />;
+    return (
+      <PdfDeckView
+        src={src}
+        fileName={fileName}
+        watermarkLabel={watermarkLabel || undefined}
+      />
+    );
   }
 
   if (mimeType.startsWith("image/")) {
-    return <ImageDeckView src={src} fileName={fileName} />;
+    return (
+      <ImageDeckView
+        src={src}
+        fileName={fileName}
+        watermarkLabel={watermarkLabel || undefined}
+      />
+    );
   }
 
   return (
     <div className="flex h-full flex-col">
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto"
+        className="relative flex-1 overflow-y-auto"
         onScroll={(e) => {
           const el = e.currentTarget;
           const pct = el.scrollTop / Math.max(1, el.scrollHeight - el.clientHeight);
           setScrollPct(Math.min(100, Math.max(0, pct * 100)));
         }}
       >
-        <iframe src={src} className="h-full w-full border-0" title={fileName} />
+        {watermarkLabel ? (
+          <ViewerWatermarkOverlay label={watermarkLabel} variant="light" />
+        ) : null}
+        <iframe
+          src={src}
+          className="relative z-0 h-full w-full border-0"
+          title={fileName}
+        />
       </div>
       <div className="h-1 w-full bg-white/10">
         <motion.div

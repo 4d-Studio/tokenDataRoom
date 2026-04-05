@@ -16,7 +16,9 @@ import {
 } from "lucide-react";
 
 import { MobileShareViewer } from "@/components/dataroom/mobile-share-viewer";
+import { ShareDesktopWelcomeHero } from "@/components/dataroom/share-entry-welcome";
 import { SignatureCanvas } from "@/components/dataroom/signature-canvas";
+import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-overlay";
 import { decryptFile } from "@/lib/dataroom/client-crypto";
 import { getOrCreateViewerBinding } from "@/lib/dataroom/viewer-binding-client";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
@@ -50,6 +52,16 @@ type AccessResponse = {
   success?: boolean;
 };
 
+type NdaFlowStep = "identity" | "review" | "sign";
+
+type NdaFormDraft = {
+  signerName: string;
+  signerEmail: string;
+  signerCompany: string;
+  signerAddress: string;
+  signatureName: string;
+};
+
 export function ShareExperience({
   metadata,
   initialAcceptance,
@@ -60,6 +72,9 @@ export function ShareExperience({
   ndaPostPath,
   ndaAcceptSuccessMessage,
   needsBootstrapFromWorkspace = false,
+  shareHostLabel = "",
+  workspaceLogoUrl,
+  workspaceCompanyName,
 }: {
   metadata: VaultRecord;
   initialAcceptance: VaultAcceptanceRecord | null;
@@ -70,6 +85,9 @@ export function ShareExperience({
   ndaPostPath: string;
   ndaAcceptSuccessMessage: string;
   needsBootstrapFromWorkspace?: boolean;
+  shareHostLabel?: string;
+  workspaceLogoUrl?: string | null;
+  workspaceCompanyName?: string | null;
 }) {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
@@ -86,8 +104,24 @@ export function ShareExperience({
     initialAcceptance ? `/api/vaults/${metadata.slug}/signed-nda` : "",
   );
   const [isPending, startTransition] = useTransition();
+  const [ndaStep, setNdaStep] = useState<NdaFlowStep>("identity");
+  const [ndaReadConfirmed, setNdaReadConfirmed] = useState(false);
+  const [ndaDraft, setNdaDraft] = useState<NdaFormDraft>(() => ({
+    signerName: initialAcceptance?.signerName ?? "",
+    signerEmail: initialAcceptance?.signerEmail ?? "",
+    signerCompany: initialAcceptance?.signerCompany ?? "",
+    signerAddress: initialAcceptance?.signerAddress ?? "",
+    signatureName: initialAcceptance?.signatureName ?? "",
+  }));
 
   const hasDocument = vaultHasEncryptedDocument(metadata);
+
+  const viewerWatermarkLabel =
+    acceptance?.signerEmail && objectUrl && hasDocument
+      ? `${acceptance.signerEmail} · ${acceptance.signerName || "Viewer"} · ${new Date().toLocaleDateString()}`
+      : objectUrl && hasDocument
+        ? `Confidential · ${metadata.title}`
+        : "";
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -195,10 +229,12 @@ export function ShareExperience({
     return (
       <MobileShareViewer
         hasDocument={hasDocument}
+        viewerWatermarkLabel={viewerWatermarkLabel}
         metadata={metadata}
         initialAcceptance={initialAcceptance}
-        initialAccessGranted={initialAccessGranted}
+        initialAccessGranted={accessGranted}
         ndaCardTitle={ndaCardTitle}
+        ndaCardDescription={ndaCardDescription}
         ndaDocumentText={ndaDocumentText}
         ndaPostPath={ndaPostPath}
         needsBootstrapFromWorkspace={needsBootstrapFromWorkspace}
@@ -209,6 +245,9 @@ export function ShareExperience({
         onUnlockDocument={handleUnlockDocument}
         onDismissError={() => setError("")}
         objectUrl={objectUrl}
+        shareHostLabel={shareHostLabel}
+        workspaceLogoUrl={workspaceLogoUrl}
+        workspaceCompanyName={workspaceCompanyName}
       />
     );
   }
@@ -224,11 +263,11 @@ export function ShareExperience({
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            signerName: acceptance?.signerName,
-            signerEmail: acceptance?.signerEmail,
-            signerCompany: acceptance?.signerCompany,
-            signerAddress: acceptance?.signerAddress,
-            signatureName: acceptance?.signatureName,
+            signerName: ndaDraft.signerName,
+            signerEmail: ndaDraft.signerEmail,
+            signerCompany: ndaDraft.signerCompany,
+            signerAddress: ndaDraft.signerAddress,
+            signatureName: ndaDraft.signatureName,
             signatureImage,
             viewerBinding: getOrCreateViewerBinding(metadata.slug),
           }),
@@ -305,7 +344,48 @@ export function ShareExperience({
       metadata.mimeType.startsWith("text/"));
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="relative mx-auto w-full max-w-3xl">
+      {/* Blurred “everything” behind the welcome — decorative only */}
+      <div
+        className="pointer-events-none absolute -inset-x-4 -top-6 bottom-[42%] z-0 overflow-hidden rounded-[1.75rem] opacity-[0.38] sm:-inset-x-10 sm:-top-10"
+        aria-hidden
+      >
+        <div className="h-full scale-[1.06] blur-2xl">
+          <div className="space-y-4 p-3 sm:p-5">
+            <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border/60 bg-muted/90 p-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <FileText className="size-5 text-muted-foreground/40" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-4 max-w-[14rem] rounded-md bg-foreground/10" />
+                <div className="h-3 max-w-[10rem] rounded-md bg-foreground/5" />
+              </div>
+              <div className="h-7 w-20 rounded-full bg-foreground/10" />
+            </div>
+            <div className="h-52 rounded-xl border border-border/50 bg-muted/70 sm:h-64" />
+            <div className="flex flex-wrap gap-2">
+              <div className="h-8 w-28 rounded-lg bg-foreground/10" />
+              <div className="h-8 w-36 rounded-lg bg-foreground/8" />
+              <div className="h-8 w-24 rounded-lg bg-foreground/8" />
+            </div>
+            <div className="space-y-2 rounded-xl border border-border/40 bg-card/80 p-4">
+              <div className="h-3 w-3/4 rounded bg-foreground/8" />
+              <div className="h-3 w-full rounded bg-foreground/5" />
+              <div className="h-3 w-5/6 rounded bg-foreground/5" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 space-y-6">
+      <ShareDesktopWelcomeHero
+        shareHostLabel={shareHostLabel}
+        workspaceLogoUrl={workspaceLogoUrl}
+        workspaceCompanyName={workspaceCompanyName}
+        roomTitle={metadata.title}
+        subtitle={ndaCardDescription}
+      />
+
       {/* File info bar */}
       <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-muted/30 p-4">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-background">
@@ -402,108 +482,186 @@ export function ShareExperience({
 
           {!accessGranted ? (
             <CardContent className="space-y-6">
-              <div
-                className="tkn-prose max-h-64 overflow-y-auto rounded-lg border bg-muted/20 p-4 text-sm leading-relaxed text-foreground"
-                tabIndex={0}
-              >
-                {isRichNdaContent(ndaDocumentText) ? (
-                  <div dangerouslySetInnerHTML={{ __html: ndaDocumentText }} />
-                ) : (
-                  <div className="whitespace-pre-wrap">{ndaDocumentText}</div>
-                )}
-              </div>
+              {ndaStep === "identity" ? (
+                <>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Step 1 of 3 — Your details</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Enter how you&apos;ll appear on the confidentiality agreement and access record.
+                    </p>
+                  </div>
+                  <FieldGroup>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field>
+                        <FieldLabel htmlFor="signer-name">Full name</FieldLabel>
+                        <Input
+                          id="signer-name"
+                          autoComplete="name"
+                          value={ndaDraft.signerName}
+                          onChange={(e) =>
+                            setNdaDraft((d) => ({ ...d, signerName: e.target.value }))
+                          }
+                          placeholder="Jane Doe"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="signer-email">Work email</FieldLabel>
+                        <Input
+                          id="signer-email"
+                          type="email"
+                          autoComplete="email"
+                          value={ndaDraft.signerEmail}
+                          onChange={(e) =>
+                            setNdaDraft((d) => ({ ...d, signerEmail: e.target.value }))
+                          }
+                          placeholder="jane@company.com"
+                        />
+                      </Field>
+                    </div>
+                  </FieldGroup>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      disabled={
+                        ndaDraft.signerName.trim().length < 2 ||
+                        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ndaDraft.signerEmail.trim())
+                      }
+                      onClick={() => setNdaStep("review")}
+                    >
+                      Continue to review NDA
+                    </Button>
+                  </div>
+                </>
+              ) : null}
 
-              <FieldGroup>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="signer-name">Full name</FieldLabel>
-                    <Input
-                      id="signer-name"
-                      value={acceptance?.signerName ?? ""}
-                      onChange={(e) =>
-                        setAcceptance((prev) =>
-                          prev ? { ...prev, signerName: e.target.value } : prev,
-                        )
-                      }
-                      placeholder="Jane Doe"
+              {ndaStep === "review" ? (
+                <>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Step 2 of 3 — Review</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Read the full agreement, then confirm to proceed to signing.
+                    </p>
+                  </div>
+                  <div
+                    className="tkn-prose max-h-[min(22rem,58vh)] min-h-[12rem] overflow-y-auto overscroll-contain rounded-lg border bg-muted/20 p-4 text-sm leading-relaxed text-foreground sm:max-h-96 [-webkit-overflow-scrolling:touch]"
+                    tabIndex={0}
+                    role="region"
+                    aria-label="NDA full text"
+                  >
+                    {isRichNdaContent(ndaDocumentText) ? (
+                      <div dangerouslySetInnerHTML={{ __html: ndaDocumentText }} />
+                    ) : (
+                      <div className="whitespace-pre-wrap">{ndaDocumentText}</div>
+                    )}
+                  </div>
+                  <label className="flex cursor-pointer items-start gap-3 text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-4 shrink-0 rounded border-input"
+                      checked={ndaReadConfirmed}
+                      onChange={(e) => setNdaReadConfirmed(e.target.checked)}
                     />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="signer-email">Work email</FieldLabel>
-                    <Input
-                      id="signer-email"
-                      value={acceptance?.signerEmail ?? ""}
-                      onChange={(e) =>
-                        setAcceptance((prev) =>
-                          prev ? { ...prev, signerEmail: e.target.value } : prev,
-                        )
-                      }
-                      placeholder="jane@company.com"
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="signer-company">Company</FieldLabel>
-                    <Input
-                      id="signer-company"
-                      value={acceptance?.signerCompany ?? ""}
-                      onChange={(e) =>
-                        setAcceptance((prev) =>
-                          prev ? { ...prev, signerCompany: e.target.value } : prev,
-                        )
-                      }
-                      placeholder="Northlight Labs"
-                    />
-                  </Field>
-                  <Field className="sm:col-span-2">
-                    <FieldLabel htmlFor="signer-address">Address</FieldLabel>
-                    <Textarea
-                      id="signer-address"
-                      className="min-h-20"
-                      value={acceptance?.signerAddress ?? ""}
-                      onChange={(e) =>
-                        setAcceptance((prev) =>
-                          prev ? { ...prev, signerAddress: e.target.value } : prev,
-                        )
-                      }
-                      placeholder="123 Main St, City, State, Zip"
-                    />
-                  </Field>
-                </div>
-              </FieldGroup>
+                    <span>I have read this agreement and agree to continue to sign.</span>
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    <Button type="button" variant="outline" onClick={() => setNdaStep("identity")}>
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={!ndaReadConfirmed}
+                      onClick={() => setNdaStep("sign")}
+                    >
+                      Continue to sign
+                    </Button>
+                  </div>
+                </>
+              ) : null}
 
-              <Separator />
-
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div className="flex-1">
-                  <FieldLabel className="mb-2 block">Your signature</FieldLabel>
-                  <SignatureCanvas
-                    value={acceptance?.signatureName ?? ""}
-                    imageValue={signatureImage}
-                    onChange={(text) =>
-                      setAcceptance((prev) =>
-                        prev ? { ...prev, signatureName: text } : prev,
-                      )
-                    }
-                    onImageChange={(img) => setSignatureImage(img)}
-                    placeholder="Jane Doe"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  disabled={
-                    isPending ||
-                    !acceptance?.signatureName ||
-                    !acceptance?.signerName ||
-                    !acceptance?.signerEmail ||
-                    !acceptance?.signerAddress
-                  }
-                  onClick={handleSign}
-                  className="w-full sm:w-auto"
-                >
-                  <ShieldCheck className="size-4" />
-                  Sign and continue
-                </Button>
-              </div>
+              {ndaStep === "sign" ? (
+                <>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Step 3 of 3 — Sign</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Complete your address and signature to accept the NDA and unlock the document
+                      (after password).
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">{ndaDraft.signerName}</span>
+                    <span className="mx-2">·</span>
+                    {ndaDraft.signerEmail}
+                  </div>
+                  <FieldGroup>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field>
+                        <FieldLabel htmlFor="signer-company">Company</FieldLabel>
+                        <Input
+                          id="signer-company"
+                          value={ndaDraft.signerCompany}
+                          onChange={(e) =>
+                            setNdaDraft((d) => ({ ...d, signerCompany: e.target.value }))
+                          }
+                          placeholder="Northlight Labs"
+                        />
+                      </Field>
+                      <Field className="sm:col-span-2">
+                        <FieldLabel htmlFor="signer-address">Address</FieldLabel>
+                        <Textarea
+                          id="signer-address"
+                          className="min-h-20"
+                          value={ndaDraft.signerAddress}
+                          onChange={(e) =>
+                            setNdaDraft((d) => ({ ...d, signerAddress: e.target.value }))
+                          }
+                          placeholder="123 Main St, City, State, Zip"
+                        />
+                      </Field>
+                    </div>
+                  </FieldGroup>
+                  <Separator />
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex-1">
+                      <FieldLabel className="mb-2 block">Your signature</FieldLabel>
+                      <SignatureCanvas
+                        value={ndaDraft.signatureName}
+                        imageValue={signatureImage}
+                        onChange={(text) =>
+                          setNdaDraft((d) => ({ ...d, signatureName: text }))
+                        }
+                        onImageChange={(img) => setSignatureImage(img)}
+                        placeholder="Jane Doe"
+                      />
+                    </div>
+                    <div className="flex w-full flex-col gap-2 sm:w-auto">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() => {
+                          setNdaStep("review");
+                        }}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled={
+                          isPending ||
+                          !ndaDraft.signatureName ||
+                          !ndaDraft.signerAddress ||
+                          ndaDraft.signerAddress.trim().length < 10
+                        }
+                        onClick={handleSign}
+                        className="w-full sm:w-auto"
+                      >
+                        <ShieldCheck className="size-4" />
+                        Sign and continue
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : null}
             </CardContent>
           ) : acceptance ? (
             <CardContent>
@@ -639,29 +797,35 @@ export function ShareExperience({
               </div>
 
               {objectUrl ? (
-                <div className="overflow-hidden rounded-lg border bg-background">
-                  {metadata.mimeType.startsWith("image/") ? (
-                    <Image
-                      src={objectUrl}
-                      alt={downloadName}
-                      width={1600}
-                      height={1200}
-                      unoptimized
-                      className="h-auto w-full"
-                    />
-                  ) : metadata.mimeType === "application/pdf" ? (
-                    <iframe
-                      title={downloadName}
-                      src={objectUrl}
-                      className="h-[70vh] min-h-[24rem] w-full"
-                    />
-                  ) : (
-                    <iframe
-                      title={downloadName}
-                      src={objectUrl}
-                      className="h-[56vh] min-h-[20rem] w-full"
-                    />
-                  )}
+                <div className="space-y-2">
+                  <div className="relative overflow-hidden rounded-lg border bg-background">
+                    <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
+                    {metadata.mimeType.startsWith("image/") ? (
+                      <Image
+                        src={objectUrl}
+                        alt={downloadName}
+                        width={1600}
+                        height={1200}
+                        unoptimized
+                        className="relative z-0 h-auto w-full"
+                      />
+                    ) : metadata.mimeType === "application/pdf" ? (
+                      <iframe
+                        title={downloadName}
+                        src={objectUrl}
+                        className="relative z-0 h-[70vh] min-h-[24rem] w-full"
+                      />
+                    ) : (
+                      <iframe
+                        title={downloadName}
+                        src={objectUrl}
+                        className="relative z-0 h-[56vh] min-h-[20rem] w-full"
+                      />
+                    )}
+                  </div>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Preview is watermarked. The file you download is the original decrypted document.
+                  </p>
                 </div>
               ) : null}
             </>
@@ -672,6 +836,7 @@ export function ShareExperience({
       <p className="text-center text-xs text-muted-foreground">
         Room opens, NDA acceptance, and downloads are recorded by Token.
       </p>
+      </div>
     </div>
   );
 }

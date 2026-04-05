@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { BrandMark } from "@/components/dataroom/brand-mark";
@@ -107,6 +107,12 @@ export default async function SharePage({
     ? "Workspace NDA accepted — it covers every room from this workspace. You can now unlock."
     : "NDA accepted. You can now unlock the document.";
 
+  const headerList = await headers();
+  const shareHostLabel =
+    headerList.get("x-forwarded-host")?.split(",")[0]?.trim() ??
+    headerList.get("host") ??
+    "";
+
   return (
     <main className="mx-auto min-h-screen w-full max-w-5xl px-4 py-4 sm:px-6">
       <header className="page-header">
@@ -133,6 +139,9 @@ export default async function SharePage({
           ndaPostPath={ndaPostPath}
           ndaAcceptSuccessMessage={ndaAcceptSuccessMessage}
           needsBootstrapFromWorkspace={needsBootstrapFromWorkspace}
+          shareHostLabel={shareHostLabel}
+          workspaceLogoUrl={workspace?.logoUrl}
+          workspaceCompanyName={workspace?.companyName}
         />
       </div>
     </main>
