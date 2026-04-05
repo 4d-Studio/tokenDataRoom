@@ -23,11 +23,16 @@
 
 - `AUTH_STATE_TABLE_MISSING_MARKER` in `auth-state-errors.ts` is embedded in the Postgres `ensureTable` error and detected by `vaultCreateFailureResponse`. **Do not change the substring** without updating tests.
 
+## Public share / manage URLs (`POST /api/vaults`)
+
+Links must not use `http://0.0.0.0:8080`. Resolution is `getPublicAppBaseUrl()` in `helpers.ts`: `NEXT_PUBLIC_SITE_URL` or `SITE_URL` → `RAILWAY_PUBLIC_DOMAIN` → `x-forwarded-host` / `host` → last resort `request.url`.
+
 ## Operations checklist
 
-1. `GET /api/health` → `database: "connected"`, `authStateTable: "ok"`, `vaultStorage` matches intent (`s3` for Railway Bucket).
-2. After deploy, create a **room without file** (metadata-only); expect 200 and links.
-3. CI: run `pnpm test` then `pnpm build` on every PR (paste the workflow below as `.github/workflows/test.yml` if your Git token has the `workflow` scope, or run locally before deploy).
+1. Set **`NEXT_PUBLIC_SITE_URL`** to your public origin (for example `https://your-app.up.railway.app`) for metadata and API-generated links, or rely on Railway’s **`RAILWAY_PUBLIC_DOMAIN`** + `x-forwarded-*` headers.
+2. `GET /api/health` → `database: "connected"`, `authStateTable: "ok"`, `vaultStorage` matches intent (`s3` for Railway Bucket).
+3. After deploy, create a **room without file** (metadata-only); expect 200 and links whose host matches your public domain (not `0.0.0.0`).
+4. CI: run `pnpm test` then `pnpm build` on every PR (paste the workflow below as `.github/workflows/test.yml` if your Git token has the `workflow` scope, or run locally before deploy).
 
 ```yaml
 name: test

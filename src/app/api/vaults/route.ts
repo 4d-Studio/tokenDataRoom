@@ -5,7 +5,13 @@ import {
   getCurrentWorkspace,
   recordWorkspaceRoom,
 } from "@/lib/dataroom/auth";
-import { addDays, buildDefaultNdaText, createOwnerKey, createPublicSlug } from "@/lib/dataroom/helpers";
+import {
+  addDays,
+  buildDefaultNdaText,
+  createOwnerKey,
+  createPublicSlug,
+  getPublicAppBaseUrl,
+} from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import {
   createEvent,
@@ -118,7 +124,7 @@ export async function POST(request: Request) {
         status: metadata.status,
       });
 
-      const baseUrl = new URL(request.url).origin;
+      const baseUrl = getPublicAppBaseUrl(request);
 
       return NextResponse.json({
         slug,
@@ -192,7 +198,7 @@ export async function POST(request: Request) {
       status: metadata.status,
     });
 
-    const baseUrl = new URL(request.url).origin;
+    const baseUrl = getPublicAppBaseUrl(request);
 
     return NextResponse.json({
       slug,

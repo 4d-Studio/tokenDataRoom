@@ -67,6 +67,58 @@ export const getBaseUrlFromHeaders = (headerMap: { get(name: string): string | n
   return `${protocol}://${host}`;
 };
 
+function isBogusPublicHostname(hostname: string): boolean {
+  return hostname === "0.0.0.0" || hostname === "[::]" || hostname.length === 0;
+}
+
+/**
+ * Public `https://…` origin for share/manage links from API routes.
+ * Never rely on `request.url` alone — behind Railway/Docker it is often `http://0.0.0.0:8080`.
+ *
+ * Priority: `NEXT_PUBLIC_SITE_URL` / `SITE_URL` → `RAILWAY_PUBLIC_DOMAIN` → proxy headers → `request.url`.
+ */
+export function getPublicAppBaseUrl(request: Request): string {
+  const trimSlash = (s: string) => (s.endsWith("/") ? s.slice(0, -1) : s);
+
+  for (const key of ["NEXT_PUBLIC_SITE_URL", "SITE_URL"] as const) {
+    const raw = process.env[key]?.trim();
+    if (!raw) continue;
+    try {
+      const normalized = trimSlash(raw);
+      const withProto = /^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
+      const u = new URL(withProto);
+      if (u.protocol === "http:" || u.protocol === "https:") return u.origin;
+    } catch {
+      /* invalid */
+    }
+  }
+
+  const railway = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
+  if (railway) {
+    const hostOnly = railway.replace(/^https?:\/\//i, "").split("/")[0]?.trim() ?? "";
+    if (hostOnly && !isBogusPublicHostname(hostOnly)) {
+      return `https://${hostOnly}`;
+    }
+  }
+
+  const fromHeaders = getBaseUrlFromHeaders(request.headers);
+  try {
+    const u = new URL(fromHeaders);
+    if (!isBogusPublicHostname(u.hostname)) return fromHeaders;
+  } catch {
+    /* */
+  }
+
+  try {
+    const u = new URL(request.url);
+    if (!isBogusPublicHostname(u.hostname)) return u.origin;
+  } catch {
+    /* */
+  }
+
+  return "http://localhost:3000";
+}
+
 export const getClientIp = (request: Request) =>
   request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
   request.headers.get("x-real-ip") ??
