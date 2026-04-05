@@ -77,9 +77,9 @@ Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain include
 | Variable | Required | Description |
 |---|---|---|
 | `TKN_APP_SECRET` | Yes (prod) | HMAC signing secret for session and access cookies |
-| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL (no trailing slash) for `metadataBase`, Open Graph, **and share/manage links from `POST /api/vaults`**. On Railway without this, `RAILWAY_PUBLIC_DOMAIN` or `x-forwarded-*` headers are used so links are not `0.0.0.0:8080`. |
-| `RAILWAY_PUBLIC_DOMAIN` | Auto | Set by Railway (hostname only). Used as fallback for public URLs when `request.url` is internal. |
-| `SITE_URL` | No | Server-only alternate to `NEXT_PUBLIC_SITE_URL` for the same public-origin resolution. |
+| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL for `metadataBase`, Open Graph, and **`POST /api/vaults` links in production** (`NODE_ENV=production`). In **`next dev`**, API links use your local host instead — this var is ignored for those URLs so `.env.local` can still point at prod for other uses. |
+| `RAILWAY_PUBLIC_DOMAIN` | Auto | Railway hostname. Used in **production** as fallback when `request.url` is internal (e.g. `0.0.0.0:8080`). Ignored in `next dev` for vault links. |
+| `SITE_URL` | No | Server-only alternate to `NEXT_PUBLIC_SITE_URL` for production vault-link resolution only. |
 | `DATABASE_URL` | No | PostgreSQL URL. Also accepts `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `RAILWAY_DATABASE_URL`. When set, auth/workspace index uses table `public.tkn_auth_state` (create with `pnpm db:migrate`; Railway `releaseCommand` runs this). |
 | `BLOB_READ_WRITE_TOKEN` | No | Optional Vercel Blob **only when S3 bucket env is incomplete**. If Railway Bucket vars are set, Blob token is ignored. |
 | Railway Bucket | No | `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `ENDPOINT`, `REGION` from Railway Storage — **highest priority** for vault files when complete. |

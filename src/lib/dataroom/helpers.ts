@@ -71,13 +71,45 @@ function isBogusPublicHostname(hostname: string): boolean {
   return hostname === "0.0.0.0" || hostname === "[::]" || hostname.length === 0;
 }
 
+function localDevPublicBaseUrl(request: Request): string {
+  try {
+    const u = new URL(request.url);
+    if (u.hostname === "0.0.0.0") {
+      return `http://localhost:${u.port || "3000"}`;
+    }
+    if (!isBogusPublicHostname(u.hostname)) return u.origin;
+  } catch {
+    /* */
+  }
+
+  const fromHeaders = getBaseUrlFromHeaders(request.headers);
+  try {
+    const u = new URL(fromHeaders);
+    if (u.hostname === "0.0.0.0") {
+      return `http://localhost:${u.port || "3000"}`;
+    }
+    if (!isBogusPublicHostname(u.hostname)) return fromHeaders;
+  } catch {
+    /* */
+  }
+
+  return "http://localhost:3000";
+}
+
 /**
- * Public `https://…` origin for share/manage links from API routes.
- * Never rely on `request.url` alone — behind Railway/Docker it is often `http://0.0.0.0:8080`.
+ * Public origin for share/manage links from API routes.
  *
- * Priority: `NEXT_PUBLIC_SITE_URL` / `SITE_URL` → `RAILWAY_PUBLIC_DOMAIN` → proxy headers → `request.url`.
+ * - **`next dev`** (`NODE_ENV === "development"`): uses the host you’re actually hitting
+ *   (localhost, etc.). Ignores `NEXT_PUBLIC_SITE_URL` / `RAILWAY_PUBLIC_DOMAIN` so local
+ *   links stay local.
+ * - **Production** (and **`vitest`**, `NODE_ENV === "test"`): `NEXT_PUBLIC_SITE_URL` /
+ *   `SITE_URL` → `RAILWAY_PUBLIC_DOMAIN` → proxy headers — avoids `0.0.0.0:8080` behind Railway.
  */
 export function getPublicAppBaseUrl(request: Request): string {
+  if (process.env.NODE_ENV === "development") {
+    return localDevPublicBaseUrl(request);
+  }
+
   const trimSlash = (s: string) => (s.endsWith("/") ? s.slice(0, -1) : s);
 
   for (const key of ["NEXT_PUBLIC_SITE_URL", "SITE_URL"] as const) {

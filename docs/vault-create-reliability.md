@@ -25,7 +25,7 @@
 
 ## Public share / manage URLs (`POST /api/vaults`)
 
-Links must not use `http://0.0.0.0:8080`. Resolution is `getPublicAppBaseUrl()` in `helpers.ts`: `NEXT_PUBLIC_SITE_URL` or `SITE_URL` → `RAILWAY_PUBLIC_DOMAIN` → `x-forwarded-host` / `host` → last resort `request.url`.
+Links must not use `http://0.0.0.0:8080` in production. **`next dev`**: links follow the request host (localhost); `NEXT_PUBLIC_SITE_URL` / `RAILWAY_PUBLIC_DOMAIN` are **not** applied to `POST /api/vaults` responses. **Production**: `getPublicAppBaseUrl()` uses `NEXT_PUBLIC_SITE_URL` or `SITE_URL` → `RAILWAY_PUBLIC_DOMAIN` → `x-forwarded-host` / `host` → `request.url`.
 
 ## Operations checklist
 
