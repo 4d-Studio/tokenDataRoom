@@ -1,5 +1,7 @@
 import { Pool } from "pg";
 
+import { AUTH_STATE_TABLE_MISSING_MARKER } from "@/lib/dataroom/auth-state-errors";
+
 /** Mirrors the JSON blob in `auth-store` (single-table persistence). */
 export type AuthStateSnapshot = {
   users: unknown[];
@@ -89,7 +91,7 @@ const ensureTable = async () => {
       .then((res) => {
         if (!res.rows[0]?.reg) {
           throw new Error(
-            `PostgreSQL table public.${TABLE} is missing. Run migrations: pnpm db:migrate (Railway runs this in releaseCommand).`,
+            `PostgreSQL table public.${TABLE} is missing (${AUTH_STATE_TABLE_MISSING_MARKER}). Run migrations: pnpm db:migrate (Railway runs this in releaseCommand).`,
           );
         }
       });

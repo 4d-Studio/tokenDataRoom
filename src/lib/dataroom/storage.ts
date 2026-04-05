@@ -1,18 +1,24 @@
 import { BlobVaultStorage } from "@/lib/dataroom/blob-storage";
 import { LocalVaultStorage } from "@/lib/dataroom/local-storage";
 import { isS3VaultConfigured, S3VaultStorage } from "@/lib/dataroom/s3-vault-storage";
+import {
+  getVaultStorageModeFromEnv,
+  type VaultStorageMode,
+} from "@/lib/dataroom/vault-storage-mode";
 
 type VaultStorage = BlobVaultStorage | S3VaultStorage | LocalVaultStorage;
 
 let storage: VaultStorage | undefined;
 
-export type StorageMode = "blob" | "s3" | "local";
+export type StorageMode = VaultStorageMode;
 
-export const getStorageMode = (): StorageMode => {
-  if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
-  if (isS3VaultConfigured()) return "s3";
-  return "local";
-};
+export const getStorageMode = (): StorageMode =>
+  getVaultStorageModeFromEnv(process.env);
+
+/** Test-only: clear singleton so `getVaultStorage()` re-reads env. */
+export function __resetVaultStorageSingletonForTests(): void {
+  storage = undefined;
+}
 
 export const getVaultStorage = () => {
   if (!storage) {

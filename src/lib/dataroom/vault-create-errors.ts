@@ -1,4 +1,5 @@
-import { isS3VaultConfigured } from "@/lib/dataroom/s3-vault-storage";
+import { AUTH_STATE_TABLE_MISSING_MARKER } from "@/lib/dataroom/auth-state-errors";
+import { isS3VaultConfiguredFromEnv } from "@/lib/dataroom/s3-vault-storage";
 
 /**
  * Map vault creation failures to safe API responses (no secrets / stack in body).
@@ -6,9 +7,9 @@ import { isS3VaultConfigured } from "@/lib/dataroom/s3-vault-storage";
 
 function awsErrorName(err: unknown): string | undefined {
   if (!err || typeof err !== "object") return undefined;
-  if ("name" in err && typeof (err as { name: unknown }).name === "string") {
-    return (err as { name: string }).name;
-  }
+  const o = err as Record<string, unknown>;
+  if (typeof o.name === "string" && o.name.length > 0) return o.name;
+  if (typeof o.Code === "string" && o.Code.length > 0) return o.Code;
   return undefined;
 }
 
@@ -27,7 +28,7 @@ export function vaultCreateFailureResponse(err: unknown): {
   const message = err instanceof Error ? err.message : String(err);
   const name = awsErrorName(err);
 
-  if (message.includes("tkn_auth_state is missing")) {
+  if (message.includes(AUTH_STATE_TABLE_MISSING_MARKER)) {
     return {
       status: 503,
       body: {
@@ -110,8 +111,9 @@ export function vaultCreateFailureResponse(err: unknown): {
     };
   }
 
+  const env = process.env;
   const hint =
-    process.env.BLOB_READ_WRITE_TOKEN?.trim() || isS3VaultConfigured()
+    env.BLOB_READ_WRITE_TOKEN?.trim() || isS3VaultConfiguredFromEnv(env)
       ? ""
       : " Configure a Railway Bucket (S3 env vars), BLOB_READ_WRITE_TOKEN, or a writable TKN_LOCAL_VAULT_DIR.";
 

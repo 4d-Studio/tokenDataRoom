@@ -17,32 +17,41 @@ const payloadPath = (slug: string) => `vaults/${slug}/payload.bin`;
 const eventsPath = (slug: string) => `vaults/${slug}/events.json`;
 const acceptancesPath = (slug: string) => `vaults/${slug}/acceptances.json`;
 
+/** Env bag for tests and non-global resolution (Railway Bucket / S3-compatible). */
+export type S3EnvSource = Record<string, string | undefined>;
+
 /**
  * Railway Bucket shared vars, or AWS-SDK-style preset (`AWS_ACCESS_KEY_ID`, etc.).
  */
-function s3Env() {
-  const bucket = process.env.BUCKET?.trim() || process.env.AWS_S3_BUCKET?.trim();
+export function readS3BucketEnv(env: S3EnvSource = process.env) {
+  const bucket = env.BUCKET?.trim() || env.AWS_S3_BUCKET?.trim();
   const accessKeyId =
-    process.env.ACCESS_KEY_ID?.trim() || process.env.AWS_ACCESS_KEY_ID?.trim();
+    env.ACCESS_KEY_ID?.trim() || env.AWS_ACCESS_KEY_ID?.trim();
   const secretAccessKey =
-    process.env.SECRET_ACCESS_KEY?.trim() || process.env.AWS_SECRET_ACCESS_KEY?.trim();
+    env.SECRET_ACCESS_KEY?.trim() || env.AWS_SECRET_ACCESS_KEY?.trim();
   const endpoint =
-    process.env.ENDPOINT?.trim() ||
-    process.env.AWS_ENDPOINT_URL?.trim() ||
-    process.env.AWS_S3_ENDPOINT?.trim();
+    env.ENDPOINT?.trim() ||
+    env.AWS_ENDPOINT_URL?.trim() ||
+    env.AWS_S3_ENDPOINT?.trim();
   const region =
-    process.env.REGION?.trim() ||
-    process.env.AWS_DEFAULT_REGION?.trim() ||
-    process.env.AWS_REGION?.trim() ||
+    env.REGION?.trim() ||
+    env.AWS_DEFAULT_REGION?.trim() ||
+    env.AWS_REGION?.trim() ||
     "auto";
   return { bucket, accessKeyId, secretAccessKey, endpoint, region };
 }
 
+function s3Env() {
+  return readS3BucketEnv(process.env);
+}
+
 /** True when bucket + credentials + endpoint are present (Railway Bucket or compatible S3). */
-export const isS3VaultConfigured = (): boolean => {
-  const e = s3Env();
+export function isS3VaultConfiguredFromEnv(env: S3EnvSource = process.env): boolean {
+  const e = readS3BucketEnv(env);
   return Boolean(e.bucket && e.accessKeyId && e.secretAccessKey && e.endpoint);
-};
+}
+
+export const isS3VaultConfigured = (): boolean => isS3VaultConfiguredFromEnv(process.env);
 
 function createClient(): S3Client {
   const e = s3Env();
