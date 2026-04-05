@@ -122,6 +122,7 @@ export async function POST(request: Request) {
         senderName: metadata.senderName,
         createdAt,
         status: metadata.status,
+        ownerKey,
       });
 
       const baseUrl = getPublicAppBaseUrl(request);
@@ -196,6 +197,7 @@ export async function POST(request: Request) {
       senderName: metadata.senderName,
       createdAt,
       status: metadata.status,
+      ownerKey,
     });
 
     const baseUrl = getPublicAppBaseUrl(request);

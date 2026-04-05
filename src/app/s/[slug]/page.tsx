@@ -123,7 +123,7 @@ export default async function SharePage({
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
       {/* Recipient page: minimal chrome — title and context live inside ShareExperience */}
       <header className="mb-8 flex items-center justify-between gap-3 border-b border-border/80 pb-5">
-        <BrandMark logoUrl={workspace?.logoUrl} />
+        <BrandMark />
         <span className="hidden text-xs text-muted-foreground sm:inline">Shared room</span>
       </header>
 

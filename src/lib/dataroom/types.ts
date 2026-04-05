@@ -126,6 +126,8 @@ export type VaultRecord = {
   senderName: string;
   senderCompany?: string;
   message?: string;
+  /** Owner-only; never shown on the recipient share page. For the single encrypted file in this room. */
+  ownerNotes?: string;
   requiresNda: boolean;
   ndaText?: string;
   ndaVersion: string;

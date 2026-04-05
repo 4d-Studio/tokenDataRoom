@@ -26,7 +26,9 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Empty,
   EmptyDescription,
@@ -78,6 +80,10 @@ export const VaultOwnerPanel = ({
   const [isPending, startTransition] = useTransition();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
+  const [ownerNotesDraft, setOwnerNotesDraft] = useState(
+    initialMetadata.ownerNotes ?? "",
+  );
+  const [ownerNotesSaved, setOwnerNotesSaved] = useState(false);
 
   const stats = useMemo(
     () => ({
@@ -117,6 +123,31 @@ export const VaultOwnerPanel = ({
     setEvents(payload.events);
   };
 
+  const saveOwnerNotes = async () => {
+    setError("");
+    const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ownerKey,
+        action: "save_owner_notes",
+        ownerNotes: ownerNotesDraft,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      metadata?: VaultRecord;
+      events?: VaultEvent[];
+    };
+    if (!response.ok || !payload.metadata || !payload.events) {
+      throw new Error(payload.error || "Unable to save notes.");
+    }
+    setMetadata(payload.metadata);
+    setEvents(payload.events);
+    setOwnerNotesSaved(true);
+    setTimeout(() => setOwnerNotesSaved(false), 2500);
+  };
+
   const deleteRoom = async () => {
     setError("");
     const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
@@ -148,8 +179,51 @@ export const VaultOwnerPanel = ({
               onUploaded={(next, nextEvents) => {
                 setMetadata(next);
                 setEvents(nextEvents);
+                setOwnerNotesDraft(next.ownerNotes ?? "");
               }}
             />
+
+            <Separator className="my-6" />
+
+            <div>
+              <Field>
+                <FieldLabel htmlFor="owner-file-notes">
+                  Notes on this file <span className="font-normal text-muted-foreground">(private)</span>
+                </FieldLabel>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Only you see this. It is not shown to recipients. Each room has one encrypted file — use
+                  this for internal context (version, deal name, follow-ups).
+                </p>
+                <Textarea
+                  id="owner-file-notes"
+                  className="min-h-[6.5rem] resize-y"
+                  value={ownerNotesDraft}
+                  onChange={(e) => setOwnerNotesDraft(e.target.value)}
+                  placeholder="e.g. Q4 draft — send final after counsel review"
+                  maxLength={4000}
+                />
+              </Field>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(() => {
+                      void saveOwnerNotes().catch((e: unknown) => {
+                        setError(e instanceof Error ? e.message : "Unable to save notes.");
+                      });
+                    })
+                  }
+                >
+                  Save notes
+                </Button>
+                {ownerNotesSaved ? (
+                  <span className="text-xs text-muted-foreground">Saved.</span>
+                ) : null}
+              </div>
+            </div>
           </ProductSectionBody>
         </ProductSectionCard>
 

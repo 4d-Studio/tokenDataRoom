@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -68,11 +69,19 @@ export default async function ManagePage({
 
   return (
     <main className="page-shell max-w-[78rem]">
-      <header className="page-header">
+      <header className="page-header flex-wrap">
         <BrandMark />
-        <ProductBreadcrumb
-          items={[{ label: "Owner controls" }, { label: metadata.title }]}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/workspace"
+            className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            All rooms
+          </Link>
+          <ProductBreadcrumb
+            items={[{ label: "Manage room" }, { label: metadata.title }]}
+          />
+        </div>
       </header>
       <div className="page-hero pt-2">
         <VaultOwnerPanel

@@ -8,7 +8,8 @@ import { NdaTemplateEditorSkeleton } from "@/components/dataroom/route-loading";
 import { SettingsSection } from "@/components/dataroom/settings-section";
 import { WorkspaceLogoUploader } from "@/components/dataroom/workspace-logo-uploader";
 import { ProductPageIntro } from "@/components/dataroom/product-ui";
-import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity } from "@/lib/dataroom/auth";
+import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
+import { roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
 
 export const metadata: Metadata = {
@@ -35,6 +36,7 @@ export default async function WorkspaceSettingsPage() {
 
   const defaultTemplate = buildDefaultNdaText(workspace.companyName);
   const activityEvents = await getWorkspaceActivity();
+  const rooms = await getWorkspaceRooms();
 
   const logoPreview = workspace.logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -63,8 +65,8 @@ export default async function WorkspaceSettingsPage() {
       userPlan={user.plan}
       workspaceName={workspace.name}
       workspaceCompany={workspace.companyName}
-      workspaceLogoUrl={workspace.logoUrl}
       activityEvents={activityEvents}
+      roomNavItems={roomNavItemsFromRooms(rooms)}
     >
       <ProductPageIntro
         eyebrow="Settings"
@@ -75,7 +77,7 @@ export default async function WorkspaceSettingsPage() {
       <div className="mt-5 flex flex-col gap-3">
         <SettingsSection
           title="Logo"
-          description="Displayed in your sidebar and on shared room pages."
+          description="Shown on shared room pages (recipient header) when NDA is enabled."
           preview={logoPreview}
         >
           <WorkspaceLogoUploader

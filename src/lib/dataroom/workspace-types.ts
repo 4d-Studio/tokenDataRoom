@@ -7,4 +7,6 @@ export type WorkspaceRoomSummary = {
   senderName: string;
   createdAt: string;
   status: "active" | "revoked";
+  /** Present for manage links; backfilled from vault metadata when missing in workspace index. */
+  ownerKey?: string;
 };

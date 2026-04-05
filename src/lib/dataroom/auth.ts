@@ -60,7 +60,18 @@ export const getWorkspaceRooms = async (): Promise<WorkspaceRoomSummary[]> => {
     return [];
   }
 
-  return listRoomsForWorkspace(workspace.id);
+  const rooms = await listRoomsForWorkspace(workspace.id);
+  const storage = getVaultStorage();
+  return Promise.all(
+    rooms.map(async (room) => {
+      if (room.ownerKey) return room;
+      const meta = await storage.getVaultMetadata(room.slug);
+      if (meta?.ownerKey) {
+        return { ...room, ownerKey: meta.ownerKey };
+      }
+      return room;
+    }),
+  );
 };
 
 export const recordWorkspaceRoom = async (

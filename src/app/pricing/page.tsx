@@ -192,6 +192,7 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <div
               key={plan.name}
+              id={plan.name === "Plus" ? "plan-plus" : undefined}
               className={`flex flex-col rounded-2xl border p-6 ${
                 plan.accent
                   ? "relative border-[var(--color-accent)] bg-white shadow-[0_2px_16px_rgba(243,91,45,0.10)]"

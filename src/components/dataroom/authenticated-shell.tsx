@@ -26,6 +26,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
@@ -36,16 +39,46 @@ import { Badge } from "@/components/ui/badge";
 
 import { cn } from "@/lib/utils";
 
-function planNavLabel(plan: TknUser["plan"]): string {
-  switch (plan) {
-    case "free":
-      return "Starter";
-    case "plus":
-      return "Plus";
-    case "unicorn":
-      return "Unicorn";
+function WorkspacePlanPill({ plan }: { plan: TknUser["plan"] }) {
+  if (plan === "plus") {
+    return (
+      <Badge
+        className={cn(
+          "shrink-0 border border-white/25 bg-primary px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.07em] text-primary-foreground",
+          "shadow-[0_1px_2px_rgba(35,31,26,0.1),0_2px_6px_rgba(243,91,45,0.22)]",
+        )}
+      >
+        Plus
+      </Badge>
+    );
   }
+  if (plan === "unicorn") {
+    return (
+      <Badge
+        variant="secondary"
+        className="shrink-0 px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.07em]"
+      >
+        Unicorn
+      </Badge>
+    );
+  }
+  return (
+    <Button
+      asChild
+      variant="outline"
+      size="sm"
+      className="h-8 shrink-0 border-primary/35 px-2.5 text-[0.68rem] font-bold uppercase tracking-[0.06em] text-primary hover:bg-primary/10"
+    >
+      <Link href="/pricing#plan-plus">Plus plans</Link>
+    </Button>
+  );
 }
+
+export type AuthenticatedShellRoomNavItem = {
+  slug: string;
+  title: string;
+  manageHref: string;
+};
 
 type AuthenticatedShellProps = {
   children: ReactNode;
@@ -54,17 +87,12 @@ type AuthenticatedShellProps = {
   userPlan: TknUser["plan"];
   workspaceName?: string;
   workspaceCompany?: string;
-  workspaceLogoUrl?: string;
   activityEvents?: WorkspaceActivityRow[];
+  /** Shown under “Rooms” — links open owner manage for each room. */
+  roomNavItems?: AuthenticatedShellRoomNavItem[];
 };
 
-const navItems = [
-  {
-    href: "/workspace",
-    label: "Rooms",
-    icon: LayoutPanelTop,
-    key: "workspace",
-  },
+const secondaryNavItems = [
   {
     href: "/workspace/settings",
     label: "Settings",
@@ -79,6 +107,11 @@ const navItems = [
   },
 ] as const;
 
+function trimRoomTitle(title: string, max = 26) {
+  if (title.length <= max) return title;
+  return `${title.slice(0, max - 1)}…`;
+}
+
 export function AuthenticatedShell({
   children,
   current,
@@ -86,8 +119,8 @@ export function AuthenticatedShell({
   userPlan,
   workspaceName,
   workspaceCompany,
-  workspaceLogoUrl,
   activityEvents,
+  roomNavItems = [],
 }: AuthenticatedShellProps) {
   return (
     <SidebarProvider
@@ -101,9 +134,12 @@ export function AuthenticatedShell({
       {/* Do not set h-full here — it overrides Sidebar's h-svh and breaks full-height nav. */}
       <Sidebar collapsible="none" className="border-r border-sidebar-border">
         <SidebarHeader className="gap-3 px-3 py-4">
-          <Link href="/workspace" className="block">
-            <BrandMark logoUrl={workspaceLogoUrl} />
-          </Link>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <Link href="/workspace" className="min-w-0">
+              <BrandMark />
+            </Link>
+            <WorkspacePlanPill plan={userPlan} />
+          </div>
           {workspaceName ? (
             <div className="px-1">
               <div className="label-title">Workspace</div>
@@ -115,14 +151,6 @@ export function AuthenticatedShell({
               ) : null}
             </div>
           ) : null}
-          <div className="px-1 pt-1">
-            <Badge
-              variant="secondary"
-              className="rounded-md px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.06em] text-sidebar-foreground"
-            >
-              {planNavLabel(userPlan)} plan
-            </Badge>
-          </div>
         </SidebarHeader>
 
         <SidebarSeparator />
@@ -132,7 +160,31 @@ export function AuthenticatedShell({
             <SidebarGroupLabel>Workspace</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navItems.map((item) => (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={current === "workspace" || current === "new"}
+                  >
+                    <Link href="/workspace">
+                      <LayoutPanelTop />
+                      <span>Rooms</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  {roomNavItems.length > 0 ? (
+                    <SidebarMenuSub>
+                      {roomNavItems.map((r) => (
+                        <SidebarMenuSubItem key={r.slug}>
+                          <SidebarMenuSubButton asChild size="sm">
+                            <Link href={r.manageHref} title={r.title}>
+                              {trimRoomTitle(r.title)}
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  ) : null}
+                </SidebarMenuItem>
+                {secondaryNavItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={current === item.key}>
                       <Link href={item.href}>
@@ -172,15 +224,9 @@ export function AuthenticatedShell({
       <SidebarInset className="bg-transparent shadow-none">
         {activityEvents ? (
           <header className="flex h-12 items-center justify-end gap-2 border-b border-border px-4">
-            <Badge
-              variant="outline"
-              className={cn(
-                "mr-auto hidden sm:inline-flex",
-                "rounded-md px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.06em]",
-              )}
-            >
-              {planNavLabel(userPlan)}
-            </Badge>
+            <div className="mr-auto flex items-center">
+              <WorkspacePlanPill plan={userPlan} />
+            </div>
             {current !== "new" ? (
               <Button asChild size="sm" className="shrink-0 gap-1.5">
                 <Link href="/new">

@@ -7,6 +7,7 @@ import { CreateVaultFormSkeleton } from "@/components/dataroom/route-loading";
 import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
 import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
+import { roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 
 export const metadata: Metadata = {
   title: "New room",
@@ -42,8 +43,8 @@ export default async function NewVaultPage() {
       userPlan={user.plan}
       workspaceName={workspace.name}
       workspaceCompany={workspace.companyName}
-      workspaceLogoUrl={workspace.logoUrl}
       activityEvents={activityEvents}
+      roomNavItems={roomNavItemsFromRooms(rooms)}
     >
       <header className="page-header pb-2">
         <ProductBreadcrumb

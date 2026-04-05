@@ -8,10 +8,21 @@ import { createEvent } from "@/lib/dataroom/types";
 
 export const runtime = "nodejs";
 
-const ownerActionSchema = z.object({
-  ownerKey: z.string().min(32).max(128),
-  action: z.enum(["revoke", "restore"]),
-});
+const ownerPostSchema = z.discriminatedUnion("action", [
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("revoke"),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("restore"),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("save_owner_notes"),
+    ownerNotes: z.string().max(4000).optional(),
+  }),
+]);
 
 export async function POST(
   request: Request,
@@ -28,10 +39,21 @@ export async function POST(
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
 
-  const parsed = ownerActionSchema.safeParse(await request.json());
+  const parsed = ownerPostSchema.safeParse(await request.json());
 
   if (!parsed.success || !verifyOwnerKey(parsed.data.ownerKey, metadata.ownerKey)) {
     return NextResponse.json({ error: "Owner access denied." }, { status: 403 });
+  }
+
+  if (parsed.data.action === "save_owner_notes") {
+    const nextMetadata = {
+      ...metadata,
+      ownerNotes: parsed.data.ownerNotes?.trim() || undefined,
+    };
+    await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
   }
 
   const nextStatus = parsed.data.action === "revoke" ? "revoked" : "active";

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { CalendarPlus, LayoutPanelTop, Zap } from "lucide-react";
@@ -17,7 +16,7 @@ import {
 } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
 import { formatDateTime } from "@/lib/dataroom/helpers";
-import { Button } from "@/components/ui/button";
+import { roomManageHref, roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 
 export const metadata: Metadata = {
   title: "Workspace",
@@ -59,6 +58,8 @@ export default async function WorkspacePage() {
   const host = headersList.get("host") ?? "localhost:3000";
   const baseUrl = `${protocol}://${host}`;
 
+  const roomNavItems = roomNavItemsFromRooms(rooms);
+
   return (
     <AuthenticatedShell
       current="workspace"
@@ -66,8 +67,8 @@ export default async function WorkspacePage() {
       userPlan={user.plan}
       workspaceName={workspace.name}
       workspaceCompany={workspace.companyName}
-      workspaceLogoUrl={workspace.logoUrl}
       activityEvents={activityRows}
+      roomNavItems={roomNavItems}
     >
       {rooms.length === 0 ? (
         <div className="flex flex-1 flex-col justify-center py-10 sm:py-16">
@@ -78,12 +79,7 @@ export default async function WorkspacePage() {
           <ProductPageIntro
             eyebrow="Workspace"
             title="Data rooms"
-            description="Share sensitive documents with legal protection, NDA gating, and a clear audit trail."
-            action={
-              <Button asChild size="sm">
-                <Link href="/new">Create room</Link>
-              </Button>
-            }
+            description="Manage rooms from the list below (upload files, links, activity). Use Preview to open the recipient view in a new tab."
           />
 
           <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -110,7 +106,7 @@ export default async function WorkspacePage() {
           <ProductSectionCard>
             <ProductSectionHeader
               title="Your data rooms"
-              description="Open the recipient link to preview what they see. Owner controls (revoke, activity) stay on the private management URL for each room."
+              description="Manage goes to your private owner page. Preview opens what recipients see (share link)."
             />
 
             <ProductSectionBody className="py-0.5">
@@ -118,6 +114,7 @@ export default async function WorkspacePage() {
                 rooms={rooms.map((room) => ({
                   ...room,
                   createdAtFormatted: formatDateTime(room.createdAt),
+                  manageHref: roomManageHref(room),
                 }))}
                 baseUrl={baseUrl}
               />

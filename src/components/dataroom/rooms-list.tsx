@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, FileText, Trash2 } from "lucide-react";
+import { ExternalLink, FileText, Settings2, Trash2 } from "lucide-react";
 
 import type { WorkspaceRoomSummary } from "@/lib/dataroom/workspace-types";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { CopyButton } from "@/components/dataroom/copy-button";
 
 export type WorkspaceRoomRow = WorkspaceRoomSummary & {
   createdAtFormatted: string;
+  manageHref: string;
 };
 
 interface RoomsListProps {
@@ -42,7 +43,7 @@ export function RoomsList({ rooms, baseUrl }: RoomsListProps) {
   return (
     <div className="flex flex-col">
       {rooms.map((room) => {
-        const roomUrl = `${baseUrl}/s/${room.slug}`;
+        const shareUrl = `${baseUrl}/s/${room.slug}`;
         const isActive = room.status === "active";
         const isConfirming = deletingSlug === room.slug;
 
@@ -63,7 +64,7 @@ export function RoomsList({ rooms, baseUrl }: RoomsListProps) {
               </p>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               <span
                 className={`rounded-full px-2.5 py-0.5 text-[0.72rem] font-semibold capitalize ${
                   isActive
@@ -78,13 +79,20 @@ export function RoomsList({ rooms, baseUrl }: RoomsListProps) {
                 className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100"
                 title="Copy recipient link"
               >
-                <CopyButton value={roomUrl} size="icon" />
+                <CopyButton value={shareUrl} size="icon" />
               </div>
 
+              <Button asChild size="sm" className="gap-1">
+                <Link href={room.manageHref}>
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Manage
+                </Link>
+              </Button>
+
               <Button asChild variant="outline" size="sm" className="gap-1">
-                <Link href={`/s/${room.slug}`}>
-                  Open
-                  <ArrowUpRight data-icon="inline-end" className="h-3.5 w-3.5" />
+                <Link href={`/s/${room.slug}`} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Preview
                 </Link>
               </Button>
 
