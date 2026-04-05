@@ -12,14 +12,15 @@ import { FILE_SIZE_LIMIT_BYTES } from "@/lib/dataroom/types";
 import { formatBytes } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
 import type { VaultEvent, VaultRecord } from "@/lib/dataroom/types";
+import { cn } from "@/lib/utils";
 
 type Props = {
   slug: string;
   ownerKey: string;
   metadata: VaultRecord;
   onUploaded: (metadata: VaultRecord, events: VaultEvent[]) => void;
-  /** `featured` — owner-page primary column: larger drop zone and document tile. */
-  variant?: "default" | "featured";
+  /** `featured` / `compact` — manage page layouts; `default` — sidebar-style. */
+  variant?: "default" | "featured" | "compact";
 };
 
 export function VaultOwnerDocumentUpload({
@@ -38,6 +39,8 @@ export function VaultOwnerDocumentUpload({
   const [needsSignIn, setNeedsSignIn] = useState(false);
 
   const hasDocument = metadata.hasEncryptedFile !== false;
+  const isCompact = variant === "compact";
+  const isFeatured = variant === "featured";
 
   const onFiles = useCallback((list: FileList | null) => {
     const next = list?.[0] ?? null;
@@ -119,25 +122,32 @@ export function VaultOwnerDocumentUpload({
   };
 
   if (hasDocument) {
-    if (variant === "featured") {
+    if (isFeatured || isCompact) {
+      const pad = isCompact ? "p-3.5" : "p-5";
+      const iconBox = isCompact ? "size-11" : "size-14";
+      const iconSz = isCompact ? "size-6" : "size-7";
       return (
-        <div className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50">
-            <FileText className="size-7 text-muted-foreground" strokeWidth={1.5} />
+        <div className={`flex gap-3 rounded-xl border border-border bg-card shadow-sm ${pad}`}>
+          <div
+            className={`flex ${iconBox} shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50`}
+          >
+            <FileText className={`${iconSz} text-muted-foreground`} strokeWidth={1.5} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Encrypted document in this room
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Encrypted file
             </p>
-            <p className="mt-1.5 truncate text-base font-semibold text-foreground">
+            <p className={`mt-0.5 truncate font-semibold text-foreground ${isCompact ? "text-sm" : "text-base"}`}>
               {metadata.fileName}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {formatBytes(metadata.fileSize)} · {formatMimeLabel(metadata.mimeType)}
             </p>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Each room stores one encrypted bundle. To share a different file, create another room.
-            </p>
+            {!isCompact ? (
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                One bundle per room. New file → new room.
+              </p>
+            ) : null}
           </div>
         </div>
       );
@@ -155,98 +165,118 @@ export function VaultOwnerDocumentUpload({
     );
   }
 
-  const dropMinH =
-    variant === "featured" ? "min-h-[12rem] sm:min-h-[14rem]" : "min-h-[9rem]";
-  const titleClass =
-    variant === "featured" ? "text-lg font-semibold text-foreground" : "text-sm font-semibold text-foreground";
+  const dropMinH = isFeatured ? "min-h-[12rem] sm:min-h-[14rem]" : isCompact ? "min-h-[7.5rem]" : "min-h-[9rem]";
+  const titleClass = isFeatured ? "text-lg font-semibold text-foreground" : isCompact ? "text-sm font-semibold text-foreground" : "text-sm font-semibold text-foreground";
 
-  return (
-    <div className="flex flex-col gap-4">
+  const passwordField = (
+    <Field className={isCompact ? "gap-1.5" : undefined}>
+      <FieldLabel htmlFor="owner-upload-pw" className={isCompact ? "text-xs" : undefined}>
+        Room password <span className="font-normal text-muted-foreground">(for encryption)</span>
+      </FieldLabel>
+      <Input
+        id="owner-upload-pw"
+        type="password"
+        autoComplete="off"
+        placeholder="Same password you set when creating the room"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className={isCompact ? "h-9 text-sm" : undefined}
+      />
+    </Field>
+  );
+
+  const dropZone = (
+    <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        onFiles(e.dataTransfer.files);
+      }}
+      className={
+        "upload-zone flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-3 text-center transition-colors " +
+        dropMinH +
+        " " +
+        (isDragging
+          ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10"
+          : "border-border bg-muted/30 hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5")
+      }
+      onClick={() => inputRef.current?.click()}
+    >
+      <Upload
+        className={
+          isFeatured ? "size-10 text-muted-foreground" : isCompact ? "size-7 text-muted-foreground" : "size-8 text-muted-foreground"
+        }
+      />
       <div>
-        <h3 className={titleClass}>Add a document</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Drag and drop a file, then enter the same password you set for this room. It encrypts in
-          your browser before upload.
+        <p
+          className={
+            isFeatured
+              ? "text-base font-medium text-foreground"
+              : isCompact
+                ? "text-sm font-medium text-foreground"
+                : "text-sm font-medium text-foreground"
+          }
+        >
+          {file ? file.name : "Drop file or click to browse"}
+        </p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          {file
+            ? `${(file.size / 1024 / 1024).toFixed(1)} MB · ${formatMimeLabel(file.type || "application/octet-stream")}`
+            : "PDF, Office, images, text · max 25 MB"}
         </p>
       </div>
+      <input
+        ref={inputRef}
+        className="sr-only"
+        type="file"
+        onChange={(e) => onFiles(e.target.files)}
+      />
+    </div>
+  );
 
-      <div
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            inputRef.current?.click();
-          }
-        }}
-        onDragEnter={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsDragging(true);
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsDragging(false);
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsDragging(false);
-          onFiles(e.dataTransfer.files);
-        }}
-        className={
-          "upload-zone flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-4 text-center transition-colors " +
-          dropMinH +
-          " " +
-          (isDragging
-            ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10"
-            : "border-border bg-muted/30 hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5")
-        }
-        onClick={() => inputRef.current?.click()}
-      >
-        <Upload className={variant === "featured" ? "size-10 text-muted-foreground" : "size-8 text-muted-foreground"} />
-        <div>
-          <p
-            className={
-              variant === "featured"
-                ? "text-base font-medium text-foreground"
-                : "text-sm font-medium text-foreground"
-            }
-          >
-            {file ? file.name : "Drop a file here or click to browse"}
+  return (
+    <div className={cn("flex flex-col", isFeatured ? "gap-2.5" : "gap-3")}>
+      <div>
+        <h3 className={titleClass}>{isFeatured ? "Add a document" : "Add encrypted file"}</h3>
+        {!isCompact ? (
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isFeatured
+              ? "Use the room password to encrypt in your browser, then upload."
+              : "Uses your room password, then encrypts in the browser before upload."}
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {file
-              ? `${(file.size / 1024 / 1024).toFixed(1)} MB · ${formatMimeLabel(file.type || "application/octet-stream")}`
-              : "PDF, Office, images, text — up to 25 MB"}
-          </p>
-        </div>
-        <input
-          ref={inputRef}
-          className="sr-only"
-          type="file"
-          onChange={(e) => onFiles(e.target.files)}
-        />
+        ) : (
+          <p className="mt-0.5 text-xs text-muted-foreground">Password first, then file — all encryption stays in your browser.</p>
+        )}
       </div>
 
-      <Field>
-        <FieldLabel htmlFor="owner-upload-pw">Room password</FieldLabel>
-        <Input
-          id="owner-upload-pw"
-          type="password"
-          autoComplete="off"
-          placeholder="Same password you set when creating the room"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </Field>
+      {/* Password before file: separate step in the flow */}
+      {passwordField}
+      {dropZone}
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
       {needsSignIn ? (
         <Button type="button" size="sm" variant="outline" asChild>
@@ -254,7 +284,13 @@ export function VaultOwnerDocumentUpload({
         </Button>
       ) : null}
 
-      <Button type="button" size="sm" disabled={isPending || !file} onClick={upload}>
+      <Button
+        type="button"
+        size={isCompact ? "sm" : "sm"}
+        disabled={isPending || !file}
+        onClick={upload}
+        className={isFeatured ? "w-full sm:w-auto" : "w-fit"}
+      >
         {isPending ? "Encrypting & uploading…" : "Upload encrypted file"}
       </Button>
     </div>

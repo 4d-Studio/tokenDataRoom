@@ -151,6 +151,30 @@ export function getPublicAppBaseUrl(request: Request): string {
   return "http://localhost:3000";
 }
 
+/**
+ * Compact single-line URL preview for UI. The full string is still used when copying.
+ * Prefers `host + path` and inserts a middle ellipsis when over `maxChars`.
+ */
+export function shortenUrlForDisplay(url: string, maxChars = 44): string {
+  const s = url.trim();
+  if (s.length <= maxChars) return s;
+  try {
+    const u = new URL(s);
+    const path = `${u.pathname}${u.search}` || "/";
+    const core = `${u.host}${path}`;
+    if (core.length <= maxChars) return core;
+    const inner = maxChars - 1;
+    const left = Math.max(8, Math.floor(inner * 0.45));
+    const right = inner - left;
+    if (left + right >= core.length) return `${core.slice(0, inner)}…`;
+    return `${core.slice(0, left)}…${core.slice(-right)}`;
+  } catch {
+    const budget = maxChars - 1;
+    const half = Math.floor(budget / 2);
+    return `${s.slice(0, half)}…${s.slice(-(budget - half))}`;
+  }
+}
+
 export const getClientIp = (request: Request) =>
   request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
   request.headers.get("x-real-ip") ??

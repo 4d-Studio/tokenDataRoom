@@ -27,15 +27,15 @@ export async function generateMetadata({
   const { slug } = await params;
   const { key } = await searchParams;
   if (!isValidPublicVaultSlug(slug)) {
-    return { title: "Owner controls", robots: { index: false, follow: false } };
+    return { title: "Manage room", robots: { index: false, follow: false } };
   }
   const storage = getVaultStorage();
   const vault = await storage.getVaultMetadata(slug);
   if (!vault || !verifyOwnerKey(key, vault.ownerKey)) {
-    return { title: "Owner controls", robots: { index: false, follow: false } };
+    return { title: "Manage room", robots: { index: false, follow: false } };
   }
   return {
-    title: `${vault.title} (owner)`,
+    title: `Manage · ${vault.title}`,
     robots: { index: false, follow: false },
   };
 }
@@ -84,6 +84,15 @@ export default async function ManagePage({
         </div>
       </header>
       <div className="page-hero pt-2">
+        <div className="mb-5 border-b border-border pb-4">
+          <h1 className="text-[1.05rem] font-semibold tracking-[-0.02em] text-foreground">
+            Manage this room
+          </h1>
+          <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
+            Room name <span className="font-medium text-foreground">{metadata.title}</span> — add
+            files on the left; copy links and revoke from the right column.
+          </p>
+        </div>
         <VaultOwnerPanel
           initialAcceptances={acceptances}
           initialMetadata={metadata}

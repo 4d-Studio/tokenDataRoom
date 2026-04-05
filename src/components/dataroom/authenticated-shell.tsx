@@ -224,9 +224,6 @@ export function AuthenticatedShell({
       <SidebarInset className="bg-transparent shadow-none">
         {activityEvents ? (
           <header className="flex h-12 items-center justify-end gap-2 border-b border-border px-4">
-            <div className="mr-auto flex items-center">
-              <WorkspacePlanPill plan={userPlan} />
-            </div>
             {current !== "new" ? (
               <Button asChild size="sm" className="shrink-0 gap-1.5">
                 <Link href="/new">
@@ -237,9 +234,18 @@ export function AuthenticatedShell({
             ) : null}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-                  <Activity className="h-4 w-4" />
-                  Activity
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground"
+                  aria-label={
+                    activityEvents.length > 0
+                      ? `Room activity, ${activityEvents.length} events`
+                      : "Room activity"
+                  }
+                >
+                  <Activity className="h-4 w-4" aria-hidden />
+                  <span>Room activity</span>
                   {activityEvents.length > 0 && (
                     <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-accent)] px-1.5 text-[0.65rem] font-bold text-white">
                       {activityEvents.length}
@@ -249,9 +255,9 @@ export function AuthenticatedShell({
               </SheetTrigger>
               <SheetContent side="right" className="w-full sm:max-w-md">
                 <SheetHeader>
-                  <SheetTitle>Recent activity</SheetTitle>
+                  <SheetTitle>Activity across your rooms</SheetTitle>
                   <SheetDescription>
-                    Audit trail across your data rooms
+                    Opens, NDA signers, downloads, and uploads — a single log for your workspace.
                   </SheetDescription>
                 </SheetHeader>
                 <div className="flex-1 overflow-y-auto">
@@ -261,7 +267,7 @@ export function AuthenticatedShell({
             </Sheet>
           </header>
         ) : null}
-        <div className="page-shell flex max-w-[60rem] !min-h-0 min-h-svh flex-col py-5">
+        <div className="page-shell flex max-w-[60rem] !min-h-0 min-h-svh flex-col py-4">
           {children}
         </div>
       </SidebarInset>

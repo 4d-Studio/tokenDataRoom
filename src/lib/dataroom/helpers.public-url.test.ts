@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getPublicAppBaseUrl } from "@/lib/dataroom/helpers";
+import { getPublicAppBaseUrl, shortenUrlForDisplay } from "@/lib/dataroom/helpers";
 
 describe("getPublicAppBaseUrl", () => {
   it("in development ignores NEXT_PUBLIC_SITE_URL and uses Host (local)", () => {
@@ -73,5 +73,20 @@ describe("getPublicAppBaseUrl", () => {
     expect(getPublicAppBaseUrl(req)).toBe("https://example.com");
 
     vi.unstubAllEnvs();
+  });
+});
+
+describe("shortenUrlForDisplay", () => {
+  it("returns short URLs unchanged", () => {
+    expect(shortenUrlForDisplay("https://a.com/s/x", 44)).toBe("https://a.com/s/x");
+  });
+
+  it("middle-ellipsis long host+path", () => {
+    const u =
+      "https://opendataroom-production.up.railway.app/s/fm-30fbb408f6ef?key=abc123secret";
+    const out = shortenUrlForDisplay(u, 40);
+    expect(out.length).toBeLessThanOrEqual(40);
+    expect(out).toContain("…");
+    expect(out.startsWith("opendataroom")).toBe(true);
   });
 });
