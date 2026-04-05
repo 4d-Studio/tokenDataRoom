@@ -25,6 +25,10 @@ Token is a lightweight secure-sharing app for sharing sensitive documents throug
 - Do not break owner-link management unless real auth replaces it
 - Do not claim GDPR compliance — use accurate language about encryption and user data control
 
+## Hosting
+
+Production runs on **Railway** (`railway.toml`: release `npm run db:migrate`, start `npm run start`). **Vercel is not used for hosting**; `@vercel/blob` is optional **file storage** when no S3-compatible bucket is configured.
+
 ## Plan limits (src/lib/dataroom/auth-store.ts PLAN_LIMITS)
 
 | Plan    | Rooms | Files/room | Custom Domain | Board Minutes |

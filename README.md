@@ -37,8 +37,8 @@ Browser (React 19)          Next.js 15 App Router
 │  encryptFile(password)        │  /api/vaults/*
 └─────────────────────────────►│  /api/workspace/*
                                 │
-              Local filesystem   │  Vercel Blob
-              (.dataroom/)      │  (when BLOB_TOKEN set)
+              Local filesystem   │  S3-compatible bucket
+              (.dataroom/)      │  (e.g. Railway) or Vercel Blob
 ```
 
 ## Tech Stack
@@ -50,7 +50,7 @@ Browser (React 19)          Next.js 15 App Router
 - **Framer Motion** — Animations (mobile bottom sheet, page transitions)
 - **Tiptap** — Rich text NDA template editor
 - **Zod** — Runtime schema validation
-- **Vercel Blob** — Production file storage (optional; local filesystem in dev)
+- **Object storage** — Railway Bucket (S3-compatible) or Vercel Blob when configured; else local `.dataroom/` in dev
 - **SendGrid** — Transactional email for magic-link login codes
 
 ## Getting Started
@@ -87,7 +87,7 @@ cp .env.example .env.local
 | `TKN_APP_SECRET` | Yes (prod) | Secret used to sign session and access cookies. Generate a long random string. |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical site URL for Open Graph / metadata (e.g. `https://token.fyi` or your Railway URL). |
 | `DATABASE_URL` | No | PostgreSQL URL for durable auth/workspace state (Railway Postgres). |
-| `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token. Enables production storage. Without it, uses local `.dataroom/` filesystem. |
+| `BLOB_READ_WRITE_TOKEN` | No | Optional Vercel Blob (used only if S3/Railway bucket env is not set). |
 | `SENDGRID_API_KEY` | No | SendGrid API key for email delivery. Without it, magic codes print to the console. |
 | `SENDGRID_FROM_EMAIL` | No | Verified sender email for OTP delivery. |
 
@@ -175,32 +175,28 @@ The server stores only the encrypted blob and the key derivation parameters. Wit
 ### Data Storage
 
 - **Development**: Encrypted blobs stored in `.dataroom/vaults/{slug}/` (local filesystem)
-- **Production**: Encrypted blobs stored in Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
+- **Production**: Encrypted blobs in an S3-compatible bucket (e.g. Railway) when those env vars are set; otherwise optional Vercel Blob via `BLOB_READ_WRITE_TOKEN`
 - **Auth state**: `.dataroom/auth/state.json` locally, or PostgreSQL table `tkn_auth_state` when `DATABASE_URL` is set (e.g. Railway)
 - **Session cookies**: HTTP-only, signed with HMAC-SHA256 using `TKN_APP_SECRET`
 
 ## Deployment
 
-### Vercel (Recommended)
+### Railway (recommended)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Tarzelf/openDataRoom)
+The repo includes [`railway.toml`](./railway.toml): Node 20, `npm run db:migrate` as the release command, `npm run start`, and health check on `/api/health`.
 
-1. Fork or clone this repository
-2. Connect to Vercel
-3. Add environment variables in Vercel project settings:
-   - `TKN_APP_SECRET` — generate with `openssl rand -hex 32`
-   - `BLOB_READ_WRITE_TOKEN` — from Vercel Blob dashboard
-   - `SENDGRID_API_KEY` — from SendGrid API Keys
-   - `SENDGRID_FROM_EMAIL` — your verified sender
-4. Deploy
+1. Create a [Railway](https://railway.app) project and deploy this repo (GitHub integration or `railway up`).
+2. Add **PostgreSQL** and set `DATABASE_URL` (migrations run on deploy).
+3. Set at least `TKN_APP_SECRET` (e.g. `openssl rand -hex 32`), `NEXT_PUBLIC_SITE_URL` or `SITE_URL` to your public origin, and optional SendGrid vars for email.
+4. For file storage, prefer **Railway Bucket** (S3-compatible env vars: `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `ENDPOINT`, `REGION`) — see `AGENTS.md` for priority order.
 
-**Vercel Blob setup:**
-```bash
-vercel env add BLOB_READ_WRITE_TOKEN
-```
-Create a new blob store in your Vercel project dashboard and paste the token.
+You do **not** need Vercel to host the app.
 
-### Docker (Self-hosted)
+### Optional: Vercel Blob (storage only)
+
+If you are not using an S3-compatible bucket, you can store encrypted vault files in **Vercel Blob** by setting `BLOB_READ_WRITE_TOKEN` from the Vercel Blob dashboard. This is **object storage only**, not application hosting.
+
+### Docker (self-hosted)
 
 ```bash
 docker build -t token .
