@@ -1,5 +1,31 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
+/** Login card only — page already renders header + frame */
+export function LoginFlowSkeleton() {
+  return (
+    <div className="rounded-[var(--radius)] border border-border bg-card p-6 shadow-none">
+      <Skeleton className="h-3 w-28" />
+      <Skeleton className="mt-3 h-7 w-4/5 max-w-sm" />
+      <Skeleton className="mt-2 h-16 w-full" />
+      <Skeleton className="mt-6 h-4 w-24" />
+      <Skeleton className="mt-2 h-11 w-full rounded-xl" />
+    </div>
+  );
+}
+
+/** Onboarding form — workspace name + company */
+export function WorkspaceOnboardingSkeleton() {
+  return (
+    <div className="rounded-[var(--radius)] border border-border bg-card p-6 shadow-none">
+      <Skeleton className="h-3 w-36" />
+      <Skeleton className="mt-3 h-7 w-3/4 max-w-sm" />
+      <Skeleton className="mt-4 h-11 w-full rounded-xl" />
+      <Skeleton className="mt-3 h-11 w-full rounded-xl" />
+      <Skeleton className="mt-6 h-11 w-full rounded-xl" />
+    </div>
+  );
+}
+
 /** Login / onboarding column */
 export function AuthPageSkeleton() {
   return (
@@ -181,10 +207,55 @@ export function PageShellSkeleton() {
 
 export function ShareExperienceSkeleton() {
   return (
-    <div className="page-shell flex min-h-svh flex-col items-center justify-center gap-4 py-12">
-      <Skeleton className="h-10 w-40" />
-      <Skeleton className="h-6 w-64" />
-      <Skeleton className="mt-4 h-[min(50vh,28rem)] w-full max-w-md rounded-2xl" />
+    <div className="w-full max-w-3xl space-y-6">
+      <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/20 p-6 sm:p-8">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-3">
+          <Skeleton className="size-16 rounded-2xl sm:size-[4.5rem]" />
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-6 w-full max-w-sm" />
+          <Skeleton className="h-4 w-full max-w-xs" />
+          <Skeleton className="mt-2 h-10 w-full max-w-lg" />
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-muted/30 p-4">
+        <Skeleton className="size-10 shrink-0 rounded-lg" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-4 w-48 max-w-full" />
+          <Skeleton className="h-3 w-64 max-w-full" />
+        </div>
+        <Skeleton className="h-7 w-24 rounded-full" />
+      </div>
+      <Skeleton className="h-48 w-full rounded-xl sm:h-56" />
+    </div>
+  );
+}
+
+/** Room table placeholder on workspace home */
+export function RoomsListSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 py-2">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} className="h-14 w-full rounded-lg" />
+      ))}
+    </div>
+  );
+}
+
+/** Inline placeholder while `VaultOwnerPanel` chunk loads */
+export function VaultOwnerPanelSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <Skeleton className="h-9 w-28 rounded-md" />
+        <Skeleton className="h-9 w-32 rounded-md" />
+        <Skeleton className="h-9 w-36 rounded-md" />
+      </div>
+      <Skeleton className="h-[min(14rem,36vh)] w-full rounded-xl" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-xl" />
+        ))}
+      </div>
     </div>
   );
 }

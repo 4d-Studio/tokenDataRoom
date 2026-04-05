@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
+import nextDynamic from "next/dynamic";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { BrandMark } from "@/components/dataroom/brand-mark";
 import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
-import { ShareExperience } from "@/components/dataroom/share-experience";
+import { ShareExperienceSkeleton } from "@/components/dataroom/route-loading";
+
+const ShareExperience = nextDynamic(
+  () =>
+    import("@/components/dataroom/share-experience").then((m) => m.ShareExperience),
+  { loading: () => <ShareExperienceSkeleton /> },
+);
 import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
 import { getWorkspaceById } from "@/lib/dataroom/auth-store";
 import { buildDefaultNdaText } from "@/lib/dataroom/helpers";

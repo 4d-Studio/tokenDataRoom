@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-
-export const metadata: Metadata = {
-  title: "Workspace",
-  description: "Your Token workspace: datarooms, activity, and quick actions.",
-};
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { CalendarPlus, LayoutPanelTop, Zap } from "lucide-react";
 
 import { AuthenticatedShell } from "@/components/dataroom/authenticated-shell";
+import { RoomsListSkeleton } from "@/components/dataroom/route-loading";
 import { WorkspaceEmptyState } from "@/components/dataroom/workspace-empty-state";
 import {
   ProductPageIntro,
@@ -21,7 +18,16 @@ import {
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
 import { formatDateTime } from "@/lib/dataroom/helpers";
 import { Button } from "@/components/ui/button";
-import { RoomsList } from "@/components/dataroom/rooms-list";
+
+export const metadata: Metadata = {
+  title: "Workspace",
+  description: "Your Token workspace: datarooms, activity, and quick actions.",
+};
+
+const RoomsList = dynamic(
+  () => import("@/components/dataroom/rooms-list").then((m) => m.RoomsList),
+  { loading: () => <RoomsListSkeleton /> },
+);
 
 export default async function WorkspacePage() {
   const user = await getCurrentUser();

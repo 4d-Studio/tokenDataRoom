@@ -112,7 +112,7 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  /* No global smooth scroll — snappier navigation and less main-thread work. */
   background-color: var(--color-background);
 }
 
@@ -178,6 +178,30 @@ textarea {
   line-height: 1.45;
   font-weight: 400;
   color: var(--tkn-text-fine);
+}
+
+/* Route template enter (see app/template.tsx) */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes tkn-page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .tkn-page-enter {
+    animation: tkn-page-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tkn-page-enter {
+    animation: none;
+  }
 }
 
 /* In-app navigation progress (see navigation-progress.tsx) */

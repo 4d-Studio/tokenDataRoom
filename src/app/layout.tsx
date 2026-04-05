@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 
 import "./globals.css";
-import { NavigationProgress } from "@/components/dataroom/navigation-progress";
+import { NavigationProgressDeferred } from "@/components/dataroom/navigation-progress-deferred";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const sansFont = Inter({
@@ -10,6 +10,7 @@ const sansFont = Inter({
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700"],
+  adjustFontFallback: true,
 });
 
 /** Public site name — the dataroom product is "Token". */
@@ -53,6 +54,11 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#f6f3ee",
+  colorScheme: "light",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -62,7 +68,7 @@ export default function RootLayout({
     <html lang="en" className={sansFont.variable}>
       <body>
         <TooltipProvider>
-          <NavigationProgress />
+          <NavigationProgressDeferred />
           {children}
         </TooltipProvider>
       </body>

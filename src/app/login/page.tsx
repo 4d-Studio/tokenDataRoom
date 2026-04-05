@@ -1,18 +1,24 @@
 import type { Metadata } from "next";
+import nextDynamic from "next/dynamic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+import { BrandMark } from "@/components/dataroom/brand-mark";
+import { CookieNotice } from "@/components/dataroom/cookie-notice";
+import { LoginFlowSkeleton } from "@/components/dataroom/route-loading";
+import { ProductAuthFrame } from "@/components/dataroom/product-ui";
+import { Button } from "@/components/ui/button";
+import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
 
 export const metadata: Metadata = {
   title: "Sign in",
   description: "Sign in to Token with a one-time email code. No password to remember.",
 };
 
-import { CookieNotice } from "@/components/dataroom/cookie-notice";
-import { LoginFlow } from "@/components/auth/login-flow";
-import { BrandMark } from "@/components/dataroom/brand-mark";
-import { ProductAuthFrame } from "@/components/dataroom/product-ui";
-import { Button } from "@/components/ui/button";
-import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
+const LoginFlow = nextDynamic(
+  () => import("@/components/auth/login-flow").then((m) => m.LoginFlow),
+  { loading: () => <LoginFlowSkeleton /> },
+);
 
 export default async function LoginPage() {
   const user = await getCurrentUser();

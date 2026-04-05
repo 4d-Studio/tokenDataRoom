@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { BrandMark } from "@/components/dataroom/brand-mark";
 import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
-import { VaultOwnerPanel } from "@/components/dataroom/vault-owner-panel";
+import { VaultOwnerPanelSkeleton } from "@/components/dataroom/route-loading";
+
+const VaultOwnerPanel = dynamic(
+  () =>
+    import("@/components/dataroom/vault-owner-panel").then((m) => m.VaultOwnerPanel),
+  { loading: () => <VaultOwnerPanelSkeleton /> },
+);
 import { getBaseUrlFromHeaders } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { isValidPublicVaultSlug, verifyOwnerKey } from "@/lib/dataroom/vault-access";
