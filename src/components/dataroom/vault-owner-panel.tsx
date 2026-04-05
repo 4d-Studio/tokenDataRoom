@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
@@ -56,25 +56,40 @@ const SECTIONS = [
   { id: "owner-overview", num: "6", label: "Links & access" },
 ] as const;
 
-function SectionNav() {
+type SectionId = (typeof SECTIONS)[number]["id"];
+
+function SectionNav({
+  active,
+  onSelect,
+}: {
+  active: SectionId;
+  onSelect: (id: SectionId) => void;
+}) {
   return (
     <nav
-      className="flex gap-0.5 overflow-x-auto border-b border-border pb-2 lg:sticky lg:top-20 lg:w-[10.5rem] lg:shrink-0 lg:flex-col lg:gap-0 lg:overflow-visible lg:border-b-0 lg:border-r lg:pb-0 lg:pr-3"
+      className="flex gap-0.5 overflow-x-auto border-b border-border pb-2 lg:sticky lg:top-20 lg:w-[10.5rem] lg:shrink-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:border-b-0 lg:border-r lg:pb-0 lg:pr-3"
       aria-label="Manage room sections"
     >
-      {SECTIONS.map((s) => (
-        <a
-          key={s.id}
-          href={`#${s.id}`}
-          className={cn(
-            "whitespace-nowrap rounded-md px-2 py-1.5 text-left text-xs font-medium transition-colors",
-            "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-            "lg:block lg:rounded-sm lg:px-1.5 lg:py-1 lg:text-[12px]",
-          )}
-        >
-          <span className="text-muted-foreground/80">{s.num}.</span> {s.label}
-        </a>
-      ))}
+      {SECTIONS.map((s) => {
+        const isActive = s.id === active;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => onSelect(s.id)}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "whitespace-nowrap rounded-md px-2 py-1.5 text-left text-xs font-medium transition-colors",
+              "lg:block lg:rounded-sm lg:px-1.5 lg:py-1 lg:text-[12px]",
+              isActive
+                ? "bg-muted text-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+            )}
+          >
+            <span className="text-muted-foreground/80">{s.num}.</span> {s.label}
+          </button>
+        );
+      })}
     </nav>
   );
 }
@@ -220,6 +235,19 @@ export const VaultOwnerPanel = ({
     initialMetadata.ownerNotes ?? "",
   );
   const [ownerNotesSaved, setOwnerNotesSaved] = useState(false);
+  const [activeSection, setActiveSection] = useState<SectionId>("owner-document");
+
+  useEffect(() => {
+    const raw = window.location.hash.replace(/^#/, "");
+    if (SECTIONS.some((s) => s.id === raw)) {
+      setActiveSection(raw as SectionId);
+    }
+  }, []);
+
+  const selectSection = (id: SectionId) => {
+    setActiveSection(id);
+    window.history.replaceState(null, "", `#${id}`);
+  };
 
   const hasDocument = vaultHasEncryptedDocument(metadata);
 
@@ -308,186 +336,8 @@ export const VaultOwnerPanel = ({
     return `${main} (${extra.join(", ")})`;
   };
 
-  return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
-      <SectionNav />
-
-      <div className="grid min-w-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_min(18rem,100%)] xl:grid-cols-[minmax(0,1fr)_20.5rem] lg:items-start">
-        <div className="flex min-w-0 flex-col gap-3">
-          <SectionShell
-            id="owner-document"
-            title="1. Room documents"
-            description="Files are encrypted in your browser before upload. Recipients only see the share link and password — not this page."
-          >
-            <VaultOwnerDocumentUpload
-              variant="featured"
-              slug={metadata.slug}
-              ownerKey={ownerKey}
-              metadata={metadata}
-              onUploaded={(next, nextEvents) => {
-                setMetadata(next);
-                setEvents(nextEvents);
-                setOwnerNotesDraft(next.ownerNotes ?? "");
-              }}
-            />
-          </SectionShell>
-
-          <SectionShell
-            id="owner-notes"
-            title="2. Notes on this file (private)"
-            description="Only you see these notes; they are not shown to recipients."
-          >
-            {hasDocument ? (
-              <div className="space-y-2">
-                <Field>
-                  <FieldLabel htmlFor="owner-file-notes" className="sr-only">
-                    Notes
-                  </FieldLabel>
-                  <Textarea
-                    id="owner-file-notes"
-                    className="min-h-[5rem] resize-y text-sm"
-                    value={ownerNotesDraft}
-                    onChange={(e) => setOwnerNotesDraft(e.target.value)}
-                    placeholder="e.g. Q4 draft — send final after counsel review"
-                    maxLength={4000}
-                  />
-                </Field>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={isPending}
-                    onClick={() =>
-                      startTransition(() => {
-                        void saveOwnerNotes().catch((e: unknown) => {
-                          setError(e instanceof Error ? e.message : "Unable to save notes.");
-                        });
-                      })
-                    }
-                  >
-                    Save notes
-                  </Button>
-                  {ownerNotesSaved ? (
-                    <span className="text-xs text-muted-foreground">Saved.</span>
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Upload an encrypted file in section 1, then add notes here.
-              </p>
-            )}
-          </SectionShell>
-
-          <SectionShell id="owner-stats" title="3. Activity summary">
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px]">
-              <span>
-                <span className="font-semibold tabular-nums text-foreground">{stats.views}</span>{" "}
-                <span className="text-muted-foreground">opens</span>
-              </span>
-              <span>
-                <span className="font-semibold tabular-nums text-foreground">{stats.accepts}</span>{" "}
-                <span className="text-muted-foreground">NDAs</span>
-              </span>
-              <span>
-                <span className="font-semibold tabular-nums text-foreground">{stats.downloads}</span>{" "}
-                <span className="text-muted-foreground">downloads</span>
-              </span>
-              <span>
-                <span className="font-semibold tabular-nums text-foreground">{stats.signedCopies}</span>{" "}
-                <span className="text-muted-foreground">NDA copies</span>
-              </span>
-            </div>
-          </SectionShell>
-
-          <SectionShell
-            id="owner-reviewers"
-            title="4. Signed reviewers"
-            description="Reviewer records attach to the room after NDA completion."
-          >
-            {acceptances.length ? (
-              <ul className="divide-y divide-border">
-                {acceptances.map((acceptance) => (
-                  <li
-                    key={acceptance.id}
-                    className="flex flex-col gap-1.5 py-2 first:pt-0 sm:flex-row sm:items-start sm:justify-between"
-                  >
-                    <div className="min-w-0 text-[13px]">
-                      <div className="font-medium text-foreground">{acceptance.signerName}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {acceptance.signerEmail}
-                        {acceptance.signerCompany ? ` · ${acceptance.signerCompany}` : ""}
-                      </div>
-                      <div className="mt-1 flex items-start gap-1 text-xs text-foreground">
-                        <MapPin className="mt-0.5 size-3 shrink-0 text-[var(--color-accent)]" />
-                        <span className="leading-snug">{acceptance.signerAddress}</span>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
-                      <time className="text-[11px] tabular-nums text-muted-foreground">
-                        {formatDateTime(acceptance.acceptedAt)}
-                      </time>
-                      <Button asChild variant="outline" size="sm" className="h-8 text-xs">
-                        <a href={`${signedNdaBaseUrl}&acceptanceId=${acceptance.id}`}>
-                          <Download className="size-3.5" />
-                          Signed NDA
-                        </a>
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <Empty className="border-0 bg-muted/25 py-6">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <ShieldCheck className="size-5" />
-                  </EmptyMedia>
-                  <EmptyTitle className="text-sm">No signers yet</EmptyTitle>
-                  <EmptyDescription className="text-xs">
-                    Appear here after recipients complete the NDA.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            )}
-          </SectionShell>
-
-          <SectionShell
-            id="owner-timeline"
-            title="5. Timeline"
-            description="Views, NDA acceptance, downloads, uploads, and status changes — newest at the top."
-          >
-            {events.length ? (
-              <ul className="max-h-[min(46vh,20rem)] divide-y divide-border overflow-y-auto overscroll-contain">
-                {events.map((event) => (
-                  <li key={event.id} className="flex gap-2 py-1 text-[11px] leading-snug sm:text-xs">
-                    <div className="min-w-0 flex-1">
-                      <span className="font-medium text-foreground">{EVENT_LABELS[event.type]}</span>
-                      <span className="text-muted-foreground"> · {timelineDetail(event)}</span>
-                    </div>
-                    <time className="shrink-0 tabular-nums text-[10px] text-muted-foreground sm:text-[11px]">
-                      {formatDateTime(event.occurredAt)}
-                    </time>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <Empty className="border-0 bg-muted/25 py-6">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Activity className="size-5" />
-                  </EmptyMedia>
-                  <EmptyTitle className="text-sm">No events yet</EmptyTitle>
-                  <EmptyDescription className="text-xs">Activity will show here.</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            )}
-          </SectionShell>
-        </div>
-
-        <aside className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-20 lg:self-start">
-          <SectionShell id="owner-overview" title="6. Links & access" className="border-primary/15 bg-gradient-to-b from-primary/[0.03] to-card">
+  const overviewShell = (
+    <SectionShell id="owner-overview" title="6. Links & access" className="border-primary/15 bg-gradient-to-b from-primary/[0.03] to-card">
             <div className="space-y-3">
               <div>
                 <span className="inline-flex items-center rounded border border-primary/25 bg-primary/5 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-primary">
@@ -630,7 +480,207 @@ export const VaultOwnerPanel = ({
               ) : null}
             </div>
           </SectionShell>
-        </aside>
+  );
+
+  return (
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
+      <SectionNav active={activeSection} onSelect={selectSection} />
+
+      <div
+        className={cn(
+          "grid min-w-0 flex-1 gap-4 lg:items-start",
+          activeSection !== "owner-overview" &&
+            "lg:grid-cols-[minmax(0,1fr)_min(18rem,100%)] xl:grid-cols-[minmax(0,1fr)_20.5rem]",
+        )}
+      >
+        <div className="min-w-0">
+          {activeSection === "owner-document" ? (
+            <SectionShell
+              id="owner-document"
+              title="1. Room documents"
+              description="Files are encrypted in your browser before upload. Recipients only see the share link and password — not this page."
+            >
+              <VaultOwnerDocumentUpload
+                variant="featured"
+                slug={metadata.slug}
+                ownerKey={ownerKey}
+                metadata={metadata}
+                onUploaded={(next, nextEvents) => {
+                  setMetadata(next);
+                  setEvents(nextEvents);
+                  setOwnerNotesDraft(next.ownerNotes ?? "");
+                }}
+              />
+            </SectionShell>
+          ) : null}
+
+          {activeSection === "owner-notes" ? (
+            <SectionShell
+              id="owner-notes"
+              title="2. Notes on this file (private)"
+              description="Only you see these notes; they are not shown to recipients."
+            >
+              {hasDocument ? (
+                <div className="space-y-2">
+                  <Field>
+                    <FieldLabel htmlFor="owner-file-notes" className="sr-only">
+                      Notes
+                    </FieldLabel>
+                    <Textarea
+                      id="owner-file-notes"
+                      className="min-h-[5rem] resize-y text-sm"
+                      value={ownerNotesDraft}
+                      onChange={(e) => setOwnerNotesDraft(e.target.value)}
+                      placeholder="e.g. Q4 draft — send final after counsel review"
+                      maxLength={4000}
+                    />
+                  </Field>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isPending}
+                      onClick={() =>
+                        startTransition(() => {
+                          void saveOwnerNotes().catch((e: unknown) => {
+                            setError(e instanceof Error ? e.message : "Unable to save notes.");
+                          });
+                        })
+                      }
+                    >
+                      Save notes
+                    </Button>
+                    {ownerNotesSaved ? (
+                      <span className="text-xs text-muted-foreground">Saved.</span>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Upload an encrypted file under Room documents first, then add notes here.
+                </p>
+              )}
+            </SectionShell>
+          ) : null}
+
+          {activeSection === "owner-stats" ? (
+            <SectionShell id="owner-stats" title="3. Activity summary">
+              <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px]">
+                <span>
+                  <span className="font-semibold tabular-nums text-foreground">{stats.views}</span>{" "}
+                  <span className="text-muted-foreground">opens</span>
+                </span>
+                <span>
+                  <span className="font-semibold tabular-nums text-foreground">{stats.accepts}</span>{" "}
+                  <span className="text-muted-foreground">NDAs</span>
+                </span>
+                <span>
+                  <span className="font-semibold tabular-nums text-foreground">{stats.downloads}</span>{" "}
+                  <span className="text-muted-foreground">downloads</span>
+                </span>
+                <span>
+                  <span className="font-semibold tabular-nums text-foreground">{stats.signedCopies}</span>{" "}
+                  <span className="text-muted-foreground">NDA copies</span>
+                </span>
+              </div>
+            </SectionShell>
+          ) : null}
+
+          {activeSection === "owner-reviewers" ? (
+            <SectionShell
+              id="owner-reviewers"
+              title="4. Signed reviewers"
+              description="Reviewer records attach to the room after NDA completion."
+            >
+              {acceptances.length ? (
+                <ul className="divide-y divide-border">
+                  {acceptances.map((acceptance) => (
+                    <li
+                      key={acceptance.id}
+                      className="flex flex-col gap-1.5 py-2 first:pt-0 sm:flex-row sm:items-start sm:justify-between"
+                    >
+                      <div className="min-w-0 text-[13px]">
+                        <div className="font-medium text-foreground">{acceptance.signerName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {acceptance.signerEmail}
+                          {acceptance.signerCompany ? ` · ${acceptance.signerCompany}` : ""}
+                        </div>
+                        <div className="mt-1 flex items-start gap-1 text-xs text-foreground">
+                          <MapPin className="mt-0.5 size-3 shrink-0 text-[var(--color-accent)]" />
+                          <span className="leading-snug">{acceptance.signerAddress}</span>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
+                        <time className="text-[11px] tabular-nums text-muted-foreground">
+                          {formatDateTime(acceptance.acceptedAt)}
+                        </time>
+                        <Button asChild variant="outline" size="sm" className="h-8 text-xs">
+                          <a href={`${signedNdaBaseUrl}&acceptanceId=${acceptance.id}`}>
+                            <Download className="size-3.5" />
+                            Signed NDA
+                          </a>
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Empty className="border-0 bg-muted/25 py-6">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <ShieldCheck className="size-5" />
+                    </EmptyMedia>
+                    <EmptyTitle className="text-sm">No signers yet</EmptyTitle>
+                    <EmptyDescription className="text-xs">
+                      Appear here after recipients complete the NDA.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              )}
+            </SectionShell>
+          ) : null}
+
+          {activeSection === "owner-timeline" ? (
+            <SectionShell
+              id="owner-timeline"
+              title="5. Timeline"
+              description="Views, NDA acceptance, downloads, uploads, and status changes — newest at the top."
+            >
+              {events.length ? (
+                <ul className="max-h-[min(46vh,20rem)] divide-y divide-border overflow-y-auto overscroll-contain">
+                  {events.map((event) => (
+                    <li key={event.id} className="flex gap-2 py-1 text-[11px] leading-snug sm:text-xs">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium text-foreground">{EVENT_LABELS[event.type]}</span>
+                        <span className="text-muted-foreground"> · {timelineDetail(event)}</span>
+                      </div>
+                      <time className="shrink-0 tabular-nums text-[10px] text-muted-foreground sm:text-[11px]">
+                        {formatDateTime(event.occurredAt)}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Empty className="border-0 bg-muted/25 py-6">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Activity className="size-5" />
+                    </EmptyMedia>
+                    <EmptyTitle className="text-sm">No events yet</EmptyTitle>
+                    <EmptyDescription className="text-xs">Activity will show here.</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              )}
+            </SectionShell>
+          ) : null}
+
+          {activeSection === "owner-overview" ? overviewShell : null}
+        </div>
+
+        {activeSection !== "owner-overview" ? (
+          <aside className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-20 lg:self-start">{overviewShell}</aside>
+        ) : null}
       </div>
     </div>
   );
