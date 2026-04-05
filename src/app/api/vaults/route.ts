@@ -6,7 +6,6 @@ import {
   recordWorkspaceRoom,
 } from "@/lib/dataroom/auth";
 import { addDays, buildDefaultNdaText, createOwnerKey, createPublicSlug } from "@/lib/dataroom/helpers";
-import { isS3VaultConfigured } from "@/lib/dataroom/s3-vault-storage";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import {
   createEvent,
@@ -15,6 +14,7 @@ import {
   isSupportedFileType,
   type VaultRecord,
 } from "@/lib/dataroom/types";
+import { vaultCreateFailureResponse } from "@/lib/dataroom/vault-create-errors";
 
 export const runtime = "nodejs";
 /** Large PDFs / Office files after client-side encryption */
@@ -201,15 +201,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("[api/vaults] POST failed:", err);
-    const hint =
-      process.env.BLOB_READ_WRITE_TOKEN?.trim() || isS3VaultConfigured()
-        ? ""
-        : " Configure a Railway Bucket (S3 env vars), BLOB_READ_WRITE_TOKEN, or a writable TKN_LOCAL_VAULT_DIR.";
-    return NextResponse.json(
-      {
-        error: `Token could not create the room right now.${hint}`.trim(),
-      },
-      { status: 500 },
-    );
+    const { status, body } = vaultCreateFailureResponse(err);
+    return NextResponse.json(body, { status });
   }
 }

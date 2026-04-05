@@ -5,6 +5,7 @@ import {
   isPostgresAuthConfigured,
   pingPostgres,
 } from "@/lib/dataroom/postgres-auth-state";
+import { getStorageMode } from "@/lib/dataroom/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +15,19 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   if (!isPostgresAuthConfigured()) {
-    return NextResponse.json({ ok: true, database: "disabled" as const });
+    return NextResponse.json({
+      ok: true,
+      database: "disabled" as const,
+      vaultStorage: getStorageMode(),
+    });
   }
   const dbOk = await pingPostgres();
   if (!dbOk) {
-    return NextResponse.json({ ok: true, database: "error" as const });
+    return NextResponse.json({
+      ok: true,
+      database: "error" as const,
+      vaultStorage: getStorageMode(),
+    });
   }
   let authStateTable: "ok" | "missing" = "missing";
   try {
@@ -34,5 +43,6 @@ export async function GET() {
     ok: true,
     database: "connected" as const,
     authStateTable,
+    vaultStorage: getStorageMode(),
   });
 }
