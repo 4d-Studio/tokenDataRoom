@@ -9,14 +9,14 @@
 | Postgres migration | Room create fails after login works | `AUTH_STATE_TABLE_MISSING` | Run `pnpm db:migrate` on deploy Postgres (see `migrations/001_tkn_auth_state.sql`). |
 | `DATABASE_URL` | Auth / API errors | `DATABASE_URL_MISSING` | Link Railway Postgres; set `DATABASE_URL` or `POSTGRES_URL`. |
 | Postgres connectivity | Intermittent failures | `DATABASE_UNAVAILABLE` | Check service status, URL, SSL. |
-| Vercel Blob token invalid | 500 in prod with Blob configured | `VAULT_STORAGE_BLOB_ERROR` | Fix token or **remove** `BLOB_READ_WRITE_TOKEN` to use S3. |
+| Vercel Blob token invalid | Only when S3 is not configured | `VAULT_STORAGE_BLOB_ERROR` | Fix `BLOB_READ_WRITE_TOKEN` or add full S3 env (Railway Bucket wins when both are set). |
 | S3 / Railway Bucket | Put denied / wrong endpoint | `VAULT_STORAGE_S3_ERROR` | `BUCKET`, `ENDPOINT`, keys, `REGION`; try `TKN_S3_FORCE_PATH_STYLE=true`. |
 | Local disk | EROFS / EACCES on read-only FS | `VAULT_STORAGE_DISK_ERROR` | Set S3 env or `TKN_LOCAL_VAULT_DIR` on a volume. |
 
 ## Storage priority (enforced in code + tests)
 
-1. `BLOB_READ_WRITE_TOKEN` → **blob** (Vercel Blob; **wins over S3** if both set — see prod log warning).
-2. Full S3 env (`BUCKET` + keys + `ENDPOINT`) → **s3**.
+1. Full S3 env (`BUCKET` + keys + `ENDPOINT`) → **s3** (Railway Bucket). A leftover `BLOB_READ_WRITE_TOKEN` does **not** override S3.
+2. Else if `BLOB_READ_WRITE_TOKEN` → **blob** (Vercel Blob).
 3. Else → **local** (`/tmp/...` on Railway when no blob/S3).
 
 ## Stable markers

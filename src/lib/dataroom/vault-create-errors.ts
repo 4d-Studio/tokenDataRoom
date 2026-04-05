@@ -95,7 +95,7 @@ export function vaultCreateFailureResponse(err: unknown): {
       body: {
         code: "VAULT_STORAGE_BLOB_ERROR",
         error:
-          "Vercel Blob upload failed. Check BLOB_READ_WRITE_TOKEN, or remove it to use Railway Bucket (S3 env vars) instead.",
+          "File storage (Vercel Blob) rejected the request. Verify BLOB_READ_WRITE_TOKEN, or configure S3-compatible bucket env vars to use Railway Bucket instead.",
       },
     };
   }

@@ -3,13 +3,21 @@ import { describe, expect, it } from "vitest";
 import { getVaultStorageModeFromEnv } from "@/lib/dataroom/vault-storage-mode";
 
 describe("getVaultStorageModeFromEnv", () => {
-  it("prefers BLOB_READ_WRITE_TOKEN over S3", () => {
+  it("prefers S3 over BLOB_READ_WRITE_TOKEN when both are set (Railway Bucket wins)", () => {
     const mode = getVaultStorageModeFromEnv({
       BLOB_READ_WRITE_TOKEN: "tok",
       BUCKET: "b",
       ACCESS_KEY_ID: "k",
       SECRET_ACCESS_KEY: "s",
       ENDPOINT: "https://s3.example.com",
+    } as NodeJS.ProcessEnv);
+    expect(mode).toBe("s3");
+  });
+
+  it("uses blob when S3 incomplete but token set", () => {
+    const mode = getVaultStorageModeFromEnv({
+      BLOB_READ_WRITE_TOKEN: "tok",
+      BUCKET: "only-name",
     } as NodeJS.ProcessEnv);
     expect(mode).toBe("blob");
   });

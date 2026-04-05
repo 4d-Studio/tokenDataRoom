@@ -4,12 +4,12 @@ export type VaultStorageMode = "blob" | "s3" | "local";
 
 /**
  * Pure resolution of which vault backend would be selected (for tests and health checks).
- * Priority: Vercel Blob token → S3-compatible → local disk.
+ * Priority: S3-compatible (e.g. Railway Bucket) → Vercel Blob token → local disk.
  */
 export function getVaultStorageModeFromEnv(
   env: NodeJS.ProcessEnv,
 ): VaultStorageMode {
-  if (env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
   if (isS3VaultConfiguredFromEnv(env)) return "s3";
+  if (env.BLOB_READ_WRITE_TOKEN?.trim()) return "blob";
   return "local";
 }

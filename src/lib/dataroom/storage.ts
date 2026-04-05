@@ -22,18 +22,18 @@ export function __resetVaultStorageSingletonForTests(): void {
 
 export const getVaultStorage = () => {
   if (!storage) {
-    if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
-      if (isS3VaultConfigured() && process.env.NODE_ENV === "production") {
-        console.warn(
-          "[storage] BLOB_READ_WRITE_TOKEN is set, so Vercel Blob is used for vault files. S3/Railway Bucket env vars are ignored. Remove BLOB_READ_WRITE_TOKEN if you intend to use Railway Bucket.",
-        );
-      }
-      storage = new BlobVaultStorage();
-    } else if (isS3VaultConfigured()) {
+    if (isS3VaultConfigured()) {
       storage = new S3VaultStorage();
       if (process.env.NODE_ENV === "production") {
         console.info("[storage] Using S3-compatible bucket (e.g. Railway Bucket) for vault files.");
       }
+      if (process.env.BLOB_READ_WRITE_TOKEN?.trim() && process.env.NODE_ENV === "production") {
+        console.info(
+          "[storage] BLOB_READ_WRITE_TOKEN is set but ignored — S3/Railway Bucket env takes priority.",
+        );
+      }
+    } else if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+      storage = new BlobVaultStorage();
     } else {
       if (process.env.NODE_ENV === "production") {
         console.warn(
