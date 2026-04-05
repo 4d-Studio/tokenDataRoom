@@ -66,12 +66,6 @@ const navItems = [
     key: "workspace",
   },
   {
-    href: "/new",
-    label: "Create room",
-    icon: FilePlus2,
-    key: "new",
-  },
-  {
     href: "/workspace/settings",
     label: "Settings",
     icon: Settings,
@@ -177,7 +171,7 @@ export function AuthenticatedShell({
 
       <SidebarInset className="bg-transparent shadow-none">
         {activityEvents ? (
-          <header className="flex h-12 items-center justify-end gap-3 border-b border-border px-4">
+          <header className="flex h-12 items-center justify-end gap-2 border-b border-border px-4">
             <Badge
               variant="outline"
               className={cn(
@@ -187,6 +181,14 @@ export function AuthenticatedShell({
             >
               {planNavLabel(userPlan)}
             </Badge>
+            {current !== "new" ? (
+              <Button asChild size="sm" className="shrink-0 gap-1.5">
+                <Link href="/new">
+                  <FilePlus2 className="h-4 w-4" />
+                  Create room
+                </Link>
+              </Button>
+            ) : null}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">

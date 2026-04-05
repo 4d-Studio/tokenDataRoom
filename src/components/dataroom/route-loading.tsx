@@ -67,7 +67,7 @@ function SidebarSkeleton() {
       <div className="mx-3 border-t border-sidebar-border" />
       <div className="flex flex-1 flex-col gap-2 px-2 py-3">
         <Skeleton className="h-3 w-24 px-2" />
-        {Array.from({ length: 5 }).map((_, i) => (
+        {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-10 w-full rounded-md" />
         ))}
       </div>
