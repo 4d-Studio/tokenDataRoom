@@ -79,8 +79,8 @@ Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain include
 | `TKN_APP_SECRET` | Yes (prod) | HMAC signing secret for session and access cookies |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL (no trailing slash) for `metadataBase`, Open Graph, and absolute links — e.g. `https://token.fyi` or your Railway hostname |
 | `DATABASE_URL` | No | PostgreSQL URL. Also accepts `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `RAILWAY_DATABASE_URL`. When set, auth/workspace index uses table `public.tkn_auth_state` (create with `pnpm db:migrate`; Railway `releaseCommand` runs this). |
-| `BLOB_READ_WRITE_TOKEN` | No | Optional Vercel Blob. If set, vault files use Blob (highest priority). |
-| Railway Bucket | No | Reference `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `ENDPOINT`, `REGION` from a Railway Storage Bucket onto the app service — S3-compatible vault storage when Blob token is unset. |
+| `BLOB_READ_WRITE_TOKEN` | No | Optional Vercel Blob **only when S3 bucket env is incomplete**. If Railway Bucket vars are set, Blob token is ignored. |
+| Railway Bucket | No | `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `ENDPOINT`, `REGION` from Railway Storage — **highest priority** for vault files when complete. |
 | `TKN_LOCAL_VAULT_DIR` / `TKN_LOCAL_DATA_ROOT` | No | Local vault directory when neither Blob nor bucket env is configured. |
 | `SENDGRID_API_KEY` | No | SendGrid API key for email OTP delivery |
 | `SENDGRID_FROM_EMAIL` | No | Verified sender email for OTP codes |
