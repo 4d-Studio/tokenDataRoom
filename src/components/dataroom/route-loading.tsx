@@ -207,25 +207,24 @@ export function PageShellSkeleton() {
 
 export function ShareExperienceSkeleton() {
   return (
-    <div className="w-full max-w-3xl space-y-6">
-      <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/20 p-6 sm:p-8">
-        <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-          <Skeleton className="size-16 rounded-2xl sm:size-[4.5rem]" />
-          <Skeleton className="h-3 w-32" />
-          <Skeleton className="h-6 w-full max-w-sm" />
-          <Skeleton className="h-4 w-full max-w-xs" />
-          <Skeleton className="mt-2 h-10 w-full max-w-lg" />
+    <div className="w-full max-w-2xl space-y-8">
+      <div className="flex gap-4 border-b border-border pb-5">
+        <Skeleton className="size-12 shrink-0 rounded-xl sm:size-14" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-8 w-4/5 max-w-md" />
+          <Skeleton className="h-4 w-48" />
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-muted/30 p-4">
-        <Skeleton className="size-10 shrink-0 rounded-lg" />
+      <div className="flex flex-wrap items-center gap-3 border-y border-border py-4">
+        <Skeleton className="size-9 shrink-0 rounded-lg" />
         <div className="min-w-0 flex-1 space-y-2">
-          <Skeleton className="h-4 w-48 max-w-full" />
+          <Skeleton className="h-4 w-52 max-w-full" />
           <Skeleton className="h-3 w-64 max-w-full" />
         </div>
-        <Skeleton className="h-7 w-24 rounded-full" />
+        <Skeleton className="h-7 w-20 rounded-full" />
       </div>
-      <Skeleton className="h-48 w-full rounded-xl sm:h-56" />
+      <Skeleton className="h-40 w-full rounded-xl border border-border sm:h-48" />
     </div>
   );
 }

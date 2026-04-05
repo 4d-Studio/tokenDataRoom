@@ -125,18 +125,18 @@ export function MobileShareViewer({
   const displayError = localError || externalError;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a]">
-      {/* ── Top bar ── */}
-      <div className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-black/90 px-4 backdrop-blur-md">
+    <div className="fixed inset-0 flex flex-col bg-background">
+      {/* ── Top bar (recipient: product light shell, not theater-dark) ── */}
+      <div className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 shadow-sm">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/10">
-            <FileText className="size-4 text-white/70" />
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
+            <FileText className="size-4 text-muted-foreground" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">
+            <p className="truncate text-sm font-semibold text-foreground">
               {hasDocument ? metadata.fileName : "No document yet"}
             </p>
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-muted-foreground">
               {hasDocument ? formatBytes(metadata.fileSize) : "Waiting for sender"}
             </p>
           </div>
@@ -144,12 +144,12 @@ export function MobileShareViewer({
 
         <div className="flex shrink-0 items-center gap-2">
           {decrypted ? (
-            <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-400">
+            <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
               <CheckCircle2 className="size-3" />
               Unlocked
             </span>
           ) : (
-            <span className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/60">
+            <span className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
               <Lock className="size-3" />
               Encrypted
             </span>
@@ -169,15 +169,16 @@ export function MobileShareViewer({
           />
         ) : decrypted ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-            <Clock className="size-10 text-white/30" />
-            <p className="text-sm font-medium text-white/80">No file in this room yet</p>
-            <p className="text-xs text-white/45">
+            <Clock className="size-10 text-muted-foreground/50" />
+            <p className="text-sm font-medium text-foreground">No file in this room yet</p>
+            <p className="text-xs text-muted-foreground">
               The room is unlocked but there&apos;s nothing to preview. Ask the sender to upload from
               owner controls.
             </p>
           </div>
         ) : (
           <ShareMobileWelcomeLayer
+            tone="clean"
             shareHostLabel={shareHostLabel}
             workspaceLogoUrl={workspaceLogoUrl}
             workspaceCompanyName={workspaceCompanyName}
@@ -490,7 +491,7 @@ export function MobileShareViewer({
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
             onClick={() => setSheetOpen(true)}
-            className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-5 py-3 shadow-xl ring-1 ring-black/10"
+            className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-foreground shadow-lg"
           >
             {isNdaDone ? <Lock className="size-4" /> : <ShieldCheck className="size-4" />}
             <span className="text-sm font-medium text-foreground">

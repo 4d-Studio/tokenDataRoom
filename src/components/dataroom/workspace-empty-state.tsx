@@ -33,7 +33,7 @@ export function WorkspaceEmptyState() {
         <Button
           asChild
           size="lg"
-          className="h-12 rounded-[0.625rem] px-7 text-[0.94rem] font-semibold shadow-[0_2px_8px_rgba(243,91,45,0.25)] transition-[transform,box-shadow] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(243,91,45,0.3)]"
+          className="h-12 rounded-[0.625rem] px-7 text-[0.94rem] font-semibold transition-[transform,box-shadow] hover:-translate-y-px"
         >
           <Link href="/new">
             <Plus

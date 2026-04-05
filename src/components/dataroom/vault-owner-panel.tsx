@@ -132,164 +132,27 @@ export const VaultOwnerPanel = ({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-      <ProductSectionCard className="lg:sticky lg:top-5 lg:self-start">
-        <ProductSectionBody className="p-5">
-          <ProductPageIntro
-            eyebrow="Owner room"
-            title={metadata.title}
-            description="Keep the management link private. Anyone with it can revoke or reactivate the room."
-            className="pb-0"
-            titleClassName="text-[1.55rem] sm:text-[1.7rem]"
-            descriptionClassName="text-[0.9rem] leading-6"
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+      <div className="flex min-w-0 flex-col gap-6">
+        <ProductSectionCard>
+          <ProductSectionHeader
+            title="Room documents"
+            description="Drag and drop or browse. Files encrypt in your browser before they leave your device. Recipients only see the share link — not this page."
           />
+          <ProductSectionBody className="pt-5">
+            <VaultOwnerDocumentUpload
+              variant="featured"
+              slug={metadata.slug}
+              ownerKey={ownerKey}
+              metadata={metadata}
+              onUploaded={(next, nextEvents) => {
+                setMetadata(next);
+                setEvents(nextEvents);
+              }}
+            />
+          </ProductSectionBody>
+        </ProductSectionCard>
 
-          <Separator className="my-4" />
-
-          <div className="meta-grid">
-            <div className="meta-row">
-              <dt>Status</dt>
-              <dd>{metadata.status === "active" ? "Active room" : "Revoked room"}</dd>
-            </div>
-            <div className="meta-row">
-              <dt>Expires</dt>
-              <dd>{formatDateTime(metadata.expiresAt)}</dd>
-            </div>
-          </div>
-
-          <Separator className="my-4" />
-
-          <VaultOwnerDocumentUpload
-            slug={metadata.slug}
-            ownerKey={ownerKey}
-            metadata={metadata}
-            onUploaded={(next, nextEvents) => {
-              setMetadata(next);
-              setEvents(nextEvents);
-            }}
-          />
-
-          <Separator className="my-4" />
-
-          <div className="grid gap-4">
-            <ProductMetaBlock label="Share link">
-              <div className="break-all">{shareUrl}</div>
-              <div className="mt-3">
-                <CopyButton value={shareUrl} label="Copy room link" />
-              </div>
-            </ProductMetaBlock>
-
-            <ProductMetaBlock label="Management link">
-              <div className="break-all">{manageUrl}</div>
-              <div className="mt-3">
-                <CopyButton value={manageUrl} label="Copy management link" />
-              </div>
-            </ProductMetaBlock>
-          </div>
-
-          <Separator className="my-4" />
-
-          <div>
-            <div className="label-title">Room status</div>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Revoke this room if access should stop immediately.
-            </p>
-            <Button
-              type="button"
-              disabled={isPending}
-              onClick={() =>
-                startTransition(() => {
-                  void updateStatus(metadata.status === "active" ? "revoke" : "restore").catch(
-                    (caughtError: unknown) => {
-                      setError(
-                        caughtError instanceof Error
-                          ? caughtError.message
-                          : "Unable to update room status.",
-                      );
-                    },
-                  );
-                })
-              }
-              variant={metadata.status === "active" ? "destructive" : "default"}
-              className="mt-3.5 w-full justify-start"
-            >
-              <LockKeyhole data-icon="inline-start" />
-              {metadata.status === "active" ? "Revoke room" : "Restore room"}
-            </Button>
-          </div>
-
-          <Separator className="my-4" />
-
-          <div>
-            <div className="label-title">Delete room</div>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Permanently delete this room, its encrypted file, NDA records, and all activity. This cannot be undone.
-            </p>
-            {!showDeleteConfirm ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="mt-3.5 w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 data-icon="inline-start" />
-                Delete room permanently
-              </Button>
-            ) : (
-              <div className="mt-3.5 space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-                <p className="text-sm font-medium text-destructive">
-                  Type <span className="font-bold">DELETE</span> to confirm
-                </p>
-                <Input
-                  value={deleteInput}
-                  onChange={(e) => setDeleteInput(e.target.value)}
-                  placeholder="DELETE"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    disabled={isPending || deleteInput !== "DELETE"}
-                    onClick={() =>
-                      startTransition(() => {
-                        void deleteRoom().catch((e: unknown) => {
-                          setError(e instanceof Error ? e.message : "Unable to delete.");
-                        });
-                      })
-                    }
-                    className="flex-1"
-                  >
-                    <Trash2 data-icon="inline-start" />
-                    Confirm delete
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowDeleteConfirm(false);
-                      setDeleteInput("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {error ? (
-            <>
-              <Separator className="my-4" />
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            </>
-          ) : null}
-        </ProductSectionBody>
-      </ProductSectionCard>
-
-      <section className="flex flex-col gap-5">
         <ProductSectionCard>
           <ProductSectionHeader
             title="Review who opened, signed, and downloaded."
@@ -411,7 +274,151 @@ export const VaultOwnerPanel = ({
             )}
           </ProductSectionBody>
         </ProductSectionCard>
-      </section>
+      </div>
+
+      <ProductSectionCard className="lg:sticky lg:top-5 lg:self-start">
+        <ProductSectionBody className="p-5">
+          <ProductPageIntro
+            eyebrow="Owner controls"
+            title={metadata.title}
+            description="This management link is secret — it can revoke access and delete the room. Recipients use the share link only."
+            className="pb-0"
+            titleClassName="text-[1.35rem] sm:text-[1.5rem]"
+            descriptionClassName="text-[0.88rem] leading-6"
+          />
+
+          <Separator className="my-4" />
+
+          <div className="meta-grid">
+            <div className="meta-row">
+              <dt>Status</dt>
+              <dd>{metadata.status === "active" ? "Active room" : "Revoked room"}</dd>
+            </div>
+            <div className="meta-row">
+              <dt>Expires</dt>
+              <dd>{formatDateTime(metadata.expiresAt)}</dd>
+            </div>
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="grid gap-4">
+            <ProductMetaBlock label="Share link">
+              <div className="break-all">{shareUrl}</div>
+              <div className="mt-3">
+                <CopyButton value={shareUrl} label="Copy room link" />
+              </div>
+            </ProductMetaBlock>
+
+            <ProductMetaBlock label="Management link">
+              <div className="break-all">{manageUrl}</div>
+              <div className="mt-3">
+                <CopyButton value={manageUrl} label="Copy management link" />
+              </div>
+            </ProductMetaBlock>
+          </div>
+
+          <Separator className="my-4" />
+
+          <div>
+            <div className="label-title">Room status</div>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Revoke this room if access should stop immediately.
+            </p>
+            <Button
+              type="button"
+              disabled={isPending}
+              onClick={() =>
+                startTransition(() => {
+                  void updateStatus(metadata.status === "active" ? "revoke" : "restore").catch(
+                    (caughtError: unknown) => {
+                      setError(
+                        caughtError instanceof Error
+                          ? caughtError.message
+                          : "Unable to update room status.",
+                      );
+                    },
+                  );
+                })
+              }
+              variant={metadata.status === "active" ? "destructive" : "default"}
+              className="mt-3.5 w-full justify-start"
+            >
+              <LockKeyhole data-icon="inline-start" />
+              {metadata.status === "active" ? "Revoke room" : "Restore room"}
+            </Button>
+          </div>
+
+          <Separator className="my-4" />
+
+          <div>
+            <div className="label-title">Delete room</div>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Permanently delete this room, its encrypted file, NDA records, and all activity. This cannot be undone.
+            </p>
+            {!showDeleteConfirm ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="mt-3.5 w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 data-icon="inline-start" />
+                Delete room permanently
+              </Button>
+            ) : (
+              <div className="mt-3.5 space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                <p className="text-sm font-medium text-destructive">
+                  Type <span className="font-bold">DELETE</span> to confirm
+                </p>
+                <Input
+                  value={deleteInput}
+                  onChange={(e) => setDeleteInput(e.target.value)}
+                  placeholder="DELETE"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={isPending || deleteInput !== "DELETE"}
+                    onClick={() =>
+                      startTransition(() => {
+                        void deleteRoom().catch((e: unknown) => {
+                          setError(e instanceof Error ? e.message : "Unable to delete.");
+                        });
+                      })
+                    }
+                    className="flex-1"
+                  >
+                    <Trash2 data-icon="inline-start" />
+                    Confirm delete
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeleteInput("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {error ? (
+            <>
+              <Separator className="my-4" />
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            </>
+          ) : null}
+        </ProductSectionBody>
+      </ProductSectionCard>
     </div>
   );
 };

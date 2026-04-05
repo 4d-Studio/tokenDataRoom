@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Upload } from "lucide-react";
+import { FileText, Upload } from "lucide-react";
 
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,17 @@ type Props = {
   ownerKey: string;
   metadata: VaultRecord;
   onUploaded: (metadata: VaultRecord, events: VaultEvent[]) => void;
+  /** `featured` — owner-page primary column: larger drop zone and document tile. */
+  variant?: "default" | "featured";
 };
 
-export function VaultOwnerDocumentUpload({ slug, ownerKey, metadata, onUploaded }: Props) {
+export function VaultOwnerDocumentUpload({
+  slug,
+  ownerKey,
+  metadata,
+  onUploaded,
+  variant = "default",
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
@@ -111,6 +119,29 @@ export function VaultOwnerDocumentUpload({ slug, ownerKey, metadata, onUploaded 
   };
 
   if (hasDocument) {
+    if (variant === "featured") {
+      return (
+        <div className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50">
+            <FileText className="size-7 text-muted-foreground" strokeWidth={1.5} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Encrypted document in this room
+            </p>
+            <p className="mt-1.5 truncate text-base font-semibold text-foreground">
+              {metadata.fileName}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {formatBytes(metadata.fileSize)} · {formatMimeLabel(metadata.mimeType)}
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Each room stores one encrypted bundle. To share a different file, create another room.
+            </p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="rounded-xl border border-border bg-muted/20 p-4">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -124,10 +155,15 @@ export function VaultOwnerDocumentUpload({ slug, ownerKey, metadata, onUploaded 
     );
   }
 
+  const dropMinH =
+    variant === "featured" ? "min-h-[12rem] sm:min-h-[14rem]" : "min-h-[9rem]";
+  const titleClass =
+    variant === "featured" ? "text-lg font-semibold text-foreground" : "text-sm font-semibold text-foreground";
+
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h3 className="text-sm font-semibold text-foreground">Add a document</h3>
+        <h3 className={titleClass}>Add a document</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Drag and drop a file, then enter the same password you set for this room. It encrypts in
           your browser before upload.
@@ -164,16 +200,24 @@ export function VaultOwnerDocumentUpload({ slug, ownerKey, metadata, onUploaded 
           onFiles(e.dataTransfer.files);
         }}
         className={
-          "upload-zone flex min-h-[9rem] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-4 text-center transition-colors " +
+          "upload-zone flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-4 text-center transition-colors " +
+          dropMinH +
+          " " +
           (isDragging
             ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10"
             : "border-border bg-muted/30 hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5")
         }
         onClick={() => inputRef.current?.click()}
       >
-        <Upload className="size-8 text-muted-foreground" />
+        <Upload className={variant === "featured" ? "size-10 text-muted-foreground" : "size-8 text-muted-foreground"} />
         <div>
-          <p className="text-sm font-medium text-foreground">
+          <p
+            className={
+              variant === "featured"
+                ? "text-base font-medium text-foreground"
+                : "text-sm font-medium text-foreground"
+            }
+          >
             {file ? file.name : "Drop a file here or click to browse"}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
