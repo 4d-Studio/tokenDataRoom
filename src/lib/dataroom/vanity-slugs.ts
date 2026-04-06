@@ -32,12 +32,16 @@ export const resolveVanitySlug = async (vanitySlug: string): Promise<string | nu
     return inMemoryMap.get(vanitySlug) ?? null;
   }
 
-  const pool = getPgPool();
-  const result = await pool.query<{ real_slug: string }>(
-    `SELECT real_slug FROM ${TABLE} WHERE vanity_slug = $1`,
-    [vanitySlug],
-  );
-  return result.rows[0]?.real_slug ?? null;
+  try {
+    const pool = getPgPool();
+    const result = await pool.query<{ real_slug: string }>(
+      `SELECT real_slug FROM ${TABLE} WHERE vanity_slug = $1`,
+      [vanitySlug],
+    );
+    return result.rows[0]?.real_slug ?? null;
+  } catch {
+    return null;
+  }
 };
 
 /** Get the vanity slug for a real slug. Returns null if none set. */
@@ -46,12 +50,16 @@ export const getVanitySlugForRoom = async (realSlug: string): Promise<string | n
     return inMemoryReverse.get(realSlug) ?? null;
   }
 
-  const pool = getPgPool();
-  const result = await pool.query<{ vanity_slug: string }>(
-    `SELECT vanity_slug FROM ${TABLE} WHERE real_slug = $1`,
-    [realSlug],
-  );
-  return result.rows[0]?.vanity_slug ?? null;
+  try {
+    const pool = getPgPool();
+    const result = await pool.query<{ vanity_slug: string }>(
+      `SELECT vanity_slug FROM ${TABLE} WHERE real_slug = $1`,
+      [realSlug],
+    );
+    return result.rows[0]?.vanity_slug ?? null;
+  } catch {
+    return null;
+  }
 };
 
 /**
@@ -83,22 +91,27 @@ export const setVanitySlug = async (
 
   const pool = getPgPool();
 
-  // Check if this vanity slug is taken by a different room
-  const conflict = await pool.query<{ real_slug: string }>(
-    `SELECT real_slug FROM ${TABLE} WHERE vanity_slug = $1`,
-    [vanitySlug],
-  );
-  if (conflict.rows[0] && conflict.rows[0].real_slug !== realSlug) {
-    throw new Error("This custom link is already taken.");
-  }
+  try {
+    // Check if this vanity slug is taken by a different room
+    const conflict = await pool.query<{ real_slug: string }>(
+      `SELECT real_slug FROM ${TABLE} WHERE vanity_slug = $1`,
+      [vanitySlug],
+    );
+    if (conflict.rows[0] && conflict.rows[0].real_slug !== realSlug) {
+      throw new Error("This custom link is already taken.");
+    }
 
-  // Remove old vanity for this room, then insert/upsert new one
-  await pool.query(`DELETE FROM ${TABLE} WHERE real_slug = $1`, [realSlug]);
-  await pool.query(
-    `INSERT INTO ${TABLE} (vanity_slug, real_slug) VALUES ($1, $2)
-     ON CONFLICT (vanity_slug) DO UPDATE SET real_slug = EXCLUDED.real_slug`,
-    [vanitySlug, realSlug],
-  );
+    // Remove old vanity for this room, then insert/upsert new one
+    await pool.query(`DELETE FROM ${TABLE} WHERE real_slug = $1`, [realSlug]);
+    await pool.query(
+      `INSERT INTO ${TABLE} (vanity_slug, real_slug) VALUES ($1, $2)
+       ON CONFLICT (vanity_slug) DO UPDATE SET real_slug = EXCLUDED.real_slug`,
+      [vanitySlug, realSlug],
+    );
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("already taken")) throw err;
+    throw new Error("Vanity slugs table not available. Run db:migrate to set up.");
+  }
 };
 
 /** Remove the vanity slug for a room. */
@@ -112,6 +125,10 @@ export const removeVanitySlug = async (realSlug: string): Promise<void> => {
     return;
   }
 
-  const pool = getPgPool();
-  await pool.query(`DELETE FROM ${TABLE} WHERE real_slug = $1`, [realSlug]);
+  try {
+    const pool = getPgPool();
+    await pool.query(`DELETE FROM ${TABLE} WHERE real_slug = $1`, [realSlug]);
+  } catch {
+    // Table may not exist yet; silently ignore
+  }
 };
