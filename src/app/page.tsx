@@ -12,32 +12,34 @@ const useCases = [
   {
     title: "Due diligence",
     description:
-      "One room per workstream—outside counsel and investors get only what you send, not your whole drive.",
+      "Give counsel and investors a door—not a map of your entire company drive. One room, one password, done.",
   },
   {
-    title: "Board communications",
-    description: "Secure links, signed acknowledgements when you need them, and a trail without a heavy portal.",
+    title: "Board comms",
+    description:
+      "NDA when you want it, links when you don’t, and a paper trail that didn’t require a committee to buy software.",
   },
   {
     title: "Deal rooms",
-    description: "Password + optional NDA, then documents. Revoke the room when the deal moves on.",
+    description:
+      "Spin up a room, leak nothing you didn’t mean to, kill the link when the vibe shifts. That’s the whole feature.",
   },
 ];
 
 const comparedTo = [
   {
-    label: "Dropbox, Box, and shared drives",
-    body: "Built for internal sync and folders. Token is for time-boxed, external sharing—NDA, password, revoke—without opening your whole library.",
+    label: "Dropbox, Box, the whole “shared folder” industrial complex",
+    body: "Love them for internal chaos. Terrible guest list for “please don’t see our cap table.” Token is a room with a bouncer—password, optional NDA, revoke—not another sync client you’ll explain in a Zoom.",
   },
   {
-    label: "DocuSign-style e-sign platforms",
-    body: "Purpose-built for legal contracts and priced that way. When you only need “agree, then view the materials,” Token stays minimal and affordable.",
+    label: "DocuSign & friends (no shade, they’re just… loud)",
+    body: "If you’re closing a merger, pay the merger people. If you need “they agreed, now show the deck,” you don’t need a pricing calculator and three approvals. We’re cheap, small, and fine with that.",
   },
 ] as const;
 
 const trustItems = [
-  { icon: Lock, label: "AES-256 encrypted files" },
-  { icon: ShieldCheck, label: "Client-side encryption" },
+  { icon: Lock, label: "AES-256 — the keys never touch our nap time" },
+  { icon: ShieldCheck, label: "Encrypted in your browser first (actually)" },
 ];
 
 export default async function Home() {
@@ -78,11 +80,11 @@ export default async function Home() {
       <section className="page-hero max-w-4xl">
         <div className="max-w-3xl">
           <Badge variant="secondary" className="rounded-full px-3 py-1 text-[0.78rem]">
-            Secure data rooms
+            Small team energy, big-company paranoia
           </Badge>
           <ProductPageIntro
-            title="Secure rooms for deals—not another company drive."
-            description="Password-protected rooms with optional NDA. Files are encrypted in your browser before upload; you get a clear activity trail and can revoke access anytime. Lighter and cheaper than wiring Dropbox or Box for outsiders, or paying e-sign suites when all you need is acknowledge-and-view."
+            title="Data rooms that don’t need a sales call."
+            description="Password. Optional NDA. Files encrypted in your browser before they ever hit a server. A timeline of who did what. Revoke the room before your ex-cofounder screenshots the deck. We’re new, we’re lean, and we’re not pretending to be Dropbox with a blazer on."
             className="mt-3 max-w-3xl items-start py-0"
             titleClassName="mt-0 text-[2.05rem] sm:text-[2.35rem]"
             descriptionClassName="max-w-2xl text-[0.9375rem] leading-7 text-[var(--tkn-text-support)]"
@@ -123,18 +125,18 @@ export default async function Home() {
             )}
             <p className="tkn-fine mt-2">
               {hasWorkspace
-                ? "You are signed in — open your data rooms or create a new one."
+                ? "You’re in. Go break (or fix) something."
                 : isAuthed
-                  ? "Complete onboarding to create your first room."
-                  : "Free to start. No credit card."}
+                  ? "Almost there — name the workspace, then we unleash the rooms."
+                  : "Free to start. We’ll ask for money later, when we’re brave enough to turn on checkout."}
             </p>
           </div>
         </div>
       </section>
 
-      {/* Positioning — no testimonials; plain contrast vs common tools */}
+      {/* Positioning — attitude, not case studies */}
       <section className="mt-10 max-w-4xl rounded-xl border border-border bg-white/80 p-5 shadow-sm">
-        <p className="label-title mb-3">Compared to</p>
+        <p className="label-title mb-3">Why we exist (rant, abbreviated)</p>
         <ul className="space-y-4">
           {comparedTo.map((row) => (
             <li key={row.label}>
@@ -147,7 +149,7 @@ export default async function Home() {
 
       {/* Use cases */}
       <section className="mt-12 max-w-4xl">
-        <div className="label-title mb-4">Built for</div>
+        <div className="label-title mb-4">You’ll use this when</div>
         <div className="grid gap-4 sm:grid-cols-3">
           {useCases.map((useCase) => (
             <div key={useCase.title} className="rounded-xl border border-border bg-white p-4">
@@ -164,33 +166,33 @@ export default async function Home() {
 
       {/* How it works */}
       <section className="max-w-4xl">
-        <div className="label-title mb-5">How it works</div>
+        <div className="label-title mb-5">Three steps. We’re not hiding a fourth behind a webinar.</div>
         <div className="grid gap-5 border-y border-border py-5 md:grid-cols-3">
           <div className="flex flex-col gap-2">
             <div className="label-title">01</div>
             <p className="text-[0.9375rem] font-medium leading-snug text-foreground">
-              Upload and encrypt
+              Lock the files in the browser
             </p>
             <p className="text-sm text-[var(--tkn-text-support)]">
-              Add files (encrypted in your browser first), set a room password, and turn on NDA if you need it.
+              Upload, encrypt locally, pick a password. Flip NDA on if your lawyer texted you at midnight. We never see plaintext.
             </p>
           </div>
           <div className="flex flex-col gap-2">
             <div className="label-title">02</div>
             <p className="text-[0.9375rem] font-medium leading-snug text-foreground">
-              Share the private link
+              Send a link, not a login saga
             </p>
             <p className="text-sm text-[var(--tkn-text-support)]">
-              Send one link—optionally a short custom URL. Recipients never see your workspace or owner controls.
+              One URL—make it cute with a custom path if you want. They don’t get keys to your workspace; they get the room.
             </p>
           </div>
           <div className="flex flex-col gap-2">
             <div className="label-title">03</div>
             <p className="text-[0.9375rem] font-medium leading-snug text-foreground">
-              Track and revoke
+              Watch the chaos, then stop it
             </p>
             <p className="text-sm text-[var(--tkn-text-support)]">
-              Activity timeline, signed NDA downloads, revoke or restore when you need to—without another vendor stack.
+              Timeline of opens, NDAs, downloads, the works. Revoke. Breathe. No new vendor tab to forget the password for.
             </p>
           </div>
         </div>
@@ -198,13 +200,13 @@ export default async function Home() {
 
       {/* CTA strip */}
       <section className="mt-10 max-w-4xl rounded-2xl border border-border bg-white p-6 text-center">
-        <p className="text-sm font-semibold text-foreground">Ready to get started?</p>
+        <p className="text-sm font-semibold text-foreground">Still here? Good taste.</p>
         <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
           {hasWorkspace
-            ? "Jump back into your workspace or create another room."
+            ? "Your rooms miss you. Or create another and pretend it’s organized."
             : isAuthed
-              ? "Finish setup to create your first secure room."
-              : "Straightforward pricing—see how it compares to seats, storage tiers, and per-envelope fees elsewhere. No credit card to start."}
+              ? "Finish setup — the empty workspace is judging you silently."
+              : "Pricing is honest; the enterprise incumbents are not. Peek at the numbers, then spin up a room. No card."}
         </p>
         {hasWorkspace ? (
           <Button asChild size="lg" className="mt-4">
