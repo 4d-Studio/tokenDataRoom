@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { AlertCircleIcon, KeyRoundIcon, MailIcon } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { AlertCircleIcon, KeyRoundIcon, MailIcon, Mail } from "lucide-react";
 
 import { productFieldClass } from "@/components/dataroom/product-ui";
 import {
@@ -39,6 +39,16 @@ export const LoginFlow = () => {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Countdown timer for resend
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setInterval(() => {
+      setResendCooldown((c) => Math.max(0, c - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [resendCooldown]);
 
   const requestCode = async () => {
     setError("");
@@ -69,6 +79,7 @@ export const LoginFlow = () => {
         : "Check your inbox for the Token sign-in code.",
     );
     setStep("code");
+    setResendCooldown(30);
   };
 
   const verifyCode = async () => {
@@ -94,13 +105,11 @@ export const LoginFlow = () => {
   return (
     <Card className="tkn-elevated-panel w-full rounded-2xl border border-[var(--tkn-panel-border)] py-0 shadow-none ring-0">
       <CardHeader className="gap-2 border-b px-5 py-4">
-        <div className="eyebrow">Login first</div>
         <CardTitle className="text-balance text-[1.65rem] tracking-[-0.04em] text-[var(--color-ink)] sm:text-[1.8rem]">
-          Sign in with a magic code
+          Sign in
         </CardTitle>
-        <CardDescription className="max-w-lg text-[0.94rem] leading-6.5">
-          We’ll email a one-time code so there’s no password to manage. After login,
-          the first step is creating your workspace.
+        <CardDescription className="max-w-lg text-[0.94rem] leading-relaxed">
+          We&apos;ll email a one-time code — no password to manage.
         </CardDescription>
       </CardHeader>
 
@@ -129,7 +138,7 @@ export const LoginFlow = () => {
           {step === "code" ? (
             <Field>
               <FieldLabel>Magic code</FieldLabel>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <InputOTP
                   autoFocus
                   maxLength={CODE_LENGTH}
@@ -147,9 +156,42 @@ export const LoginFlow = () => {
                     ))}
                   </InputOTPGroup>
                 </InputOTP>
-                <p className="text-[0.9rem] leading-6 text-muted-foreground">
-                  Enter the 6-digit code we sent to {email}.
+                <p className="text-[0.9rem] leading-relaxed text-muted-foreground">
+                  Enter the 6-digit code sent to <span className="font-medium text-foreground">{email}</span>.
                 </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground"
+                    onClick={() => {
+                      const domain = email.split("@")[1];
+                      if (domain) {
+                        window.location.href = `https://${domain}`;
+                      }
+                    }}
+                  >
+                    <Mail className="size-3.5" />
+                    Open inbox
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground"
+                    disabled={resendCooldown > 0}
+                    onClick={() =>
+                      startTransition(() => {
+                        void requestCode().catch((e: unknown) => {
+                          setError(e instanceof Error ? e.message : "Unable to resend.");
+                        });
+                      })
+                    }
+                  >
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
+                  </Button>
+                </div>
               </div>
             </Field>
           ) : null}
@@ -157,11 +199,11 @@ export const LoginFlow = () => {
           {message ? (
             <Alert className="border-border bg-accent/50">
               <KeyRoundIcon />
-              <AlertTitle>Code ready</AlertTitle>
+              <AlertTitle>Code sent</AlertTitle>
               <AlertDescription>
                 {message}
-                {debugCode ? (
-                  <div className="mt-2 font-semibold text-foreground">Code: {debugCode}</div>
+                {debugCode && process.env.NODE_ENV === "development" ? (
+                  <div className="mt-2 font-mono text-xs text-foreground">Dev: {debugCode}</div>
                 ) : null}
               </AlertDescription>
             </Alert>
@@ -181,7 +223,7 @@ export const LoginFlow = () => {
                 type="button"
                 size="lg"
                 className="min-w-36"
-                disabled={isPending}
+                disabled={isPending || !email.trim()}
                 onClick={() =>
                   startTransition(() => {
                     void requestCode().catch((caughtError: unknown) => {

@@ -733,6 +733,7 @@ export function ShareExperience({
                 <Button
                   type="button"
                   disabled={isPending || !ndaStepComplete}
+                  aria-busy={isPending}
                   onClick={() => {
                     const pw = (
                       document.getElementById("document-password") as HTMLInputElement
@@ -741,7 +742,7 @@ export function ShareExperience({
                   }}
                 >
                   <Lock className="size-4" />
-                  Unlock
+                  {isPending ? "Decrypting…" : "Unlock"}
                 </Button>
               </div>
 

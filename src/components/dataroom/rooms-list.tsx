@@ -3,10 +3,17 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ExternalLink, FileText, Settings2, Trash2 } from "lucide-react";
+import { ExternalLink, FileText, MoreHorizontal, Settings2, Trash2 } from "lucide-react";
 
 import type { WorkspaceRoomSummary } from "@/lib/dataroom/workspace-types";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CopyButton } from "@/components/dataroom/copy-button";
 
 export type WorkspaceRoomRow = WorkspaceRoomSummary & {
@@ -50,23 +57,23 @@ export function RoomsList({ rooms, baseUrl }: RoomsListProps) {
         return (
           <div
             key={room.id}
-            className="group flex items-center justify-between gap-3 border-t border-border py-3 first:border-t-0 transition-colors hover:bg-muted/30"
+            className="flex items-center justify-between gap-4 border-t border-border py-4 first:border-t-0"
           >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 shrink-0 text-[var(--tkn-text-fine)]" />
-                <span className="text-[0.95rem] font-bold text-foreground">
-                  {room.title}
-                </span>
+            {/* Left: icon + title + meta */}
+            <div className="min-w-0 flex items-center gap-3 flex-1">
+              <FileText className="size-5 shrink-0 text-[var(--tkn-text-fine)]" strokeWidth={1.5} />
+              <div className="min-w-0">
+                <p className="text-[0.9375rem] font-semibold text-foreground truncate">{room.title}</p>
+                <p className="tkn-fine mt-0.5 truncate">
+                  {room.fileName ? `${room.fileName} · ` : ""}{room.createdAtFormatted}
+                </p>
               </div>
-              <p className="tkn-support mt-1 pl-6">
-                {room.fileName} · Created {room.createdAtFormatted}
-              </p>
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {/* Right: status + primary action + overflow */}
+            <div className="flex shrink-0 items-center gap-2">
               <span
-                className={`rounded-full px-2.5 py-0.5 text-[0.72rem] font-semibold capitalize ${
+                className={`rounded-full px-2.5 py-0.5 text-[0.68rem] font-semibold capitalize ${
                   isActive
                     ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
                     : "bg-muted text-muted-foreground"
@@ -75,40 +82,46 @@ export function RoomsList({ rooms, baseUrl }: RoomsListProps) {
                 {room.status}
               </span>
 
-              <div
-                className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100"
-                title="Copy recipient link"
-              >
-                <CopyButton value={shareUrl} size="icon" />
-              </div>
-
-              <Button asChild size="sm" className="gap-1">
+              <Button asChild size="sm" className="gap-1.5">
                 <Link href={room.manageHref}>
-                  <Settings2 className="h-3.5 w-3.5" />
+                  <Settings2 className="size-3.5" />
                   Manage
                 </Link>
               </Button>
 
-              <Button asChild variant="outline" size="sm" className="gap-1">
-                <Link href={`/s/${room.slug}`} target="_blank" rel="noreferrer">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Preview
-                </Link>
-              </Button>
-
-              <Button
-                variant={isConfirming ? "destructive" : "outline"}
-                size="sm"
-                disabled={isPending}
-                onClick={() => handleDelete(room.slug)}
-                onBlur={() => {
-                  if (isConfirming) setTimeout(() => setDeletingSlug(null), 200);
-                }}
-                title={isConfirming ? "Click again to confirm" : "Delete room"}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                {isConfirming ? "Confirm" : null}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-foreground"
+                    aria-label="More options"
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem asChild>
+                    <CopyButton value={shareUrl} size="icon" className="size-8 w-full justify-start gap-2" ariaLabel="Copy link" />
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/s/${room.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                      <ExternalLink className="size-3.5" />
+                      Preview
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    destructive
+                    disabled={isPending}
+                    onSelect={() => handleDelete(room.slug)}
+                    className="gap-2"
+                  >
+                    <Trash2 className="size-3.5" />
+                    {isConfirming ? "Tap again to confirm" : "Delete room"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         );

@@ -261,12 +261,22 @@ export default function PricingPage() {
               <div className="flex flex-col gap-3">
                 {allFeatures.map(({ key, label }) => {
                   const value = plan.features[key as keyof typeof plan.features];
+                  const isUpcomingFeature =
+                    (key === "customDomain" && plan.comingSoon) ||
+                    (key === "boardMinutes" && plan.name !== "Unicorn");
                   return (
                     <div key={key} className="flex items-center justify-between gap-2 text-sm">
                       <span className="text-[var(--tkn-text-support)]">{label}</span>
                       {typeof value === "boolean" ? (
                         value ? (
-                          <Check className="h-4 w-4 shrink-0 text-[var(--color-accent)]" />
+                          <span className="flex items-center gap-1">
+                            <Check className="h-4 w-4 shrink-0 text-[var(--color-accent)]" />
+                            {isUpcomingFeature && (
+                              <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--tkn-text-fine)]">
+                                soon
+                              </span>
+                            )}
+                          </span>
                         ) : (
                           <span className="text-xs text-[var(--tkn-text-fine)]">—</span>
                         )
@@ -310,11 +320,21 @@ export default function PricingPage() {
                     <td className="py-3 pl-5 text-[var(--tkn-text-support)]">{label}</td>
                     {plans.map((plan) => {
                       const value = plan.features[key as keyof typeof plan.features];
+                      const isUpcomingFeature =
+                        (key === "customDomain" && plan.comingSoon) ||
+                        (key === "boardMinutes" && plan.name !== "Unicorn");
                       return (
                         <td key={plan.name} className="py-3 text-center">
                           {typeof value === "boolean" ? (
                             value ? (
-                              <Check className="mx-auto h-4 w-4 text-[var(--color-accent)]" />
+                              <span className="flex items-center justify-center gap-1">
+                                <Check className="mx-auto h-4 w-4 text-[var(--color-accent)]" />
+                                {isUpcomingFeature && (
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--tkn-text-fine)]">
+                                    soon
+                                  </span>
+                                )}
+                              </span>
                             ) : (
                               <span className="text-[var(--tkn-text-fine)]">—</span>
                             )

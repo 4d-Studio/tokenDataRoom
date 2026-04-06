@@ -106,7 +106,7 @@ export default async function WorkspacePage() {
           <ProductSectionCard>
             <ProductSectionHeader
               title="Your data rooms"
-              description="Manage goes to your private owner page. Preview opens what recipients see (share link)."
+              description="Manage owner controls, or copy the share link to send to recipients."
             />
 
             <ProductSectionBody className="py-0.5">

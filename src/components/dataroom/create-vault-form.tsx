@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Alert,
   AlertDescription,
@@ -384,6 +385,18 @@ export const CreateVaultForm = ({
 
   // ── Success ────────────────────────────────────────────────────────────
   if (result) {
+    const router = useRouter();
+    const [countdown, setCountdown] = useState(3);
+
+    useEffect(() => {
+      if (countdown <= 0) {
+        router.push(result.manageUrl);
+        return;
+      }
+      const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+      return () => clearTimeout(t);
+    }, [countdown, router, result.manageUrl]);
+
     return (
       <div className="flex flex-col gap-4 pb-8">
         <Card className="rounded-2xl border border-border bg-white p-6">
@@ -392,8 +405,8 @@ export const CreateVaultForm = ({
             <div>
               <p className="font-semibold text-foreground">Room created</p>
               <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
-                Open owner controls to drag and drop your document (use the same room password).
-                Share the recipient link and password separately. Keep the management link private.
+                Your room is ready. Add files on the next page — the same room password encrypts
+                everything.
               </p>
             </div>
           </div>
@@ -417,9 +430,18 @@ export const CreateVaultForm = ({
             <code className="flex-1 truncate text-sm">{result.manageUrl}</code>
             <CopyButton value={result.manageUrl} />
           </div>
-          <Button asChild size="sm" className="mt-3">
-            <Link href={result.manageUrl}>Add files (owner controls) →</Link>
-          </Button>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button asChild size="sm">
+              <Link href={result.manageUrl}>
+                Upload document
+                <span className="ml-1.5 opacity-60">→</span>
+              </Link>
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Auto-opening owner controls in{" "}
+              <span className="font-medium text-foreground">{countdown}s</span>
+            </p>
+          </div>
         </Card>
       </div>
     );

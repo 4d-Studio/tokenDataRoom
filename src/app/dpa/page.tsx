@@ -160,16 +160,9 @@ export default function DpaPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 <tr>
-                  <td className="py-2 pr-4">Vercel Inc.</td>
+                  <td className="py-2 pr-4">Railway</td>
                   <td className="py-2 pr-4 text-[var(--tkn-text-support)]">
-                    Hosting, compute, and serverless functions
-                  </td>
-                  <td className="py-2 text-[var(--tkn-text-support)]">United States</td>
-                </tr>
-                <tr>
-                  <td className="py-2 pr-4">Vercel Blob</td>
-                  <td className="py-2 pr-4 text-[var(--tkn-text-support)]">
-                    Encrypted file storage
+                    Hosting, compute, and database
                   </td>
                   <td className="py-2 text-[var(--tkn-text-support)]">United States</td>
                 </tr>

@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { CheckCircle2, RotateCcw } from "lucide-react";
+import { CheckCircle2, RotateCcw, Eye, Pencil } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Toggle } from "@/components/ui/toggle";
 import { RichTextEditor, isRichNdaContent, plainTextToHtml } from "@/components/dataroom/rich-text-editor";
 
 function ensureHtml(text: string): string {
@@ -29,6 +30,7 @@ export function NdaTemplateEditor({
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const [editorKey, setEditorKey] = useState(0);
+  const [previewMode, setPreviewMode] = useState(false);
 
   const isCustom = html.trim() !== defaultHtml.current.trim();
   const isDirty = html.trim() !== initialHtml.trim();
@@ -89,29 +91,62 @@ export function NdaTemplateEditor({
           </Alert>
         ) : null}
 
-        <RichTextEditor
-          key={editorKey}
-          content={html}
-          onChange={(value) => {
-            setHtml(value);
-            setSaved(false);
-          }}
-        />
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={handleSave} disabled={isPending || !isDirty}>
-            {isPending ? "Saving…" : "Save template"}
-          </Button>
-          {isCustom ? (
-            <Button type="button" variant="outline" onClick={handleReset}>
-              <RotateCcw className="size-4" />
-              Reset to default
-            </Button>
-          ) : null}
-          <span className="text-xs text-muted-foreground">
-            {isCustom ? "Custom template" : "Using default template"}
-          </span>
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <p className="text-xs text-muted-foreground">
+            {previewMode ? "Previewing as your recipient sees it" : "Editing your NDA template"}
+          </p>
+          <Toggle
+            aria-label="Toggle preview"
+            pressed={previewMode}
+            onPressedChange={(pressed) => setPreviewMode(Boolean(pressed))}
+            className="gap-1.5 px-2 text-xs"
+          >
+            {previewMode ? (
+              <>
+                <Pencil className="size-3" />
+                Edit
+              </>
+            ) : (
+              <>
+                <Eye className="size-3" />
+                Preview
+              </>
+            )}
+          </Toggle>
         </div>
+
+        {previewMode ? (
+          <div
+            className="prose prose-sm max-w-none rounded-xl border border-border bg-white p-6"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        ) : (
+          <RichTextEditor
+            key={editorKey}
+            content={html}
+            onChange={(value) => {
+              setHtml(value);
+              setSaved(false);
+            }}
+          />
+        )}
+
+        {!previewMode && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={handleSave} disabled={isPending || !isDirty}>
+              {isPending ? "Saving…" : "Save template"}
+            </Button>
+            {isCustom ? (
+              <Button type="button" variant="outline" onClick={handleReset}>
+                <RotateCcw className="size-4" />
+                Reset to default
+              </Button>
+            ) : null}
+            <span className="text-xs text-muted-foreground">
+              {isCustom ? "Custom template" : "Using default template"}
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

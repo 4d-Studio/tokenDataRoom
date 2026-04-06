@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Loader2 } from "lucide-react"
 import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
@@ -53,15 +54,27 @@ function Button({
     asChild?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
+  const isBusy = Boolean(props["aria-busy"])
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, className }), "relative")}
       {...props}
-    />
+    >
+      {isBusy ? (
+        <>
+          <span className="absolute inset-0 flex items-center justify-center gap-1.5">
+            <Loader2 className="size-4 animate-spin" />
+          </span>
+          <span className="invisible flex items-center gap-1.5">{props.children}</span>
+        </>
+      ) : (
+        props.children
+      )}
+    </Comp>
   )
 }
 
