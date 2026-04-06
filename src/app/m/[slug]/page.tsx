@@ -16,6 +16,12 @@ const VaultOwnerPanel = dynamic(
 import { getBaseUrlFromHeaders } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { isValidPublicVaultSlug, verifyOwnerKey } from "@/lib/dataroom/vault-access";
+import { resolveVanitySlug, getVanitySlugForRoom } from "@/lib/dataroom/vanity-slugs";
+
+async function resolveSlug(urlSlug: string): Promise<string | null> {
+  if (isValidPublicVaultSlug(urlSlug)) return urlSlug;
+  return resolveVanitySlug(urlSlug);
+}
 
 export async function generateMetadata({
   params,
@@ -24,9 +30,10 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ key?: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
   const { key } = await searchParams;
-  if (!isValidPublicVaultSlug(slug)) {
+  const slug = await resolveSlug(rawSlug);
+  if (!slug) {
     return { title: "Manage room", robots: { index: false, follow: false } };
   }
   const storage = getVaultStorage();
@@ -47,11 +54,11 @@ export default async function ManagePage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ key?: string }>;
 }) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
   const { key } = await searchParams;
-  if (!isValidPublicVaultSlug(slug)) {
-    notFound();
-  }
+  const slug = await resolveSlug(rawSlug);
+  if (!slug) notFound();
+
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 
@@ -63,7 +70,9 @@ export default async function ManagePage({
   const acceptances = await storage.getAcceptances(slug);
   const headerMap = await headers();
   const baseUrl = getBaseUrlFromHeaders(headerMap);
-  const shareUrl = `${baseUrl}/s/${slug}`;
+  const vanitySlug = await getVanitySlugForRoom(slug);
+  const shareSlug = vanitySlug ?? slug;
+  const shareUrl = `${baseUrl}/s/${shareSlug}`;
   const manageUrl = `${baseUrl}/m/${slug}?key=${metadata.ownerKey}`;
   const signedNdaBaseUrl = `${baseUrl}/api/vaults/${slug}/signed-nda?key=${metadata.ownerKey}`;
 
@@ -101,6 +110,7 @@ export default async function ManagePage({
           shareUrl={shareUrl}
           manageUrl={manageUrl}
           signedNdaBaseUrl={signedNdaBaseUrl}
+          initialVanitySlug={vanitySlug}
         />
       </div>
     </main>

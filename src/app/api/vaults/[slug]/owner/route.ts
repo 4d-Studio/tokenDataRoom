@@ -4,6 +4,7 @@ import { z } from "zod";
 import { deleteWorkspaceRoom, syncWorkspaceRoomStatus } from "@/lib/dataroom/auth";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { verifyOwnerKey, isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
+import { setVanitySlug, removeVanitySlug, getVanitySlugForRoom, isValidVanitySlug } from "@/lib/dataroom/vanity-slugs";
 import { createEvent } from "@/lib/dataroom/types";
 
 export const runtime = "nodejs";
@@ -35,6 +36,15 @@ const ownerPostSchema = z.discriminatedUnion("action", [
     action: z.literal("update_file_category"),
     fileId: z.string().min(1),
     category: z.string().trim().max(60),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("set_vanity_slug"),
+    vanitySlug: z.string().trim().min(3).max(60),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("remove_vanity_slug"),
   }),
 ]);
 
@@ -96,6 +106,32 @@ export async function POST(
     const latestMetadata = await storage.getVaultMetadata(slug);
     const events = await storage.getEvents(slug);
     return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "set_vanity_slug") {
+    const { vanitySlug } = parsed.data;
+    if (!isValidVanitySlug(vanitySlug)) {
+      return NextResponse.json(
+        { error: "Custom link must be 3–60 characters: lowercase letters, numbers, and hyphens only. Cannot start with fm-." },
+        { status: 400 },
+      );
+    }
+    try {
+      await setVanitySlug(slug, vanitySlug);
+      const latestMetadata = await storage.getVaultMetadata(slug);
+      const events = await storage.getEvents(slug);
+      return NextResponse.json({ metadata: latestMetadata, events, vanitySlug });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unable to set custom link.";
+      return NextResponse.json({ error: msg }, { status: 409 });
+    }
+  }
+
+  if (parsed.data.action === "remove_vanity_slug") {
+    await removeVanitySlug(slug);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events, vanitySlug: null });
   }
 
   const nextStatus = parsed.data.action === "revoke" ? "revoked" : "active";

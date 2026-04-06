@@ -16,6 +16,7 @@ import { getWorkspaceById } from "@/lib/dataroom/auth-store";
 import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
+import { resolveVanitySlug } from "@/lib/dataroom/vanity-slugs";
 import {
   verifyWorkspaceNdaToken,
   workspaceNdaCookieName,
@@ -23,13 +24,20 @@ import {
 
 export const dynamic = "force-dynamic";
 
+/** Resolve a URL slug to a real fm-* slug (handles vanity links). */
+async function resolveSlug(urlSlug: string): Promise<string | null> {
+  if (isValidPublicVaultSlug(urlSlug)) return urlSlug;
+  return resolveVanitySlug(urlSlug);
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  if (!isValidPublicVaultSlug(slug)) {
+  const { slug: rawSlug } = await params;
+  const slug = await resolveSlug(rawSlug);
+  if (!slug) {
     return { title: "Room", robots: { index: false, follow: false } };
   }
   const storage = getVaultStorage();
@@ -49,10 +57,10 @@ export default async function SharePage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
-  if (!isValidPublicVaultSlug(slug)) {
-    notFound();
-  }
+  const { slug: rawSlug } = await params;
+  const slug = await resolveSlug(rawSlug);
+  if (!slug) notFound();
+
   const storage = getVaultStorage();
   const metadata = await storage.getVaultMetadata(slug);
 

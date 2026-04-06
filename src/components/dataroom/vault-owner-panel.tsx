@@ -217,6 +217,7 @@ export const VaultOwnerPanel = ({
   shareUrl,
   manageUrl,
   signedNdaBaseUrl,
+  initialVanitySlug,
 }: {
   initialAcceptances: VaultAcceptanceRecord[];
   initialMetadata: VaultRecord;
@@ -225,6 +226,7 @@ export const VaultOwnerPanel = ({
   shareUrl: string;
   manageUrl: string;
   signedNdaBaseUrl: string;
+  initialVanitySlug: string | null;
 }) => {
   const router = useRouter();
   const [acceptances] = useState(initialAcceptances);
@@ -244,6 +246,11 @@ export const VaultOwnerPanel = ({
   const [editSenderName, setEditSenderName] = useState(initialMetadata.senderName ?? "");
   const [editSenderCompany, setEditSenderCompany] = useState(initialMetadata.senderCompany ?? "");
   const [roomSettingsSaved, setRoomSettingsSaved] = useState(false);
+
+  const [vanitySlug, setVanitySlug] = useState(initialVanitySlug ?? "");
+  const [vanitySlugSaved, setVanitySlugSaved] = useState(false);
+  const [vanitySlugError, setVanitySlugError] = useState("");
+  const [currentVanitySlug, setCurrentVanitySlug] = useState(initialVanitySlug);
 
   const [activeSection, setActiveSection] = useState<SectionId>("owner-settings");
 
@@ -350,6 +357,42 @@ export const VaultOwnerPanel = ({
     setEvents(payload.events);
     setRoomSettingsSaved(true);
     setTimeout(() => setRoomSettingsSaved(false), 2500);
+  };
+
+  const saveVanitySlug = async () => {
+    setVanitySlugError("");
+    const trimmed = vanitySlug.trim().toLowerCase();
+    if (!trimmed) {
+      // Remove vanity slug
+      const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ownerKey, action: "remove_vanity_slug" }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "Unable to remove custom link.");
+      setCurrentVanitySlug(null);
+      setVanitySlugSaved(true);
+      setTimeout(() => setVanitySlugSaved(false), 2500);
+      return;
+    }
+    const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ownerKey, action: "set_vanity_slug", vanitySlug: trimmed }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      vanitySlug?: string | null;
+    };
+    if (!response.ok) {
+      setVanitySlugError(payload.error || "Unable to set custom link.");
+      return;
+    }
+    setCurrentVanitySlug(payload.vanitySlug ?? trimmed);
+    setVanitySlug(payload.vanitySlug ?? trimmed);
+    setVanitySlugSaved(true);
+    setTimeout(() => setVanitySlugSaved(false), 2500);
   };
 
   const deleteRoom = async () => {
@@ -604,6 +647,58 @@ export const VaultOwnerPanel = ({
                   {roomSettingsSaved ? (
                     <span className="text-xs text-muted-foreground">Saved.</span>
                   ) : null}
+                </div>
+
+                {/* ── Vanity link ─────────────────────────── */}
+                <div className="space-y-2 border-t border-border pt-4">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Custom share link</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Set a memorable URL for recipients instead of the auto-generated one.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
+                    <span className="shrink-0 text-muted-foreground">{shareUrl.split("/s/")[0]}/s/</span>
+                    <input
+                      value={vanitySlug}
+                      onChange={(e) => {
+                        setVanitySlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+                        setVanitySlugError("");
+                      }}
+                      placeholder={metadata.slug}
+                      maxLength={60}
+                      className="min-w-0 flex-1 bg-transparent text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                    />
+                  </div>
+                  {currentVanitySlug && (
+                    <p className="text-xs text-muted-foreground">
+                      Current: <span className="font-medium text-foreground">{shareUrl.split("/s/")[0]}/s/{currentVanitySlug}</span>
+                    </p>
+                  )}
+                  {vanitySlugError && (
+                    <p className="text-xs text-destructive">{vanitySlugError}</p>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isPending || (!vanitySlug.trim() && !currentVanitySlug)}
+                      onClick={() =>
+                        startTransition(() => {
+                          void saveVanitySlug().catch((e: unknown) => {
+                            setVanitySlugError(e instanceof Error ? e.message : "Unable to save.");
+                          });
+                        })
+                      }
+                    >
+                      <Link2 className="size-3.5" />
+                      {vanitySlug.trim() ? "Set custom link" : "Remove custom link"}
+                    </Button>
+                    {vanitySlugSaved ? (
+                      <span className="text-xs text-muted-foreground">Saved.</span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </SectionShell>
