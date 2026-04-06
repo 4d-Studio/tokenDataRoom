@@ -9,10 +9,31 @@ import { Button } from "@/components/ui/button";
 import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
 
 const useCases = [
-  { title: "Due diligence", description: "Share sensitive documents with advisors and investors under NDA protection." },
-  { title: "Board communications", description: "Keep your board aligned with secure access, signed receipts, and minutes." },
-  { title: "Deal rooms", description: "Create password-protected rooms for every negotiation, with full audit trail." },
+  {
+    title: "Due diligence",
+    description:
+      "One room per workstream—outside counsel and investors get only what you send, not your whole drive.",
+  },
+  {
+    title: "Board communications",
+    description: "Secure links, signed acknowledgements when you need them, and a trail without a heavy portal.",
+  },
+  {
+    title: "Deal rooms",
+    description: "Password + optional NDA, then documents. Revoke the room when the deal moves on.",
+  },
 ];
+
+const comparedTo = [
+  {
+    label: "Dropbox, Box, and shared drives",
+    body: "Built for internal sync and folders. Token is for time-boxed, external sharing—NDA, password, revoke—without opening your whole library.",
+  },
+  {
+    label: "DocuSign-style e-sign platforms",
+    body: "Purpose-built for legal contracts and priced that way. When you only need “agree, then view the materials,” Token stays minimal and affordable.",
+  },
+] as const;
 
 const trustItems = [
   { icon: Lock, label: "AES-256 encrypted files" },
@@ -60,8 +81,8 @@ export default async function Home() {
             Secure data rooms
           </Badge>
           <ProductPageIntro
-            title="Secure data rooms for deals, due diligence, and board communications."
-            description="Password-protected rooms with optional NDA gating. Track every view, collect signed agreements, and revoke access instantly — all encrypted end-to-end."
+            title="Secure rooms for deals—not another company drive."
+            description="Password-protected rooms with optional NDA. Files are encrypted in your browser before upload; you get a clear activity trail and can revoke access anytime. Lighter and cheaper than wiring Dropbox or Box for outsiders, or paying e-sign suites when all you need is acknowledge-and-view."
             className="mt-3 max-w-3xl items-start py-0"
             titleClassName="mt-0 text-[2.05rem] sm:text-[2.35rem]"
             descriptionClassName="max-w-2xl text-[0.9375rem] leading-7 text-[var(--tkn-text-support)]"
@@ -111,6 +132,19 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Positioning — no testimonials; plain contrast vs common tools */}
+      <section className="mt-10 max-w-4xl rounded-xl border border-border bg-white/80 p-5 shadow-sm">
+        <p className="label-title mb-3">Compared to</p>
+        <ul className="space-y-4">
+          {comparedTo.map((row) => (
+            <li key={row.label}>
+              <p className="text-sm font-semibold text-foreground">{row.label}</p>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--tkn-text-support)]">{row.body}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* Use cases */}
       <section className="mt-12 max-w-4xl">
         <div className="label-title mb-4">Built for</div>
@@ -138,7 +172,7 @@ export default async function Home() {
               Upload and encrypt
             </p>
             <p className="text-sm text-[var(--tkn-text-support)]">
-              Drop a file, set a password, and choose whether recipients must sign an NDA.
+              Add files (encrypted in your browser first), set a room password, and turn on NDA if you need it.
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -147,7 +181,7 @@ export default async function Home() {
               Share the private link
             </p>
             <p className="text-sm text-[var(--tkn-text-support)]">
-              Send the room link to your recipient. They will see only what you allow.
+              Send one link—optionally a short custom URL. Recipients never see your workspace or owner controls.
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -156,7 +190,7 @@ export default async function Home() {
               Track and revoke
             </p>
             <p className="text-sm text-[var(--tkn-text-support)]">
-              See who opened what, download signed NDAs, and revoke access at any moment.
+              Activity timeline, signed NDA downloads, revoke or restore when you need to—without another vendor stack.
             </p>
           </div>
         </div>
@@ -170,7 +204,7 @@ export default async function Home() {
             ? "Jump back into your workspace or create another room."
             : isAuthed
               ? "Finish setup to create your first secure room."
-              : "New accounts include Plus limits while paid checkout rolls out. No credit card required."}
+              : "Straightforward pricing—see how it compares to seats, storage tiers, and per-envelope fees elsewhere. No credit card to start."}
         </p>
         {hasWorkspace ? (
           <Button asChild size="lg" className="mt-4">
@@ -187,12 +221,19 @@ export default async function Home() {
             </Link>
           </Button>
         ) : (
-          <Button asChild size="lg" className="mt-4">
-            <Link href="/login">
-              Create a secure room
-              <ArrowRight data-icon="inline-end" />
-            </Link>
-          </Button>
+          <>
+            <Button asChild size="lg" className="mt-4">
+              <Link href="/login">
+                Create a secure room
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+            <p className="mt-3 text-xs text-[var(--tkn-text-fine)]">
+              <Link href="/pricing" className="font-medium text-foreground underline-offset-4 hover:underline">
+                View pricing
+              </Link>
+            </p>
+          </>
         )}
       </section>
 
