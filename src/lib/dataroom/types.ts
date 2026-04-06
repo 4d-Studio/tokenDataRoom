@@ -87,7 +87,10 @@ export type VaultEventType =
   | "signed_nda_downloaded"
   | "revoked"
   | "reactivated"
-  | "document_attached";
+  | "document_attached"
+  | "access_requested"
+  | "access_verified"
+  | "files_decrypted";
 
 export type VaultEvent = {
   id: string;

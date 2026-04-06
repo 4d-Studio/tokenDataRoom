@@ -41,12 +41,15 @@ import { cn } from "@/lib/utils";
 const EVENT_LABELS: Record<VaultEvent["type"], string> = {
   created: "Room created",
   viewed: "Share page opened",
-  nda_accepted: "NDA accepted",
-  downloaded: "Encrypted bundle downloaded",
+  access_requested: "Access code requested",
+  access_verified: "Access code verified",
+  nda_accepted: "NDA signed",
+  files_decrypted: "Files decrypted",
+  downloaded: "File downloaded",
   signed_nda_downloaded: "Signed NDA downloaded",
   revoked: "Access revoked",
   reactivated: "Access restored",
-  document_attached: "Document uploaded",
+  document_attached: "Document updated",
 };
 
 const SECTIONS = [

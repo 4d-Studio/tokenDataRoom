@@ -277,6 +277,13 @@ export function ShareExperience({
           setObjectUrl(url);
           setDownloadName(metadata.fileName);
           setSuccess("Document decrypted locally. Review it below or download it.");
+
+          // Log decrypt event
+          void fetch(`/api/vaults/${metadata.slug}/view`, {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ fileCount: 1 }),
+          }).catch(() => {});
         } catch (e) {
           setError(e instanceof Error ? e.message : "Unable to unlock document.");
         }
@@ -462,6 +469,13 @@ export function ShareExperience({
         } catch {
           // sessionStorage may be unavailable in some contexts
         }
+
+        // Log decrypt event
+        void fetch(`/api/vaults/${metadata.slug}/view`, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ fileCount: Object.keys(newDecryptedFiles).length }),
+        }).catch(() => {});
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unable to unlock.");
       }

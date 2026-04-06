@@ -7,9 +7,12 @@ import {
   Download,
   Eye,
   FileCheck2,
+  KeyRound,
   LayoutPanelTop,
   Lock,
+  Mail,
   RefreshCw,
+  ShieldCheck,
   Upload,
 } from "lucide-react";
 
@@ -80,6 +83,24 @@ const EVENT_CONFIG: Record<
     color: "text-[var(--color-accent)]",
     label: "File added",
     action: "uploaded a document to",
+  },
+  access_requested: {
+    icon: Mail,
+    color: "text-muted-foreground",
+    label: "Code requested",
+    action: "requested an access code for",
+  },
+  access_verified: {
+    icon: ShieldCheck,
+    color: "text-[var(--color-accent)]",
+    label: "Verified",
+    action: "verified identity for",
+  },
+  files_decrypted: {
+    icon: KeyRound,
+    color: "text-[var(--color-accent)]",
+    label: "Decrypted",
+    action: "decrypted files in",
   },
 };
 

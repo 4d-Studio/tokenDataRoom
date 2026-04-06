@@ -124,14 +124,15 @@ export async function POST(request: Request) {
       viewerBinding,
     });
 
-    // Log return visit
+    // Log verified access (return visit with OTP)
     await storage.appendEvent(
       slug,
-      createEvent("viewed", {
+      createEvent("access_verified", {
         actorName: existing.signerName,
         actorEmail: existing.signerEmail,
         actorCompany: existing.signerCompany,
         actorAddress: existing.signerAddress,
+        note: "Return visit — identity verified via access code",
         ...getRequestContext(request),
       }),
     );

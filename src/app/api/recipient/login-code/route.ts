@@ -16,7 +16,9 @@ import {
   getOrCreateRecipientAccount,
 } from "@/lib/dataroom/recipient-auth";
 import { sendRecipientMagicCode } from "@/lib/dataroom/recipient-email";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import { getVaultStorage } from "@/lib/dataroom/storage";
+import { createEvent } from "@/lib/dataroom/types";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -70,6 +72,21 @@ export async function POST(request: Request) {
     }
 
     const delivery = await sendRecipientMagicCode(email, code, roomName);
+
+    // Log access request event
+    try {
+      const storage = getVaultStorage();
+      await storage.appendEvent(
+        slug,
+        createEvent("access_requested", {
+          actorEmail: email,
+          note: `Access code sent to ${email}`,
+          ...getRequestContext(request),
+        }),
+      );
+    } catch {
+      // Non-fatal
+    }
 
     return NextResponse.json({
       delivery: delivery.delivery === "sendgrid" ? "email" : "local",
