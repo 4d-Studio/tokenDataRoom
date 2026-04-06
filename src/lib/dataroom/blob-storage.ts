@@ -3,6 +3,7 @@ import { del, get, list, put } from "@vercel/blob";
 import type {
   VaultAcceptanceRecord,
   VaultEvent,
+  VaultFileEntry,
   VaultRecord,
 } from "@/lib/dataroom/types";
 
@@ -10,6 +11,7 @@ const metadataPath = (slug: string) => `vaults/${slug}/metadata.json`;
 const payloadPath = (slug: string) => `vaults/${slug}/payload.bin`;
 const eventsPath = (slug: string) => `vaults/${slug}/events.json`;
 const acceptancesPath = (slug: string) => `vaults/${slug}/acceptances.json`;
+const filePath = (slug: string, fileId: string) => `vaults/${slug}/files/${fileId}.bin`;
 
 const readStreamToBuffer = async (stream: ReadableStream<Uint8Array>) => {
   const arrayBuffer = await new Response(stream).arrayBuffer();
@@ -69,6 +71,30 @@ export class BlobVaultStorage {
       addRandomSuffix: false,
       contentType: "application/octet-stream",
     });
+  }
+
+  async addVaultFile(
+    slug: string,
+    fileId: string,
+    encryptedBytes: Buffer,
+    _metadata: VaultRecord,
+  ) {
+    await put(filePath(slug, fileId), encryptedBytes, {
+      access: "private",
+      allowOverwrite: true,
+      addRandomSuffix: false,
+      contentType: "application/octet-stream",
+    });
+  }
+
+  async getVaultFile(slug: string, fileId: string): Promise<Buffer | null> {
+    const blob = await get(filePath(slug, fileId), { access: "private", useCache: false });
+    if (!blob || blob.statusCode !== 200) return null;
+    return readStreamToBuffer(blob.stream);
+  }
+
+  async deleteVaultFile(slug: string, fileId: string): Promise<void> {
+    await del([filePath(slug, fileId)]);
   }
 
   async getVaultMetadata(slug: string) {

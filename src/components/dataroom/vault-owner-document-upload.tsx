@@ -2,16 +2,24 @@
 
 import { useCallback, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { FileText, Upload } from "lucide-react";
+import {
+  FileText,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+  UploadCloud,
+  X,
+} from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { encryptFile } from "@/lib/dataroom/client-crypto";
-import { FILE_SIZE_LIMIT_BYTES } from "@/lib/dataroom/types";
+import { FILE_SIZE_LIMIT_BYTES, vaultFilesList } from "@/lib/dataroom/types";
 import { formatBytes } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
-import type { VaultEvent, VaultRecord } from "@/lib/dataroom/types";
+import type { VaultEvent, VaultFileEntry, VaultRecord } from "@/lib/dataroom/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -19,262 +27,491 @@ type Props = {
   ownerKey: string;
   metadata: VaultRecord;
   onUploaded: (metadata: VaultRecord, events: VaultEvent[]) => void;
-  /** `featured` / `compact` — manage page layouts; `default` — sidebar-style. */
+  onFileRemoved?: (metadata: VaultRecord, events: VaultEvent[]) => void;
   variant?: "default" | "featured" | "compact";
 };
+
+type PendingEntry = {
+  id: string; // temp client-side id
+  file: File;
+  status: "pending" | "encrypting" | "uploading" | "done" | "error";
+  error?: string;
+};
+
+const PW_STORAGE_KEY = (slug: string) => `tkn_vault_pw_${slug}`;
 
 export function VaultOwnerDocumentUpload({
   slug,
   ownerKey,
   metadata,
   onUploaded,
+  onFileRemoved,
   variant = "default",
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [password, setPassword] = useState("");
+  const [pending, setPending] = useState<PendingEntry[]>([]);
+  const [password, setPassword] = useState(() => {
+    // Pre-fill from session storage so owner doesn't retype
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem(PW_STORAGE_KEY(slug)) ?? "";
+    }
+    return "";
+  });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [needsSignIn, setNeedsSignIn] = useState(false);
+  const [, startRemoveTransition] = useTransition();
 
-  const hasDocument = metadata.hasEncryptedFile !== false;
   const isCompact = variant === "compact";
   const isFeatured = variant === "featured";
+  const existingFiles: VaultFileEntry[] = vaultFilesList(metadata);
 
-  const onFiles = useCallback((list: FileList | null) => {
-    const next = list?.[0] ?? null;
-    setError("");
-    if (!next) {
-      setFile(null);
-      return;
+  const handleFileValidation = useCallback((rawFiles: FileList | null): File[] => {
+    if (!rawFiles?.length) return [];
+    const valid: File[] = [];
+    for (const f of Array.from(rawFiles)) {
+      if (f.size > FILE_SIZE_LIMIT_BYTES) {
+        setError(`${f.name} is too large (max ${(FILE_SIZE_LIMIT_BYTES / 1024 / 1024).toFixed(0)} MB).`);
+        return [];
+      }
     }
-    if (next.size > FILE_SIZE_LIMIT_BYTES) {
-      setError(`File is too large (max ${(FILE_SIZE_LIMIT_BYTES / 1024 / 1024).toFixed(0)} MB).`);
-      setFile(null);
-      return;
-    }
-    setFile(next);
+    return valid;
   }, []);
 
-  const upload = () => {
-    if (!file || !password || password.length < 8) {
-      setError(password.length < 8 ? "Enter the room password (min. 8 characters)." : "Choose a file.");
+  const addFiles = useCallback(
+    (rawFiles: FileList | null) => {
+      setError("");
+      if (!rawFiles?.length) return;
+
+      const newEntries: PendingEntry[] = Array.from(rawFiles).map((file) => ({
+        id: crypto.randomUUID(),
+        file,
+        status: "pending",
+      }));
+
+      setPending((prev) => {
+        const existingNames = new Set(prev.filter((p) => p.status !== "error").map((p) => p.file.name));
+        const deduped = newEntries.filter((e) => !existingNames.has(e.file.name));
+        return [...prev, ...deduped];
+      });
+    },
+    [],
+  );
+
+  const removePending = (id: string) => {
+    setPending((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const removeUploaded = (fileId: string) => {
+    startRemoveTransition(async () => {
+      try {
+        const res = await fetch(`/api/vaults/${slug}/payload?fileId=${fileId}&ownerKey=${ownerKey}`, {
+          method: "DELETE",
+        });
+        if (res.status === 401) {
+          setNeedsSignIn(true);
+          return;
+        }
+        if (!res.ok) {
+          const data = (await res.json()) as { error?: string };
+          throw new Error(data.error || "Could not remove file.");
+        }
+        const data = (await res.json()) as { metadata?: VaultRecord; events?: VaultEvent[] };
+        if (data.metadata && data.events && onFileRemoved) {
+          onFileRemoved(data.metadata, data.events);
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not remove file.");
+      }
+    });
+  };
+
+  const uploadAll = () => {
+    if (!password || password.length < 8) {
+      setError("Enter the room password (min. 8 characters) to encrypt and upload.");
       return;
     }
+    if (!pending.length) return;
     setError("");
     setNeedsSignIn(false);
+
+    // Persist password for the session so owner doesn't retype for each file
+    sessionStorage.setItem(PW_STORAGE_KEY(slug), password);
+
     startTransition(async () => {
-      try {
-        const encryptionResult = await encryptFile(file, password);
-        const formData = new FormData();
-        formData.append(
-          "encryptedFile",
-          new File([encryptionResult.encryptedBytes], `${file.name}.filmia`, {
-            type: "application/octet-stream",
-          }),
-        );
-        formData.append(
-          "metadata",
-          JSON.stringify({
-            ownerKey,
-            fileName: file.name,
-            mimeType: file.type || "application/octet-stream",
-            fileSize: file.size,
-            salt: encryptionResult.salt,
-            iv: encryptionResult.iv,
-            pbkdf2Iterations: encryptionResult.pbkdf2Iterations,
-          }),
+      for (const entry of pending) {
+        if (entry.status === "done" || entry.status === "encrypting" || entry.status === "uploading") {
+          continue;
+        }
+
+        // Mark encrypting
+        setPending((prev) =>
+          prev.map((p) => (p.id === entry.id ? { ...p, status: "encrypting" as const } : p)),
         );
 
-        const res = await fetch(`/api/vaults/${slug}/payload`, { method: "POST", body: formData });
-        const data = (await res.json()) as {
-          error?: string;
-          code?: string;
-          metadata?: VaultRecord;
-          events?: VaultEvent[];
-        };
+        try {
+          const result = await encryptFile(entry.file, password);
 
-        if (res.status === 401 && data.code === "LOGIN_REQUIRED") {
-          setNeedsSignIn(true);
-          throw new Error(
-            "SIGN_IN_REQUIRED|Sign in with the workspace account that created this room, then upload again.",
+          setPending((prev) =>
+            prev.map((p) => (p.id === entry.id ? { ...p, status: "uploading" as const } : p)),
           );
-        }
 
-        if (!res.ok || !data.metadata || !data.events) {
-          throw new Error(data.error || "Upload failed.");
-        }
+          const formData = new FormData();
+          formData.append(
+            "encryptedFile",
+            new File([result.encryptedBytes], `${entry.file.name}.filmia`, {
+              type: "application/octet-stream",
+            }),
+          );
+          formData.append(
+            "metadata",
+            JSON.stringify({
+              ownerKey,
+              fileName: entry.file.name,
+              mimeType: entry.file.type || "application/octet-stream",
+              fileSize: entry.file.size,
+              salt: result.salt,
+              iv: result.iv,
+              pbkdf2Iterations: result.pbkdf2Iterations,
+            }),
+          );
 
-        setFile(null);
-        setPassword("");
-        if (inputRef.current) inputRef.current.value = "";
-        onUploaded(data.metadata, data.events);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Upload failed.";
-        if (msg.startsWith("SIGN_IN_REQUIRED|")) {
-          setError(msg.slice("SIGN_IN_REQUIRED|".length));
-        } else {
-          setError(msg);
+          const res = await fetch(`/api/vaults/${slug}/payload`, {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = (await res.json()) as {
+            error?: string;
+            code?: string;
+            metadata?: VaultRecord;
+            events?: VaultEvent[];
+          };
+
+          if (res.status === 401 && data.code === "LOGIN_REQUIRED") {
+            setNeedsSignIn(true);
+            setPending((prev) =>
+              prev.map((p) =>
+                p.id === entry.id ? { ...p, status: "error" as const, error: "Sign in required." } : p,
+              ),
+            );
+            throw new Error("SIGN_IN_REQUIRED");
+          }
+
+          if (!res.ok || !data.metadata || !data.events) {
+            throw new Error(data.error || "Upload failed.");
+          }
+
+          setPending((prev) =>
+            prev.map((p) => (p.id === entry.id ? { ...p, status: "done" as const } : p)),
+          );
+
+          onUploaded(data.metadata, data.events);
+
+          // Remove completed entries after a short delay
+          setTimeout(() => {
+            setPending((prev) => prev.filter((p) => p.id !== entry.id));
+          }, 2000);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "Upload failed.";
+          setPending((prev) =>
+            prev.map((p) =>
+              p.id === entry.id ? { ...p, status: "error" as const, error: msg } : p,
+            ),
+          );
+          if (msg.startsWith("SIGN_IN_REQUIRED")) {
+            setNeedsSignIn(true);
+          }
         }
       }
     });
   };
 
-  if (hasDocument) {
-    if (isFeatured || isCompact) {
-      const pad = isCompact ? "p-3.5" : "p-5";
-      const iconBox = isCompact ? "size-11" : "size-14";
-      const iconSz = isCompact ? "size-6" : "size-7";
-      return (
-        <div className={`flex gap-3 rounded-xl border border-border bg-card shadow-sm ${pad}`}>
-          <div
-            className={`flex ${iconBox} shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50`}
-          >
-            <FileText className={`${iconSz} text-muted-foreground`} strokeWidth={1.5} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Encrypted file
-            </p>
-            <p className={`mt-0.5 truncate font-semibold text-foreground ${isCompact ? "text-sm" : "text-base"}`}>
-              {metadata.fileName}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {formatBytes(metadata.fileSize)} · {formatMimeLabel(metadata.mimeType)}
-            </p>
-            {!isCompact ? (
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                One bundle per room. New file → new room.
-              </p>
-            ) : null}
-          </div>
-        </div>
-      );
-    }
+  const allDone = pending.every((p) => p.status === "done" || p.status === "pending" === false);
+  const hasActive =
+    pending.some((p) => p.status === "encrypting" || p.status === "uploading");
+  const canUpload =
+    pending.some((p) => p.status === "pending" || p.status === "error") &&
+    !hasActive &&
+    Boolean(password && password.length >= 8);
+
+  // ── Compact / Featured: uploaded file list + inline drop ───────────────
+
+  if (isCompact || isFeatured) {
+    const pad = isCompact ? "p-3.5" : "p-5";
+    const iconBox = isCompact ? "size-11" : "size-14";
+    const iconSz = isCompact ? "size-6" : "size-7";
+
     return (
-      <div className="rounded-xl border border-border bg-muted/20 p-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Encrypted document
-        </p>
-        <p className="mt-1 truncate text-sm font-medium text-foreground">{metadata.fileName}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {formatBytes(metadata.fileSize)} · {formatMimeLabel(metadata.mimeType)}
-        </p>
+      <div className={cn("flex flex-col gap-3", isFeatured && "gap-2.5")}>
+        {/* Uploaded files list */}
+        {existingFiles.map((f) => (
+          <div
+            key={f.id}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border border-border bg-card shadow-sm",
+              pad,
+            )}
+          >
+            <div
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50",
+                iconBox,
+              )}
+            >
+              <FileText className={iconSz} strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">{f.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatBytes(f.sizeBytes)} · {formatMimeLabel(f.mimeType)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => removeUploaded(f.id)}
+              className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              aria-label={`Remove ${f.name}`}
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+        ))}
+
+        {/* Pending files */}
+        {pending.map((entry) => (
+          <div
+            key={entry.id}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border border-border bg-card shadow-sm",
+              pad,
+              entry.status === "error" && "border-destructive/50",
+            )}
+          >
+            <div className={cn("flex shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50", iconBox)}>
+              {entry.status === "encrypting" || entry.status === "uploading" ? (
+                <Loader2 className={cn(iconSz, "animate-spin text-muted-foreground")} />
+              ) : entry.status === "done" ? (
+                <UploadCloud className={cn(iconSz, "text-emerald-500")} />
+              ) : (
+                <FileText className={iconSz} strokeWidth={1.5} />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">{entry.file.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatBytes(entry.file.size)} · {formatMimeLabel(entry.file.type || "application/octet-stream")}
+                {entry.status === "encrypting" && " · Encrypting…"}
+                {entry.status === "uploading" && " · Uploading…"}
+                {entry.status === "done" && " · Done"}
+                {entry.status === "error" && ` · ${entry.error}`}
+              </p>
+            </div>
+            {(entry.status === "pending" || entry.status === "error") && (
+              <button
+                type="button"
+                onClick={() => removePending(entry.id)}
+                className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                aria-label={`Remove ${entry.file.name}`}
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+        ))}
+
+        {/* Drop zone */}
+        <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            addFiles(e.dataTransfer.files);
+          }}
+          className={cn(
+            "upload-zone flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 text-center transition-colors",
+            isFeatured ? "min-h-[5rem]" : "min-h-[5rem]",
+          )}
+          onClick={() => inputRef.current?.click()}
+        >
+          <Plus className="size-5 text-muted-foreground" />
+          <div>
+            <span className="text-sm font-medium text-foreground">
+              {pending.length || existingFiles.length ? "Add more files" : "Upload files"}
+            </span>
+            <span className="text-sm text-muted-foreground"> — PDF, Office, images, text</span>
+          </div>
+          <input
+            ref={inputRef}
+            className="sr-only"
+            type="file"
+            multiple
+            onChange={(e) => addFiles(e.target.files)}
+          />
+        </div>
+
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
       </div>
     );
   }
 
-  const dropMinH = isFeatured ? "min-h-[12rem] sm:min-h-[14rem]" : isCompact ? "min-h-[7.5rem]" : "min-h-[9rem]";
-  const titleClass = isFeatured ? "text-lg font-semibold text-foreground" : isCompact ? "text-sm font-semibold text-foreground" : "text-sm font-semibold text-foreground";
+  // ── Default: full-page layout ────────────────────────────────────────
 
-  const passwordField = (
-    <Field className={isCompact ? "gap-1.5" : undefined}>
-      <FieldLabel htmlFor="owner-upload-pw" className={isCompact ? "text-xs" : undefined}>
-        Room password <span className="font-normal text-muted-foreground">(for encryption)</span>
-      </FieldLabel>
-      <Input
-        id="owner-upload-pw"
-        type="password"
-        autoComplete="off"
-        placeholder="Same password you set when creating the room"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className={isCompact ? "h-9 text-sm" : undefined}
-      />
-    </Field>
-  );
-
-  const dropZone = (
-    <div
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          inputRef.current?.click();
-        }
-      }}
-      onDragEnter={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(true);
-      }}
-      onDragLeave={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-        onFiles(e.dataTransfer.files);
-      }}
-      className={
-        "upload-zone flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-3 text-center transition-colors " +
-        dropMinH +
-        " " +
-        (isDragging
-          ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10"
-          : "border-border bg-muted/30 hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5")
-      }
-      onClick={() => inputRef.current?.click()}
-    >
-      <Upload
-        className={
-          isFeatured ? "size-10 text-muted-foreground" : isCompact ? "size-7 text-muted-foreground" : "size-8 text-muted-foreground"
-        }
-      />
-      <div>
-        <p
-          className={
-            isFeatured
-              ? "text-base font-medium text-foreground"
-              : isCompact
-                ? "text-sm font-medium text-foreground"
-                : "text-sm font-medium text-foreground"
-          }
-        >
-          {file ? file.name : "Drop file or click to browse"}
-        </p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          {file
-            ? `${(file.size / 1024 / 1024).toFixed(1)} MB · ${formatMimeLabel(file.type || "application/octet-stream")}`
-            : "PDF, Office, images, text · max 25 MB"}
-        </p>
-      </div>
-      <input
-        ref={inputRef}
-        className="sr-only"
-        type="file"
-        onChange={(e) => onFiles(e.target.files)}
-      />
-    </div>
-  );
+  const dropMinH = "min-h-[9rem]";
 
   return (
-    <div className={cn("flex flex-col", isFeatured ? "gap-2.5" : "gap-3")}>
+    <div className="flex flex-col gap-3">
       <div>
-        <h3 className={titleClass}>{isFeatured ? "Add a document" : "Add encrypted file"}</h3>
-        {!isCompact ? (
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isFeatured
-              ? "Use the room password to encrypt in your browser, then upload."
-              : "Uses your room password, then encrypts in the browser before upload."}
-          </p>
-        ) : (
-          <p className="mt-0.5 text-xs text-muted-foreground">Password first, then file — all encryption stays in your browser.</p>
-        )}
+        <h3 className="text-sm font-semibold text-foreground">Add encrypted files</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Use your room password to encrypt each file in your browser, then upload.
+        </p>
       </div>
 
-      {/* Password before file: separate step in the flow */}
-      {passwordField}
-      {dropZone}
+      {/* Password */}
+      <Field>
+        <FieldLabel htmlFor="owner-upload-pw">
+          Room password <span className="font-normal text-muted-foreground">(saved for this session)</span>
+        </FieldLabel>
+        <div className="relative">
+          <Input
+            id="owner-upload-pw"
+            type={showPassword ? "text" : "password"}
+            autoComplete="off"
+            placeholder="Same password you set when creating the room"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </div>
+      </Field>
+
+      {/* Drop zone */}
+      <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          addFiles(e.dataTransfer.files);
+        }}
+        className={
+          "upload-zone flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-colors " +
+          dropMinH +
+          " " +
+          "border-border bg-muted/30 hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5"
+        }
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload className="size-8 text-muted-foreground" />
+        <div>
+          <span className="text-sm font-medium text-foreground">
+            {pending.length ? "Add more files" : "Drop files or click to browse"}
+          </span>
+          <span className="text-sm text-muted-foreground"> — PDF, Office, images, text · max 25 MB</span>
+        </div>
+        <input
+          ref={inputRef}
+          className="sr-only"
+          type="file"
+          multiple
+          onChange={(e) => addFiles(e.target.files)}
+        />
+      </div>
+
+      {/* Pending queue */}
+      {pending.map((entry) => (
+        <div
+          key={entry.id}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border border-border bg-white p-3",
+            entry.status === "error" && "border-destructive/50",
+          )}
+        >
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
+            {entry.status === "encrypting" ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : entry.status === "uploading" ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : entry.status === "done" ? (
+              <UploadCloud className="size-4 text-emerald-500" />
+            ) : (
+              <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">{entry.file.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {formatBytes(entry.file.size)} · {formatMimeLabel(entry.file.type || "application/octet-stream")}
+              {entry.status === "encrypting" && " · Encrypting…"}
+              {entry.status === "uploading" && " · Uploading…"}
+              {entry.status === "done" && " · Done!"}
+              {entry.status === "error" && ` · ${entry.error}`}
+            </p>
+          </div>
+          {(entry.status === "pending" || entry.status === "error") && (
+            <button
+              type="button"
+              onClick={() => removePending(entry.id)}
+              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              aria-label="Remove"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+      ))}
+
+      {/* Already-uploaded files */}
+      {existingFiles.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
+            Uploaded ({existingFiles.length})
+          </p>
+          {existingFiles.map((f) => (
+            <div
+              key={f.id}
+              className="mb-1.5 flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2"
+            >
+              <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{f.name}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{formatBytes(f.sizeBytes)}</span>
+              <button
+                type="button"
+                onClick={() => removeUploaded(f.id)}
+                className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                aria-label={`Remove ${f.name}`}
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
@@ -284,15 +521,35 @@ export function VaultOwnerDocumentUpload({
         </Button>
       ) : null}
 
-      <Button
-        type="button"
-        size={isCompact ? "sm" : "sm"}
-        disabled={isPending || !file}
-        onClick={upload}
-        className={isFeatured ? "w-full sm:w-auto" : "w-fit"}
-      >
-        {isPending ? "Encrypting & uploading…" : "Upload encrypted file"}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          onClick={uploadAll}
+          disabled={!canUpload || isPending}
+          aria-busy={hasActive}
+        >
+          {hasActive ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Encrypting & uploading…
+            </>
+          ) : (
+            <>
+              <UploadCloud className="size-4" />
+              Upload {pending.filter((p) => p.status === "pending" || p.status === "error").length} file
+              {pending.filter((p) => p.status === "pending" || p.status === "error").length !== 1
+                ? "s"
+                : ""}
+            </>
+          )}
+        </Button>
+        {pending.some((p) => p.status === "done") && (
+          <p className="text-xs text-emerald-600">
+            {pending.filter((p) => p.status === "done").length} file(s) uploaded
+          </p>
+        )}
+      </div>
     </div>
   );
 }

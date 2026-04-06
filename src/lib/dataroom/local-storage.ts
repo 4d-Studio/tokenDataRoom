@@ -4,6 +4,7 @@ import path from "node:path";
 import type {
   VaultAcceptanceRecord,
   VaultEvent,
+  VaultFileEntry,
   VaultRecord,
 } from "@/lib/dataroom/types";
 
@@ -32,6 +33,9 @@ const metadataPath = (slug: string) => path.join(vaultRoot(slug), "metadata.json
 const payloadPath = (slug: string) => path.join(vaultRoot(slug), "payload.bin");
 const eventsPath = (slug: string) => path.join(vaultRoot(slug), "events.json");
 const acceptancesPath = (slug: string) => path.join(vaultRoot(slug), "acceptances.json");
+const filePath = (slug: string, fileId: string) =>
+  path.join(vaultRoot(slug), "files", `${fileId}.bin`);
+const filesDir = (slug: string) => path.join(vaultRoot(slug), "files");
 
 const readJson = async <T>(filePath: string): Promise<T | null> => {
   try {
@@ -43,17 +47,36 @@ const readJson = async <T>(filePath: string): Promise<T | null> => {
 };
 
 export class LocalVaultStorage {
-  async saveVault(metadata: VaultRecord, encryptedFile: Buffer | null) {
+  async saveVault(metadata: VaultRecord, _encryptedFile: Buffer | null) {
+    // Encrypted files are now stored individually via addVaultFile; metadata.vaultFiles tracks them.
     await mkdir(vaultRoot(metadata.slug), { recursive: true });
-    const writes: Promise<void>[] = [
+    await Promise.all([
       writeFile(metadataPath(metadata.slug), JSON.stringify(metadata, null, 2), "utf8"),
       writeFile(eventsPath(metadata.slug), JSON.stringify([], null, 2), "utf8"),
       writeFile(acceptancesPath(metadata.slug), JSON.stringify([], null, 2), "utf8"),
-    ];
-    if (encryptedFile) {
-      writes.push(writeFile(payloadPath(metadata.slug), encryptedFile));
+    ]);
+  }
+
+  async addVaultFile(
+    slug: string,
+    fileId: string,
+    encryptedBytes: Buffer,
+    _metadata: VaultRecord,
+  ) {
+    await mkdir(filesDir(slug), { recursive: true });
+    await writeFile(filePath(slug, fileId), encryptedBytes);
+  }
+
+  async getVaultFile(slug: string, fileId: string): Promise<Buffer | null> {
+    try {
+      return await readFile(filePath(slug, fileId));
+    } catch {
+      return null;
     }
-    await Promise.all(writes);
+  }
+
+  async deleteVaultFile(slug: string, fileId: string): Promise<void> {
+    await rm(filePath(slug, fileId), { force: true });
   }
 
   async putEncryptedPayload(slug: string, encryptedFile: Buffer) {

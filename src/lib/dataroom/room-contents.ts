@@ -1,5 +1,9 @@
 import { formatBytes } from "@/lib/dataroom/helpers";
-import { vaultHasEncryptedDocument, type VaultRecord } from "@/lib/dataroom/types";
+import {
+  type VaultRecord,
+  vaultFilesList,
+  vaultHasEncryptedDocument,
+} from "@/lib/dataroom/types";
 
 export type RoomFsNode = {
   id: string;
@@ -11,23 +15,22 @@ export type RoomFsNode = {
   children?: RoomFsNode[];
 };
 
-/** Token rooms ship one encrypted bundle today; present it as a one-folder tree for clarity. */
+/** Builds a flat folder tree from vaultFiles[]. Each file is a direct child of the room root. */
 export function buildRoomFileTree(metadata: VaultRecord): RoomFsNode {
+  const files = vaultFilesList(metadata);
   return {
     id: "room-root",
     kind: "folder",
     name: metadata.title.trim() || "Data room",
     path: "/",
-    children: [
-      {
-        id: "primary-file",
-        kind: "file",
-        name: metadata.fileName,
-        path: `/${metadata.fileName}`,
-        sizeBytes: metadata.fileSize,
-        mimeType: metadata.mimeType,
-      },
-    ],
+    children: files.map((f) => ({
+      id: f.id,
+      kind: "file" as const,
+      name: f.name,
+      path: `/${f.name}`,
+      sizeBytes: f.sizeBytes,
+      mimeType: f.mimeType,
+    })),
   };
 }
 
@@ -44,13 +47,16 @@ export function formatMimeLabel(mimeType: string) {
 
 export function summarizeRoomData(metadata: VaultRecord) {
   const hasDoc = vaultHasEncryptedDocument(metadata);
+  const files = vaultFilesList(metadata);
   const tree = buildRoomFileTree(metadata);
-  const primary = tree.children?.[0];
+  const totalBytes = files.reduce((sum, f) => sum + f.sizeBytes, 0);
+  const fileCount = files.length;
+  const primaryMime = files[0]?.mimeType ?? "application/octet-stream";
   return {
     tree,
-    fileCount: hasDoc ? (tree.children?.length ?? 0) : 0,
-    totalBytes: hasDoc ? (primary?.sizeBytes ?? metadata.fileSize) : 0,
-    totalSizeLabel: hasDoc ? formatBytes(metadata.fileSize) : "—",
-    mimeLabel: hasDoc ? formatMimeLabel(metadata.mimeType) : "Not uploaded yet",
+    fileCount,
+    totalBytes,
+    totalSizeLabel: hasDoc ? formatBytes(totalBytes) : "—",
+    mimeLabel: hasDoc ? (fileCount === 1 ? formatMimeLabel(primaryMime) : `${fileCount} files`) : "Not uploaded yet",
   };
 }

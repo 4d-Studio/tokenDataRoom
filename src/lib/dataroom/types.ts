@@ -118,6 +118,19 @@ export type VaultAcceptanceRecord = {
   ipAddress?: string;
 };
 
+/** Single encrypted file entry within a vault. */
+export type VaultFileEntry = {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** Base64-encoded random salt for this file's key derivation */
+  salt: string;
+  /** Base64-encoded random IV for AES-GCM */
+  iv: string;
+  pbkdf2Iterations: number;
+};
+
 export type VaultRecord = {
   id: string;
   slug: string;
@@ -128,7 +141,7 @@ export type VaultRecord = {
   senderName: string;
   senderCompany?: string;
   message?: string;
-  /** Owner-only; never shown on the recipient share page. For the single encrypted file in this room. */
+  /** Owner-only; never shown on the recipient share page. */
   ownerNotes?: string;
   requiresNda: boolean;
   ndaText?: string;
@@ -136,7 +149,12 @@ export type VaultRecord = {
   status: VaultStatus;
   createdAt: string;
   expiresAt: string;
-  /** When false, no encrypted payload yet (owner uploads on manage page). Omitted on older vaults = has document. */
+  /**
+   * Multi-file array. Present on vaults created after this feature ships.
+   * If absent, fall back to the legacy single-file fields below for backward compat.
+   */
+  vaultFiles?: VaultFileEntry[];
+  /** Legacy single-file fields — used as fallback when vaultFiles is absent. */
   hasEncryptedFile?: boolean;
   fileName: string;
   mimeType: string;
@@ -146,12 +164,34 @@ export type VaultRecord = {
   pbkdf2Iterations: number;
 };
 
-/** True if the room has an encrypted document for recipients (legacy vaults without the flag count as true). */
+/** True if the vault has at least one encrypted file for recipients. */
 export const vaultHasEncryptedDocument = (metadata: VaultRecord): boolean =>
-  metadata.hasEncryptedFile !== false;
+  Boolean(metadata.vaultFiles?.length) || metadata.hasEncryptedFile !== false;
 
 export const isSupportedFileType = (mimeType: string) =>
   SUPPORTED_FILE_TYPES.includes(mimeType as SupportedFileType);
+
+/**
+ * Returns the ordered list of file entries for a vault.
+ * Uses vaultFiles[] if present; otherwise constructs a single entry from legacy fields
+ * so the rest of the codebase stays backward-compatible with existing vaults.
+ */
+export const vaultFilesList = (metadata: VaultRecord): VaultFileEntry[] => {
+  if (metadata.vaultFiles?.length) return metadata.vaultFiles;
+  // Legacy single-file vault — construct a synthetic entry from old fields
+  if (metadata.hasEncryptedFile === false) return [];
+  return [
+    {
+      id: "legacy-primary",
+      name: metadata.fileName,
+      mimeType: metadata.mimeType,
+      sizeBytes: metadata.fileSize,
+      salt: metadata.salt,
+      iv: metadata.iv,
+      pbkdf2Iterations: metadata.pbkdf2Iterations,
+    },
+  ];
+};
 
 export const createEvent = (
   type: VaultEventType,

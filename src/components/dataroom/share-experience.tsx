@@ -108,6 +108,8 @@ export function ShareExperience({
   );
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [downloadName, setDownloadName] = useState(metadata.fileName);
+  // Map of fileId → decrypted blob URL + filename (multi-file support)
+  const [decryptedFiles, setDecryptedFiles] = useState<Record<string, { objectUrl: string; downloadName: string }>>({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [signedNdaUrl, setSignedNdaUrl] = useState(
@@ -151,6 +153,24 @@ export function ShareExperience({
   useEffect(() => {
     void fetch(`/api/vaults/${metadata.slug}/view`, { method: "POST" });
   }, [metadata.slug]);
+
+  // Fetch file manifest when access is granted or room doesn't require NDA
+  const [filesList, setFilesList] = useState<Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>>([]);
+  const [fetchedFiles, setFetchedFiles] = useState(false);
+  useEffect(() => {
+    if (!accessGranted && metadata.requiresNda) return;
+    if (fetchedFiles) return;
+    setFetchedFiles(true);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/vaults/${metadata.slug}/bundle`);
+        if (res.ok) {
+          const data = (await res.json()) as { files?: Array<{ id: string; name: string; mimeType: string; sizeBytes: number }> };
+          if (data.files) setFilesList(data.files);
+        }
+      } catch { /* non-fatal */ }
+    })();
+  }, [accessGranted, metadata.requiresNda, metadata.slug, fetchedFiles]);
 
   useEffect(
     () => () => {
@@ -362,36 +382,74 @@ export function ShareExperience({
     startTransition(async () => {
       setError("");
       try {
-        const res = await fetch(`/api/vaults/${metadata.slug}/bundle`, { method: "GET" });
-        if (!res.ok) {
-          const data = (await res.json().catch(() => ({}))) as { error?: string };
-          throw new Error(data.error || "Unable to fetch document.");
+        // Revoke previous blob URLs
+        for (const { objectUrl: u } of Object.values(decryptedFiles)) {
+          URL.revokeObjectURL(u);
         }
-        const encryptedBytes = await res.arrayBuffer();
-        const decrypted = await decryptFile({
-          encryptedBytes,
-          password,
-          salt: metadata.salt,
-          iv: metadata.iv,
-          pbkdf2Iterations: metadata.pbkdf2Iterations,
-        });
-        if (objectUrl) URL.revokeObjectURL(objectUrl);
-        const blob = new Blob([decrypted], { type: metadata.mimeType });
-        const url = URL.createObjectURL(blob);
-        setObjectUrl(url);
-        setDownloadName(metadata.fileName);
-        setSuccess("Document decrypted locally. You can review it here or download it now.");
+        setDecryptedFiles({});
 
-        const previewable =
-          metadata.mimeType.startsWith("image/") ||
-          metadata.mimeType === "application/pdf" ||
-          metadata.mimeType.startsWith("text/");
-        if (!previewable) {
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = metadata.fileName;
-          link.click();
+        // Fetch all encrypted files in parallel
+        const files = filesList.length ? filesList : [{ id: "legacy-primary", name: metadata.fileName, mimeType: metadata.mimeType, sizeBytes: metadata.fileSize }];
+
+        const results = await Promise.allSettled(
+          files.map(async (file) => {
+            const params = new URLSearchParams({ fileId: file.id });
+            const res = await fetch(`/api/vaults/${metadata.slug}/bundle?${params}`, { method: "GET" });
+            if (!res.ok) throw new Error(`Unable to fetch ${file.name}.`);
+            const encryptedBytes = await res.arrayBuffer();
+
+            // Use per-file encryption params (vaultFiles) or fall back to legacy metadata fields
+            const fileEntry = filesList.find((f) => f.id === file.id);
+            const salt = fileEntry ? metadata.vaultFiles?.find((vf) => vf.id === file.id)?.salt ?? metadata.salt : metadata.salt;
+            const iv = fileEntry ? metadata.vaultFiles?.find((vf) => vf.id === file.id)?.iv ?? metadata.iv : metadata.iv;
+            const pbkdf2Iterations = fileEntry ? metadata.vaultFiles?.find((vf) => vf.id === file.id)?.pbkdf2Iterations ?? metadata.pbkdf2Iterations : metadata.pbkdf2Iterations;
+
+            const decrypted = await decryptFile({
+              encryptedBytes,
+              password,
+              salt,
+              iv,
+              pbkdf2Iterations,
+            });
+            const blob = new Blob([decrypted], { type: file.mimeType });
+            const url = URL.createObjectURL(blob);
+            return { id: file.id, objectUrl: url, downloadName: file.name, mimeType: file.mimeType };
+          }),
+        );
+
+        const newDecryptedFiles: typeof decryptedFiles = {};
+        let hasError = false;
+        for (const result of results) {
+          if (result.status === "fulfilled") {
+            newDecryptedFiles[result.value.id] = {
+              objectUrl: result.value.objectUrl,
+              downloadName: result.value.downloadName,
+            };
+          } else {
+            hasError = true;
+          }
         }
+
+        if (!Object.keys(newDecryptedFiles).length) {
+          throw new Error("Unable to decrypt any files. Check your password.");
+        }
+
+        setDecryptedFiles(newDecryptedFiles);
+
+        // Auto-preview first file if previewable
+        const firstEntry = results.find((r) => r.status === "fulfilled") as PromiseFulfilledResult<{ id: string; objectUrl: string; downloadName: string; mimeType: string }> | undefined;
+        if (firstEntry) {
+          const mime = firstEntry.value.mimeType;
+          const previewable = mime.startsWith("image/") || mime === "application/pdf" || mime.startsWith("text/");
+          setObjectUrl(previewable ? firstEntry.value.objectUrl : null);
+          setDownloadName(firstEntry.value.downloadName);
+        }
+
+        setSuccess(
+          Object.keys(newDecryptedFiles).length === 1
+            ? "File decrypted locally. Preview or download it below."
+            : `${Object.keys(newDecryptedFiles).length} files decrypted locally. Preview or download below.`,
+        );
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unable to unlock.");
       }
@@ -982,6 +1040,7 @@ export function ShareExperience({
             </Alert>
           ) : (
             <>
+              {/* Password + Unlock */}
               <div className="flex gap-3">
                 <div className="flex-1">
                   <Input
@@ -1022,35 +1081,85 @@ export function ShareExperience({
                 </Button>
               </div>
 
-              {objectUrl ? (
+              {/* Decrypted file list */}
+              {Object.keys(decryptedFiles).length > 0 ? (
                 <div className="space-y-2">
-                  <div className="relative overflow-hidden rounded-lg border bg-background">
-                    <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
-                    {metadata.mimeType.startsWith("image/") ? (
-                      <Image
-                        src={objectUrl}
-                        alt={downloadName}
-                        width={1600}
-                        height={1200}
-                        unoptimized
-                        className="relative z-0 h-auto w-full"
-                      />
-                    ) : metadata.mimeType === "application/pdf" ? (
-                      <iframe
-                        title={downloadName}
-                        src={objectUrl}
-                        className="relative z-0 h-[70vh] min-h-[24rem] w-full"
-                      />
-                    ) : (
-                      <iframe
-                        title={downloadName}
-                        src={objectUrl}
-                        className="relative z-0 h-[56vh] min-h-[20rem] w-full"
-                      />
-                    )}
-                  </div>
-                  <p className="text-center text-xs text-muted-foreground">
-                    Preview is watermarked. The file you download is the original decrypted document.
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {Object.keys(decryptedFiles).length} file{Object.keys(decryptedFiles).length !== 1 ? "s" : ""} decrypted
+                  </p>
+                  {Object.entries(decryptedFiles).map(([fileId, { objectUrl: url, downloadName: fname }]) => {
+                    const fileEntry = filesList.find((f) => f.id === fileId) ?? {
+                      id: fileId,
+                      name: fname,
+                      mimeType: metadata.mimeType,
+                      sizeBytes: metadata.fileSize,
+                    };
+                    const previewable =
+                      fileEntry.mimeType.startsWith("image/") ||
+                      fileEntry.mimeType === "application/pdf" ||
+                      fileEntry.mimeType.startsWith("text/");
+                    return (
+                      <div key={fileId} className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <FileText className="size-4 shrink-0 text-muted-foreground" />
+                          <span className="flex-1 truncate text-sm font-medium text-foreground">
+                            {fname}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatBytes(fileEntry.sizeBytes)}
+                          </span>
+                        </div>
+                        {previewable && objectUrl && decryptedFiles[fileId]?.objectUrl === objectUrl ? (
+                          <div className="relative overflow-hidden rounded-lg border bg-background">
+                            <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
+                            {fileEntry.mimeType.startsWith("image/") ? (
+                              <Image
+                                src={url}
+                                alt={fname}
+                                width={1600}
+                                height={1200}
+                                unoptimized
+                                className="relative z-0 h-auto w-full"
+                              />
+                            ) : fileEntry.mimeType === "application/pdf" ? (
+                              <iframe
+                                title={fname}
+                                src={url}
+                                className="relative z-0 h-[60vh] min-h-[20rem] w-full"
+                              />
+                            ) : (
+                              <iframe
+                                title={fname}
+                                src={url}
+                                className="relative z-0 h-[56vh] min-h-[16rem] w-full"
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (previewable) {
+                                setObjectUrl(url);
+                                setDownloadName(fname);
+                              } else {
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = fname;
+                                a.click();
+                              }
+                            }}
+                          >
+                            {previewable ? "Preview" : "Download"} {fname}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <p className="pt-1 text-center text-xs text-muted-foreground">
+                    Preview is watermarked. Downloads are the original decrypted document.
                   </p>
                 </div>
               ) : null}

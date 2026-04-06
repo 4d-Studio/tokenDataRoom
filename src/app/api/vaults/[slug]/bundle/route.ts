@@ -4,7 +4,11 @@ import { NextResponse } from "next/server";
 import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
 import { getClientIp, isVaultExpired, toAsciiDispositionBasename } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
-import { createEvent, vaultHasEncryptedDocument } from "@/lib/dataroom/types";
+import {
+  createEvent,
+  vaultFilesList,
+  vaultHasEncryptedDocument,
+} from "@/lib/dataroom/types";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 
 export const runtime = "nodejs";
@@ -14,6 +18,9 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  const { searchParams } = new URL(request.url);
+  const fileId = searchParams.get("fileId");
+
   if (!isValidPublicVaultSlug(slug)) {
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
@@ -48,8 +55,19 @@ export async function GET(
     );
   }
 
-  const encryptedFile = await storage.getEncryptedFile(slug);
+  // No fileId → return the file manifest (JSON list of files)
+  if (!fileId) {
+    return NextResponse.json({ files: vaultFilesList(metadata) });
+  }
 
+  // Specific file download
+  const files = vaultFilesList(metadata);
+  const fileEntry = files.find((f) => f.id === fileId);
+  if (!fileEntry) {
+    return NextResponse.json({ error: "File not found." }, { status: 404 });
+  }
+
+  const encryptedFile = await storage.getVaultFile(slug, fileId);
   if (!encryptedFile) {
     return NextResponse.json(
       { error: "The encrypted file could not be retrieved." },
@@ -63,12 +81,13 @@ export async function GET(
       actorName: access?.signerName,
       actorEmail: access?.signerEmail,
       actorCompany: access?.signerCompany,
+      note: `Downloaded: ${fileEntry.name}`,
       userAgent: request.headers.get("user-agent") ?? undefined,
       ipAddress: getClientIp(request),
     }),
   );
 
-  const safeBase = toAsciiDispositionBasename(metadata.fileName);
+  const safeBase = toAsciiDispositionBasename(fileEntry.name);
   return new NextResponse(new Uint8Array(encryptedFile), {
     headers: {
       "content-type": "application/octet-stream",

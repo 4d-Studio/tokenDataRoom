@@ -9,6 +9,7 @@ import {
 import type {
   VaultAcceptanceRecord,
   VaultEvent,
+  VaultFileEntry,
   VaultRecord,
 } from "@/lib/dataroom/types";
 
@@ -16,6 +17,7 @@ const metadataPath = (slug: string) => `vaults/${slug}/metadata.json`;
 const payloadPath = (slug: string) => `vaults/${slug}/payload.bin`;
 const eventsPath = (slug: string) => `vaults/${slug}/events.json`;
 const acceptancesPath = (slug: string) => `vaults/${slug}/acceptances.json`;
+const filePath = (slug: string, fileId: string) => `vaults/${slug}/files/${fileId}.bin`;
 
 /** Env bag for tests and non-global resolution (Railway Bucket / S3-compatible). */
 export type S3EnvSource = Record<string, string | undefined>;
@@ -154,6 +156,35 @@ export class S3VaultStorage {
         Key: payloadPath(slug),
         Body: encryptedFile,
         ContentType: "application/octet-stream",
+      }),
+    );
+  }
+
+  async addVaultFile(
+    slug: string,
+    fileId: string,
+    encryptedBytes: Buffer,
+    _metadata: VaultRecord,
+  ) {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: bucketName(),
+        Key: filePath(slug, fileId),
+        Body: encryptedBytes,
+        ContentType: "application/octet-stream",
+      }),
+    );
+  }
+
+  async getVaultFile(slug: string, fileId: string): Promise<Buffer | null> {
+    return readObjectBytes(this.client, filePath(slug, fileId));
+  }
+
+  async deleteVaultFile(slug: string, fileId: string): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: bucketName(),
+        Key: filePath(slug, fileId),
       }),
     );
   }
