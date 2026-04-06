@@ -29,7 +29,7 @@ import {
   markRecipientEmailVerified,
   verifyRecipientLoginCode,
 } from "@/lib/dataroom/recipient-auth";
-import { getClientIp } from "@/lib/dataroom/helpers";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 
@@ -132,8 +132,7 @@ export async function POST(request: Request) {
         actorEmail: existing.signerEmail,
         actorCompany: existing.signerCompany,
         actorAddress: existing.signerAddress,
-        userAgent: request.headers.get("user-agent") ?? undefined,
-        ipAddress: getClientIp(request),
+        ...getRequestContext(request),
       }),
     );
 

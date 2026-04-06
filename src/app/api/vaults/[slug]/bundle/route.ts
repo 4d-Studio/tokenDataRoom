@@ -2,7 +2,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
-import { getClientIp, isVaultExpired, toAsciiDispositionBasename } from "@/lib/dataroom/helpers";
+import { isVaultExpired, toAsciiDispositionBasename } from "@/lib/dataroom/helpers";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import {
   createEvent,
@@ -75,6 +76,7 @@ export async function GET(
     );
   }
 
+  const ctx = getRequestContext(request);
   await storage.appendEvent(
     slug,
     createEvent("downloaded", {
@@ -82,8 +84,7 @@ export async function GET(
       actorEmail: access?.signerEmail,
       actorCompany: access?.signerCompany,
       note: `Downloaded: ${fileEntry.name}`,
-      userAgent: request.headers.get("user-agent") ?? undefined,
-      ipAddress: getClientIp(request),
+      ...ctx,
     }),
   );
 

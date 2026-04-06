@@ -5,6 +5,7 @@ import { deleteWorkspaceRoom, syncWorkspaceRoomStatus } from "@/lib/dataroom/aut
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { verifyOwnerKey, isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 import { setVanitySlug, removeVanitySlug, getVanitySlugForRoom, isValidVanitySlug } from "@/lib/dataroom/vanity-slugs";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import { createEvent } from "@/lib/dataroom/types";
 
 export const runtime = "nodejs";
@@ -150,7 +151,7 @@ export async function POST(
           parsed.data.action === "revoke"
             ? "Owner revoked access"
             : "Owner restored access",
-        userAgent: request.headers.get("user-agent") ?? undefined,
+        ...getRequestContext(request),
       }),
     );
 

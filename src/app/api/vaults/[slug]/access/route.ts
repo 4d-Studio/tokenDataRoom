@@ -10,7 +10,8 @@ import {
 } from "@/lib/dataroom/access";
 import { createEvent, acceptanceWithViewerBindingSchema } from "@/lib/dataroom/types";
 import { getWorkspaceById } from "@/lib/dataroom/auth-store";
-import { getClientIp, isVaultExpired } from "@/lib/dataroom/helpers";
+import { isVaultExpired } from "@/lib/dataroom/helpers";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 import {
@@ -85,6 +86,8 @@ export async function POST(
     recipientAccountId = account.id;
   }
 
+  const ctx = getRequestContext(request);
+
   const acceptance = {
     id: acceptanceId,
     ...(recipientAccountId ? { recipientAccountId } : {}),
@@ -95,8 +98,8 @@ export async function POST(
     signerCompany: parsed.data.signerCompany || undefined,
     signerAddress: parsed.data.signerAddress,
     signatureName: parsed.data.signatureName,
-    userAgent: request.headers.get("user-agent") ?? undefined,
-    ipAddress: getClientIp(request),
+    userAgent: ctx.userAgent,
+    ipAddress: ctx.ipAddress,
   };
 
   await storage.saveAcceptance(slug, acceptance);
@@ -122,8 +125,7 @@ export async function POST(
       actorCompany: parsed.data.signerCompany || undefined,
       actorAddress: parsed.data.signerAddress,
       note: `Signed NDA from ${parsed.data.signerAddress}`,
-      userAgent: request.headers.get("user-agent") ?? undefined,
-      ipAddress: getClientIp(request),
+      ...ctx,
     }),
   );
 

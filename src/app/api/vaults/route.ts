@@ -5,6 +5,7 @@ import {
   getCurrentWorkspace,
   recordWorkspaceRoom,
 } from "@/lib/dataroom/auth";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import {
   addDays,
   buildDefaultNdaText,
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
         createEvent("created", {
           actorName: metadata.senderName,
           note: "Token room created — add a document from owner controls",
-          userAgent: request.headers.get("user-agent") ?? undefined,
+          ...getRequestContext(request),
         }),
       );
       await recordWorkspaceRoom(workspace.id, {
@@ -186,7 +187,7 @@ export async function POST(request: Request) {
       createEvent("created", {
         actorName: metadata.senderName,
         note: "Secure Token room created",
-        userAgent: request.headers.get("user-agent") ?? undefined,
+        ...getRequestContext(request),
       }),
     );
     await recordWorkspaceRoom(workspace.id, {

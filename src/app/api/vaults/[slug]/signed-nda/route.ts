@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
-import { getClientIp } from "@/lib/dataroom/helpers";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import { isValidPublicVaultSlug, verifyOwnerKey } from "@/lib/dataroom/vault-access";
 import {
   createSignedNdaFilename,
@@ -62,8 +62,7 @@ export async function GET(
       note: isOwner
         ? `Owner downloaded signed NDA for ${acceptance.signerName}`
         : "Signer downloaded signed NDA copy",
-      userAgent: request.headers.get("user-agent") ?? undefined,
-      ipAddress: getClientIp(request),
+      ...getRequestContext(request),
     }),
   );
 

@@ -10,7 +10,8 @@ import {
   vaultViewerBindingCookieName,
   vaultViewerBindingCookieOptions,
 } from "@/lib/dataroom/access";
-import { getClientIp, isVaultExpired } from "@/lib/dataroom/helpers";
+import { isVaultExpired } from "@/lib/dataroom/helpers";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import {
   workspaceNdaCookieName,
@@ -91,6 +92,8 @@ export async function POST(
   const acceptedAt = new Date().toISOString();
   const vaultAcceptanceId = crypto.randomUUID();
 
+  const ctx = getRequestContext(request);
+
   const vaultAcceptance = {
     id: vaultAcceptanceId,
     acceptedAt,
@@ -100,8 +103,8 @@ export async function POST(
     signerCompany: ws.signerCompany,
     signerAddress: ws.signerAddress,
     signatureName: ws.signatureName,
-    userAgent: request.headers.get("user-agent") ?? undefined,
-    ipAddress: getClientIp(request),
+    userAgent: ctx.userAgent,
+    ipAddress: ctx.ipAddress,
   };
 
   await storage.saveAcceptance(slug, vaultAcceptance);
@@ -114,8 +117,7 @@ export async function POST(
       actorCompany: ws.signerCompany,
       actorAddress: ws.signerAddress,
       note: "Room access from prior workspace NDA acceptance.",
-      userAgent: request.headers.get("user-agent") ?? undefined,
-      ipAddress: getClientIp(request),
+      ...ctx,
     }),
   );
 

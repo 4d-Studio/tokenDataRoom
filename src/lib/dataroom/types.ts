@@ -100,6 +100,14 @@ export type VaultEvent = {
   note?: string;
   userAgent?: string;
   ipAddress?: string;
+  /** Parsed device description, e.g. "Chrome on macOS" */
+  device?: string;
+  /** City from geo headers, e.g. "San Francisco" */
+  city?: string;
+  /** Region/state, e.g. "California" */
+  region?: string;
+  /** ISO country code, e.g. "US" */
+  country?: string;
 };
 
 export type VaultAcceptanceRecord = {

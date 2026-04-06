@@ -411,10 +411,20 @@ export const VaultOwnerPanel = ({
 
   const timelineDetail = (event: VaultEvent) => {
     const parts = [event.actorName, event.actorEmail, event.note].filter(Boolean);
-    const extra = [event.actorAddress, event.ipAddress].filter(Boolean);
     const main = parts.length ? parts.join(" · ") : "System";
-    if (extra.length === 0) return main;
-    return `${main} (${extra.join(", ")})`;
+    return main;
+  };
+
+  const timelineContext = (event: VaultEvent) => {
+    const geo: string[] = [];
+    if (event.city) geo.push(event.city);
+    if (event.region) geo.push(event.region);
+    if (event.country) geo.push(event.country);
+    const parts: string[] = [];
+    if (geo.length) parts.push(geo.join(", "));
+    if (event.device) parts.push(event.device);
+    if (event.ipAddress) parts.push(event.ipAddress);
+    return parts;
   };
 
   const overviewShell = (
@@ -858,18 +868,30 @@ export const VaultOwnerPanel = ({
               description="Views, NDA acceptance, downloads, uploads, and status changes — newest at the top."
             >
               {events.length ? (
-                <ul className="max-h-[min(46vh,20rem)] divide-y divide-border overflow-y-auto overscroll-contain">
-                  {events.map((event) => (
-                    <li key={event.id} className="flex gap-2 py-1 text-[11px] leading-snug sm:text-xs">
-                      <div className="min-w-0 flex-1">
-                        <span className="font-medium text-foreground">{EVENT_LABELS[event.type]}</span>
-                        <span className="text-muted-foreground"> · {timelineDetail(event)}</span>
-                      </div>
-                      <time className="shrink-0 tabular-nums text-[10px] text-muted-foreground sm:text-[11px]">
-                        {formatDateTime(event.occurredAt)}
-                      </time>
-                    </li>
-                  ))}
+                <ul className="max-h-[min(56vh,28rem)] divide-y divide-border overflow-y-auto overscroll-contain">
+                  {events.map((event) => {
+                    const ctx = timelineContext(event);
+                    return (
+                      <li key={event.id} className="flex gap-2 py-2 text-[11px] leading-snug sm:text-xs">
+                        <div className="min-w-0 flex-1">
+                          <div>
+                            <span className="font-medium text-foreground">{EVENT_LABELS[event.type]}</span>
+                            <span className="text-muted-foreground"> · {timelineDetail(event)}</span>
+                          </div>
+                          {ctx.length > 0 && (
+                            <div className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-muted-foreground/70">
+                              {ctx.map((item, i) => (
+                                <span key={i}>{item}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <time className="shrink-0 tabular-nums text-[10px] text-muted-foreground sm:text-[11px]">
+                          {formatDateTime(event.occurredAt)}
+                        </time>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <Empty className="border-0 bg-muted/25 py-6">

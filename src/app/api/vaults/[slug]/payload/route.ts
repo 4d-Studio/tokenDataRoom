@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/dataroom/auth";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import {
   attachVaultPayloadSchema,
@@ -133,7 +134,7 @@ export async function POST(
       slug,
       createEvent("document_attached", {
         note: `File added: ${parsed.data.fileName}`,
-        userAgent: request.headers.get("user-agent") ?? undefined,
+        ...getRequestContext(request),
       }),
     );
 
@@ -221,7 +222,7 @@ export async function DELETE(
     slug,
     createEvent("document_attached", {
       note: `File removed: ${targetFile.name}`,
-      userAgent: request.headers.get("user-agent") ?? undefined,
+      ...getRequestContext(request),
     }),
   );
 

@@ -2,8 +2,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
-import { getClientIp } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
+import { getRequestContext } from "@/lib/dataroom/request-context";
 import { createEvent } from "@/lib/dataroom/types";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 
@@ -27,6 +27,7 @@ export async function POST(
   const cookieStore = await cookies();
   const access = readVaultAccessFromCookies(cookieStore, slug);
 
+  const ctx = getRequestContext(request);
   await storage.appendEvent(
     slug,
     createEvent("viewed", {
@@ -34,8 +35,7 @@ export async function POST(
       actorName: access?.signerName,
       actorEmail: access?.signerEmail,
       actorCompany: access?.signerCompany,
-      userAgent: request.headers.get("user-agent") ?? undefined,
-      ipAddress: getClientIp(request),
+      ...ctx,
     }),
   );
 
