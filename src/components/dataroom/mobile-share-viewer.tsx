@@ -252,8 +252,8 @@ export function MobileShareViewer({
                 </div>
               ) : null}
 
-              {/* Return-visit gate — for recipients who already signed */}
-              {!initialAccessGranted && metadata.requiresNda ? (
+              {/* Return-visit gate — only if they have a prior acceptance record */}
+              {!initialAccessGranted && metadata.requiresNda && initialAcceptance ? (
                 <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <div className="flex size-7 items-center justify-center rounded-full bg-[var(--color-accent)]/10">
@@ -337,8 +337,8 @@ export function MobileShareViewer({
                 </div>
               ) : null}
 
-              {/* NDA card */}
-              {metadata.requiresNda && !initialAccessGranted && (
+              {/* NDA card — first-time signers only (no prior acceptance) */}
+              {metadata.requiresNda && !initialAccessGranted && !initialAcceptance && (
                 <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <div className="flex size-7 items-center justify-center rounded-full bg-[var(--color-accent)]/10">
