@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { encryptFile } from "@/lib/dataroom/client-crypto";
+import { decryptFile, encryptFile } from "@/lib/dataroom/client-crypto";
 import { FILE_SIZE_LIMIT_BYTES, vaultFilesList } from "@/lib/dataroom/types";
 import { formatBytes } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
@@ -84,18 +84,71 @@ function groupByCategory(files: VaultFileEntry[]) {
 
 function FileLightbox({
   file,
+  slug,
   onClose,
 }: {
   file: VaultFileEntry;
+  slug: string;
   onClose: () => void;
 }) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [previewError, setPreviewError] = useState("");
+
+  const isPreviewable =
+    file.mimeType.startsWith("image/") ||
+    file.mimeType === "application/pdf" ||
+    file.mimeType.startsWith("text/");
+
+  useEffect(() => {
+    if (!isPreviewable) return;
+    const pw = sessionStorage.getItem(PW_KEY(slug));
+    if (!pw) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setPreviewError("");
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/vaults/${slug}/bundle?fileId=${file.id}`);
+        if (!res.ok) throw new Error("Unable to fetch file.");
+        const encryptedBytes = await res.arrayBuffer();
+        const decrypted = await decryptFile({
+          encryptedBytes,
+          password: pw,
+          salt: file.salt,
+          iv: file.iv,
+          pbkdf2Iterations: file.pbkdf2Iterations,
+        });
+        if (cancelled) return;
+        const blob = new Blob([decrypted], { type: file.mimeType });
+        setPreviewUrl(URL.createObjectURL(blob));
+      } catch {
+        if (!cancelled) setPreviewError("Enter the room password below to preview.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [file, slug, isPreviewable]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="relative mx-4 max-h-[90vh] max-w-4xl overflow-auto rounded-2xl bg-white shadow-2xl"
+        className="relative mx-4 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-3">
@@ -116,19 +169,42 @@ function FileLightbox({
             <X className="size-5" />
           </button>
         </div>
-        <div className="flex min-h-[40vh] items-center justify-center bg-muted/20 p-6">
-          {file.mimeType.startsWith("image/") ? (
-            <p className="text-center text-sm text-muted-foreground">
-              Image preview is available on the recipient share page after decryption.
-              <br />
-              Files are stored encrypted — no server-side preview is possible.
-            </p>
+        <div className="flex-1 overflow-auto bg-muted/10">
+          {loading ? (
+            <div className="flex min-h-[40vh] items-center justify-center">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Decrypting…</span>
+            </div>
+          ) : previewUrl ? (
+            file.mimeType.startsWith("image/") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={previewUrl}
+                alt={file.name}
+                className="mx-auto max-h-[75vh] w-auto object-contain p-4"
+              />
+            ) : file.mimeType === "application/pdf" ? (
+              <iframe
+                title={file.name}
+                src={previewUrl}
+                className="h-[75vh] w-full"
+              />
+            ) : (
+              <iframe
+                title={file.name}
+                src={previewUrl}
+                className="h-[60vh] w-full"
+              />
+            )
           ) : (
-            <p className="text-center text-sm text-muted-foreground">
-              Preview is available on the recipient share page after decryption.
-              <br />
-              Files are stored encrypted — no server-side preview is possible.
-            </p>
+            <div className="flex min-h-[30vh] flex-col items-center justify-center gap-2 p-6 text-center">
+              <FileText className="size-10 text-muted-foreground/30" strokeWidth={1} />
+              <p className="text-sm text-muted-foreground">
+                {previewError || (isPreviewable
+                  ? "Enter the room password to preview this file."
+                  : "This file type cannot be previewed. Download it from the recipient share page.")}
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -836,6 +912,7 @@ export function VaultOwnerDocumentUpload({
       {lightboxFile && (
         <FileLightbox
           file={lightboxFile}
+          slug={slug}
           onClose={() => setLightboxFile(null)}
         />
       )}
