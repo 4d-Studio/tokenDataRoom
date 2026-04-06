@@ -13,6 +13,7 @@ import {
   Download,
   FileText,
   Lock,
+  Mail,
   Maximize2,
   Minimize2,
   ShieldCheck,
@@ -21,6 +22,11 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { Textarea } from "@/components/ui/textarea";
 import { SignatureCanvas } from "@/components/dataroom/signature-canvas";
 import { ShareMobileWelcomeLayer } from "@/components/dataroom/share-entry-welcome";
@@ -52,8 +58,11 @@ type Props = {
     signerAddress: string;
     signatureName: string;
     signatureImage?: string;
+    rememberMe?: boolean;
   }) => void;
   onUnlockDocument: (password: string) => void;
+  onReturnEmailSubmit: (email: string) => void;
+  onReturnVerify: (code: string, email: string) => void;
   onDismissError: () => void;
   objectUrl: string | null;
   shareHostLabel?: string;
@@ -77,6 +86,8 @@ export function MobileShareViewer({
   externalSuccess,
   onSignNda,
   onUnlockDocument,
+  onReturnEmailSubmit,
+  onReturnVerify,
   onDismissError,
   objectUrl,
   shareHostLabel = "",
@@ -98,6 +109,11 @@ export function MobileShareViewer({
   const [localError, setLocalError] = useState("");
   const [ndaSheetStep, setNdaSheetStep] = useState<1 | 2 | 3>(1);
   const [ndaReviewChecked, setNdaReviewChecked] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  // Return-visit gate
+  const [returnStep, setReturnStep] = useState<"email" | "code">("email");
+  const [returnEmail, setReturnEmail] = useState("");
+  const [returnCode, setReturnCode] = useState("");
 
   const isNdaDone = !metadata.requiresNda || initialAccessGranted;
   const previewable =
@@ -119,9 +135,9 @@ export function MobileShareViewer({
     if (!signatureName || !signerName || !signerEmail || !signerAddress) return;
     setLocalError("");
     onDismissError();
-    onSignNda({ signerName, signerEmail, signerCompany, signerAddress, signatureName, signatureImage });
+    onSignNda({ signerName, signerEmail, signerCompany, signerAddress, signatureName, signatureImage, rememberMe });
     setSheetOpen(false);
-  }, [signatureName, signatureImage, signerName, signerEmail, signerAddress, onSignNda, onDismissError]);
+  }, [signatureName, signatureImage, signerName, signerEmail, signerAddress, onSignNda, onDismissError, rememberMe]);
 
   const displayError = localError || externalError;
 
@@ -135,10 +151,10 @@ export function MobileShareViewer({
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">
-              {hasDocument ? metadata.fileName : "No document yet"}
+              {isNdaDone && hasDocument ? metadata.fileName : "Locked"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {hasDocument ? formatBytes(metadata.fileSize) : "Waiting for sender"}
+              {isNdaDone && hasDocument ? formatBytes(metadata.fileSize) : "Encrypted"}
             </p>
           </div>
         </div>
@@ -236,6 +252,86 @@ export function MobileShareViewer({
                 </div>
               ) : null}
 
+              {/* Return-visit gate — for recipients who already signed */}
+              {!initialAccessGranted && metadata.requiresNda ? (
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="flex size-7 items-center justify-center rounded-full bg-[var(--color-accent)]/10">
+                      <Mail className="size-4 text-[var(--color-accent)]" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">Welcome back</span>
+                  </div>
+                  <p className="mb-3 text-xs leading-relaxed text-neutral-600">
+                    If you previously signed the agreement, enter your email to get a quick access code.
+                  </p>
+                  {returnStep === "email" ? (
+                    <div className="space-y-2.5">
+                      <Input
+                        value={returnEmail}
+                        onChange={(e) => setReturnEmail(e.target.value)}
+                        placeholder="Your email"
+                        type="email"
+                        className="h-9 text-sm"
+                      />
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(returnEmail.trim())}
+                        onClick={() => {
+                          setLocalError("");
+                          onDismissError();
+                          onReturnEmailSubmit(returnEmail.trim());
+                          setReturnStep("code");
+                        }}
+                      >
+                        Send access code
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <p className="text-xs text-neutral-500">Enter the code sent to {returnEmail}</p>
+                      <InputOTP
+                        value={returnCode}
+                        onChange={setReturnCode}
+                        maxLength={6}
+                        className="justify-center"
+                      >
+                        <InputOTPGroup>
+                          {[0, 1, 2, 3, 4, 5].map((i) => (
+                            <InputOTPSlot key={i} index={i} className="size-10 text-base" />
+                          ))}
+                        </InputOTPGroup>
+                      </InputOTP>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            setReturnStep("email");
+                            setReturnCode("");
+                          }}
+                        >
+                          Back
+                        </Button>
+                        <Button
+                          type="button"
+                          className="flex-1"
+                          disabled={returnCode.length < 6}
+                          onClick={() => {
+                            setLocalError("");
+                            onDismissError();
+                            onReturnVerify(returnCode, returnEmail);
+                          }}
+                        >
+                          Verify
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
               {/* NDA card */}
               {metadata.requiresNda && !initialAccessGranted && (
                 <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
@@ -305,6 +401,22 @@ export function MobileShareViewer({
                           onChange={(e) => setNdaReviewChecked(e.target.checked)}
                         />
                         <span>I have read this and agree to continue to sign.</span>
+                      </label>
+                      <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-neutral-200 bg-white p-3">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 size-4 shrink-0 rounded border-neutral-300"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                        />
+                        <span>
+                          <span className="block text-xs font-medium text-foreground">
+                            Save my email for faster access
+                          </span>
+                          <span className="mt-0.5 block text-xs text-neutral-500">
+                            We&apos;ll send you a one-time code so you can return without re-signing.
+                          </span>
+                        </span>
                       </label>
                       <div className="flex gap-2">
                         <Button

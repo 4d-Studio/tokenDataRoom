@@ -1,0 +1,22 @@
+{
+  "id": "3328bd4d-d8c5-4e7e-8525-8052d3e5ee7c",
+  "slug": "fm-5562338057c3",
+  "ownerKey": "018521f281fc4d1abee68551ab6dafd28021e1e1cf3d45f9ab26bc3e920f7862",
+  "ownerUserId": "b6c28654-53a4-4f93-beba-d64b755edd5d",
+  "workspaceId": "4dfe8731-8b8a-4328-b850-58c144fcab6d",
+  "title": "Protected Content 2026",
+  "senderName": "Filmia workspace",
+  "senderCompany": "7Hive LLC",
+  "requiresNda": true,
+  "ndaText": "Confidential Information. By proceeding, you agree to keep the materials in this Filmia room confidential, use them only for evaluating the opportunity presented by the sender, and not share or reproduce them without written permission. If you are not authorized to review this material, close this window and notify the sender immediately.",
+  "ndaVersion": "filmia-standard-v1",
+  "status": "active",
+  "createdAt": "2026-03-30T17:59:46.897Z",
+  "expiresAt": "2026-04-13T17:59:46.897Z",
+  "fileName": "photo_2026-02-28_20-16-24.jpg",
+  "mimeType": "image/jpeg",
+  "fileSize": 85175,
+  "salt": "hCen4XJvoxWWW9fWGEPK1Q==",
+  "iv": "7ix9k744PULZtmo9",
+  "pbkdf2Iterations": 250000
+}

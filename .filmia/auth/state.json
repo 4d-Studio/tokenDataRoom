@@ -1,0 +1,82 @@
+{
+  "users": [
+    {
+      "id": "b6c28654-53a4-4f93-beba-d64b755edd5d",
+      "email": "joe@firstblood.io",
+      "createdAt": "2026-03-30T17:56:08.361Z",
+      "lastLoginAt": "2026-03-30T23:42:02.016Z",
+      "workspaceId": "4dfe8731-8b8a-4328-b850-58c144fcab6d"
+    },
+    {
+      "id": "76a9bdff-3865-49fa-b826-b35b6370b7eb",
+      "email": "test@filmia.dev",
+      "createdAt": "2026-03-30T22:45:57.342Z",
+      "lastLoginAt": "2026-03-30T22:50:21.759Z",
+      "workspaceId": "f6a07689-677a-473f-ab3d-a9f3323f35f2"
+    },
+    {
+      "id": "b0432564-a772-4fa3-b2e6-82f8bddcc560",
+      "email": "joe@fb.io",
+      "createdAt": "2026-03-31T18:00:22.827Z",
+      "lastLoginAt": "2026-03-31T18:43:10.842Z",
+      "workspaceId": "149db538-5ea8-4bfa-a6e4-9776eb959daa"
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "4dfe8731-8b8a-4328-b850-58c144fcab6d",
+      "userId": "b6c28654-53a4-4f93-beba-d64b755edd5d",
+      "name": "7Hive.com",
+      "companyName": "7Hive LLC",
+      "createdAt": "2026-03-30T17:56:32.367Z"
+    },
+    {
+      "id": "f6a07689-677a-473f-ab3d-a9f3323f35f2",
+      "userId": "76a9bdff-3865-49fa-b826-b35b6370b7eb",
+      "name": "Test Workspace",
+      "companyName": "Test Company Inc",
+      "createdAt": "2026-03-30T22:46:41.284Z"
+    },
+    {
+      "id": "149db538-5ea8-4bfa-a6e4-9776eb959daa",
+      "userId": "b0432564-a772-4fa3-b2e6-82f8bddcc560",
+      "name": "Hive 7",
+      "companyName": "Hive 7",
+      "createdAt": "2026-03-31T18:00:29.549Z"
+    }
+  ],
+  "rooms": [
+    {
+      "workspaceId": "4dfe8731-8b8a-4328-b850-58c144fcab6d",
+      "id": "3328bd4d-d8c5-4e7e-8525-8052d3e5ee7c",
+      "slug": "fm-5562338057c3",
+      "title": "Protected Content 2026",
+      "fileName": "photo_2026-02-28_20-16-24.jpg",
+      "senderName": "Filmia workspace",
+      "createdAt": "2026-03-30T17:59:46.897Z",
+      "status": "active"
+    },
+    {
+      "workspaceId": "4dfe8731-8b8a-4328-b850-58c144fcab6d",
+      "id": "bf7953b2-4e07-4084-996a-8644aab3d69c",
+      "slug": "fm-b5713df45dc0",
+      "title": "Protected Content 2026",
+      "fileName": "photo_2026-02-28_20-16-24.jpg",
+      "senderName": "Filmia workspace",
+      "createdAt": "2026-03-30T17:59:49.539Z",
+      "status": "active"
+    },
+    {
+      "workspaceId": "f6a07689-677a-473f-ab3d-a9f3323f35f2",
+      "id": "c0556a73-938b-45a8-953c-65c1c9fbc7dd",
+      "slug": "fm-120adb389648",
+      "title": "update",
+      "fileName": "Screenshot 2026-03-12 at 6.06.19 PM.png",
+      "senderName": "Filmia workspace",
+      "createdAt": "2026-03-31T13:08:05.808Z",
+      "status": "active"
+    }
+  ],
+  "codes": [],
+  "workspaceGuestAcceptances": []
+}

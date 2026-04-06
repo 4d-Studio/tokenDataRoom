@@ -59,6 +59,7 @@ type AccessResponse = {
   error?: string;
   signedNdaUrl?: string;
   success?: boolean;
+  pendingEmail?: boolean;
 };
 
 type NdaFlowStep = "identity" | "review" | "sign";
@@ -188,6 +189,7 @@ export function ShareExperience({
       signerAddress: string;
       signatureName: string;
       signatureImage?: string;
+      rememberMe?: boolean;
     }) => {
       startTransition(async () => {
         setError("");
@@ -241,6 +243,48 @@ export function ShareExperience({
       });
     };
 
+    const handleReturnEmailSubmit = (email: string) => {
+      startTransition(async () => {
+        setError("");
+        try {
+          const res = await fetch("/api/recipient/login-code", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email, slug: metadata.slug }),
+          });
+          if (!res.ok) {
+            const data = (await res.json().catch(() => ({}))) as { error?: string };
+            throw new Error(data.error || "Unable to send access code.");
+          }
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Unable to send access code.");
+        }
+      });
+    };
+
+    const handleReturnVerify = (code: string, email: string) => {
+      startTransition(async () => {
+        setError("");
+        try {
+          const res = await fetch("/api/recipient/verify-code", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email, code, slug: metadata.slug }),
+          });
+          const data = (await res.json()) as AccessResponse;
+          if (!res.ok) throw new Error(data.error || "Invalid access code.");
+          if (data.pendingEmail) {
+            setSuccess("Code verified — please complete the NDA to access the room.");
+            return;
+          }
+          setAccessGranted(true);
+          setSuccess("Access granted. Welcome back.");
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Invalid access code.");
+        }
+      });
+    };
+
     return (
       <MobileShareViewer
         hasDocument={hasDocument}
@@ -258,6 +302,8 @@ export function ShareExperience({
         externalSuccess={success}
         onSignNda={handleSignNda}
         onUnlockDocument={handleUnlockDocument}
+        onReturnEmailSubmit={handleReturnEmailSubmit}
+        onReturnVerify={handleReturnVerify}
         onDismissError={() => setError("")}
         objectUrl={objectUrl}
         shareHostLabel={shareHostLabel}

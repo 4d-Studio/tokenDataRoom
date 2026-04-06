@@ -1,0 +1,39 @@
+feat(recipients): persistent email login for NDA-signed viewers + full test suite
+
+PERSISTENT RECIPIENT IDENTITY
+- New tkn_recipient_accounts + tkn_recipient_codes tables
+- New recipient-auth.ts: getOrCreateRecipientAccount, createRecipientLoginCode,
+  verifyRecipientLoginCode, markRecipientEmailVerified -- with in-memory fallback
+- New recipient-email.ts: sends branded OTP email to recipients via SendGrid
+- VaultAcceptanceRecord.recipientAccountId links signers to persistent accounts
+
+AUTH FLOWS
+- POST /api/recipient/login-code: rate-limited OTP request for return visitors
+  (3 req/min per IP+email, shared with owner auth rate limiter)
+- POST /api/recipient/verify-code: verifies OTP, issues access cookies if NDA
+  already signed; returns pending_nda flag otherwise
+- POST /api/vaults/[slug]/access: optional "remember me" consent checkbox during
+  NDA signing -- creates RecipientAccount, sends OTP for future visits
+
+SHARE EXPERIENCE UI
+- Return-visit gate: "Access this room" email+OTP card before NDA signing
+- Remember me: opt-in checkbox with GDPR-consensual copy, sends OTP post-signing
+- File lock: document row, unlock section, and download hidden until email auth
+- Pre-fill: "Sign the NDA first" link passes email from gate into identity step
+
+ACTIVITY LOGGING
+- verify-code now appends "viewed" event on each return visit with email
+
+SECURITY
+- app-secret.ts: removed LOCAL_DEV_FALLBACK; dev warns instead of silent fallback
+
+SANITIZATION
+- sanitize.ts: strict DOMPurify allowlist -- all dangerouslySetInnerHTML sanitized
+
+TESTS (79 passing)
+- rate-limit: 6 tests -- sliding window, block at limit, independent keys
+- recipient-auth: 17 tests -- account creation/normalization, OTP lifecycle
+- access token: 14 tests -- round-trip, tamper, viewerBinding CSRF
+- sanitize: 11 tests -- allowlist, script removal, event handler stripping
+
+MIGRATION: pnpm db:migrate (002_tkn_recipients.sql)

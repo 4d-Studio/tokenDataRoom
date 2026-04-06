@@ -1,0 +1,74 @@
+[
+  {
+    "id": "171fdfeb-52b9-4b66-bdfd-58c951df0cb5",
+    "type": "viewed",
+    "occurredAt": "2026-03-31T17:22:48.012Z",
+    "note": "Share page opened",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.6.22 Chrome/142.0.7444.265 Electron/39.8.1 Safari/537.36",
+    "ipAddress": "::1"
+  },
+  {
+    "id": "b56243b0-9642-413c-8657-dd73c9794dc8",
+    "type": "viewed",
+    "occurredAt": "2026-03-31T17:14:44.169Z",
+    "note": "Share page opened",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.6.22 Chrome/142.0.7444.265 Electron/39.8.1 Safari/537.36",
+    "ipAddress": "::1"
+  },
+  {
+    "id": "8caacfeb-b2b5-4cd6-9946-01d289678b72",
+    "type": "viewed",
+    "occurredAt": "2026-03-31T17:14:06.374Z",
+    "note": "Share page opened",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.6.22 Chrome/142.0.7444.265 Electron/39.8.1 Safari/537.36",
+    "ipAddress": "::1"
+  },
+  {
+    "id": "9a6e8f51-1ace-4e10-9d89-42ff754daeb5",
+    "type": "viewed",
+    "occurredAt": "2026-03-31T16:46:59.745Z",
+    "note": "Share page opened",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.6.22 Chrome/142.0.7444.265 Electron/39.8.1 Safari/537.36",
+    "ipAddress": "::1"
+  },
+  {
+    "id": "fe519cf4-2019-4cf1-bfb8-b078e46d189d",
+    "type": "viewed",
+    "occurredAt": "2026-03-31T16:46:57.632Z",
+    "note": "Share page opened",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.6.22 Chrome/142.0.7444.265 Electron/39.8.1 Safari/537.36",
+    "ipAddress": "::1"
+  },
+  {
+    "id": "fffc1085-64ac-4259-a9f6-df554773dcd9",
+    "type": "viewed",
+    "occurredAt": "2026-03-31T16:44:18.168Z",
+    "note": "Share page opened",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.6.22 Chrome/142.0.7444.265 Electron/39.8.1 Safari/537.36",
+    "ipAddress": "::1"
+  },
+  {
+    "id": "b0a8fc35-0a14-4825-ab2b-db62a00d2f07",
+    "type": "viewed",
+    "occurredAt": "2026-03-31T13:27:45.711Z",
+    "note": "Share page opened",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.6.22 Chrome/142.0.7444.265 Electron/39.8.1 Safari/537.36",
+    "ipAddress": "::1"
+  },
+  {
+    "id": "075a5ed7-5acd-41b8-a1c2-0af404f7a5fc",
+    "type": "viewed",
+    "occurredAt": "2026-03-31T13:20:46.610Z",
+    "note": "Share page opened",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.6.22 Chrome/142.0.7444.265 Electron/39.8.1 Safari/537.36",
+    "ipAddress": "::1"
+  },
+  {
+    "id": "525b109f-e56d-4c9b-84a7-60d03b2ebd1d",
+    "type": "created",
+    "occurredAt": "2026-03-31T13:08:05.810Z",
+    "actorName": "Filmia workspace",
+    "note": "Secure Filmia room created",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.6.22 Chrome/142.0.7444.265 Electron/39.8.1 Safari/537.36"
+  }
+]
