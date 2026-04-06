@@ -59,6 +59,7 @@ type Props = {
     signatureImage?: string;
     rememberMe?: boolean;
   }) => void;
+  signingInProgress?: boolean;
   onUnlockDocument: (password: string) => void;
   onReturnEmailSubmit: (email: string) => void;
   onReturnVerify: (code: string, email: string) => void;
@@ -86,6 +87,7 @@ export function MobileShareViewer({
   onReturnVerify,
   onDismissError,
   objectUrl,
+  signingInProgress = false,
 }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [password, setPassword] = useState("");
@@ -129,8 +131,15 @@ export function MobileShareViewer({
     setLocalError("");
     onDismissError();
     onSignNda({ signerName, signerEmail, signerCompany, signerAddress, signatureName, signatureImage, rememberMe });
-    setSheetOpen(false);
+    // Don't close the sheet here — parent signals completion via signingInProgress=false + initialAccessGranted=true
   }, [signatureName, signatureImage, signerName, signerEmail, signerAddress, onSignNda, onDismissError, rememberMe]);
+
+  // Close sheet once the parent confirms access granted (NDA signed successfully)
+  useEffect(() => {
+    if (initialAccessGranted) {
+      setSheetOpen(false);
+    }
+  }, [initialAccessGranted]);
 
   const displayError = localError || externalError;
 
@@ -459,16 +468,18 @@ export function MobileShareViewer({
                         <Button
                           onClick={handleSign}
                           disabled={
+                            signingInProgress ||
                             isPending ||
                             !signatureName ||
                             !signerAddress ||
                             signerAddress.trim().length < 10
                           }
+                          aria-busy={signingInProgress || isPending}
                           className="flex-1"
                           size="lg"
                         >
                           <ShieldCheck className="size-4" />
-                          Sign and continue
+                          {signingInProgress || isPending ? "Signing…" : "Sign and continue"}
                         </Button>
                       </div>
                     </div>
