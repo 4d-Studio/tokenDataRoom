@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import {
   accessCookieName,
@@ -12,8 +13,18 @@ import { getWorkspaceById } from "@/lib/dataroom/auth-store";
 import { getClientIp, isVaultExpired } from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
+import {
+  getOrCreateRecipientAccount,
+  createRecipientLoginCode,
+  markRecipientEmailVerified,
+} from "@/lib/dataroom/recipient-auth";
+import { sendRecipientMagicCode } from "@/lib/dataroom/recipient-email";
 
 export const runtime = "nodejs";
+
+const accessSchema = acceptanceWithViewerBindingSchema.extend({
+  rememberMe: z.boolean().optional().default(false),
+});
 
 export async function POST(
   request: Request,
@@ -54,7 +65,7 @@ export async function POST(
     }
   }
 
-  const parsed = acceptanceWithViewerBindingSchema.safeParse(await request.json());
+  const parsed = accessSchema.safeParse(await request.json());
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -65,8 +76,17 @@ export async function POST(
 
   const acceptedAt = new Date().toISOString();
   const acceptanceId = crypto.randomUUID();
+
+  // If "remember me" is checked, create/link a RecipientAccount
+  let recipientAccountId: string | undefined;
+  if (parsed.data.rememberMe) {
+    const account = await getOrCreateRecipientAccount(parsed.data.signerEmail);
+    recipientAccountId = account.id;
+  }
+
   const acceptance = {
     id: acceptanceId,
+    ...(recipientAccountId ? { recipientAccountId } : {}),
     acceptedAt,
     ndaVersion: metadata.ndaVersion,
     signerName: parsed.data.signerName,
@@ -106,10 +126,29 @@ export async function POST(
     }),
   );
 
+  // If "remember me", also create a login code and email it to them
+  // so they can access this room again without re-signing
+  if (parsed.data.rememberMe) {
+    try {
+      const { code } = await createRecipientLoginCode(parsed.data.signerEmail, slug);
+      await sendRecipientMagicCode(parsed.data.signerEmail, code, metadata.title);
+    } catch (err) {
+      // Non-fatal: NDA is signed, cookies are issued; just log the email failure
+      console.error("[access] failed to send recipient login code:", err);
+    }
+  }
+
   const response = NextResponse.json({
     acceptance,
     success: true,
     signedNdaUrl: `/api/vaults/${slug}/signed-nda`,
+    ...(parsed.data.rememberMe
+      ? {
+          savedAccess: true,
+          savedAccessMessage:
+            "Your email is saved. Next time, enter your email on this page to access the room without signing again.",
+        }
+      : {}),
   });
   response.cookies.set(accessCookieName(slug), token, accessCookieOptions);
   response.cookies.set(

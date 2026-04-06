@@ -104,6 +104,8 @@ export type VaultEvent = {
 
 export type VaultAcceptanceRecord = {
   id: string;
+  /** Present when the signer opted into "remember me" — links to tkn_recipient_accounts.id */
+  recipientAccountId?: string;
   acceptedAt: string;
   ndaVersion: string;
   signerName: string;

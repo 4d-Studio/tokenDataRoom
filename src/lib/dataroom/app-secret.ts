@@ -1,25 +1,22 @@
 /**
  * Shared secret for HMAC-signed cookies (session, vault access, workspace NDA).
  * In production, the secret MUST be configured — no fallback is used.
- * Validated once at module load so the app fails fast if misconfigured.
  */
-
-const _secret = (() => {
-  const fromEnv = (process.env.TKN_APP_SECRET ?? process.env.NEXTAUTH_SECRET ?? "").trim();
+export const getAppSecret = (): string | null => {
+  const fromEnv = (
+    process.env.TKN_APP_SECRET ?? process.env.NEXTAUTH_SECRET ?? ""
+  ).trim();
   if (fromEnv.length > 0) return fromEnv;
   if (process.env.NODE_ENV === "production") return null;
-  // In dev/test, allow missing secret but warn loudly.
+  // In dev/test, allow missing secret but warn.
   if (process.env.NODE_ENV === "development") {
     console.warn(
       "[Token] TKN_APP_SECRET is not set. Cookies will not be signed securely. "
         + "Set it in .env.local for development.",
     );
-    return null;
   }
   return null;
-})();
-
-export const getAppSecret = (): string | null => _secret;
+};
 
 export const requireAppSecretForTokens = (): string => {
   const s = getAppSecret();

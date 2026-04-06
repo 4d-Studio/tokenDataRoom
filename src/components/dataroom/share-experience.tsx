@@ -24,6 +24,7 @@ import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-o
 import { decryptFile } from "@/lib/dataroom/client-crypto";
 import { getOrCreateViewerBinding } from "@/lib/dataroom/viewer-binding-client";
 import { sanitizeHtml } from "@/lib/dataroom/sanitize";
+import { Mail } from "lucide-react";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
 import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
@@ -46,6 +47,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { Textarea } from "@/components/ui/textarea";
 
 type AccessResponse = {
@@ -109,6 +115,12 @@ export function ShareExperience({
   const [isPending, startTransition] = useTransition();
   const [ndaStep, setNdaStep] = useState<NdaFlowStep>("identity");
   const [ndaReadConfirmed, setNdaReadConfirmed] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  // Return-visit email gate
+  const [returnEmail, setReturnEmail] = useState("");
+  const [returnStep, setReturnStep] = useState<"email" | "code">("email");
+  const [returnCode, setReturnCode] = useState("");
+  const [savedAccessMessage, setSavedAccessMessage] = useState("");
   const [ndaDraft, setNdaDraft] = useState<NdaFormDraft>(() => ({
     signerName: initialAcceptance?.signerName ?? "",
     signerEmail: initialAcceptance?.signerEmail ?? "",
@@ -272,15 +284,26 @@ export function ShareExperience({
             signerAddress: ndaDraft.signerAddress,
             signatureName: ndaDraft.signatureName,
             signatureImage,
+            rememberMe,
             viewerBinding: getOrCreateViewerBinding(metadata.slug),
           }),
         });
-        const data = (await res.json()) as AccessResponse;
+        const data = (await res.json()) as AccessResponse & {
+          savedAccess?: boolean;
+          savedAccessMessage?: string;
+        };
         if (!res.ok) throw new Error(data.error || "Unable to accept NDA.");
         setAcceptance(data.acceptance ?? null);
         setSignedNdaUrl(data.signedNdaUrl ?? "");
         setAccessGranted(true);
-        setSuccess(ndaAcceptSuccessMessage);
+        setSuccess(
+          data.savedAccess
+            ? `${ndaAcceptSuccessMessage} ${data.savedAccessMessage ?? ""}`
+            : ndaAcceptSuccessMessage,
+        );
+        if (data.savedAccess && data.savedAccessMessage) {
+          setSavedAccessMessage(data.savedAccessMessage);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unable to accept NDA.");
       }
@@ -355,41 +378,60 @@ export function ShareExperience({
         roomTitle={metadata.title}
       />
 
-      {/* Document row — calm, single-purpose (recipient is here to read) */}
-      <div className="flex flex-wrap items-center gap-3 border-y border-border py-4">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
-          <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
+      {/* Document row — gated behind email authentication */}
+      {accessGranted ? (
+        <div className="flex flex-wrap items-center gap-3 border-y border-border py-4">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
+            <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">
+              {hasDocument ? metadata.fileName : "No document yet"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {hasDocument
+                ? `${formatBytes(metadata.fileSize)} · ${formatMimeLabel(metadata.mimeType)}`
+                : "The sender has not uploaded a file. Check back later."}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Badge variant={objectUrl ? "secondary" : "outline"} className="gap-1.5 font-normal">
+              {!hasDocument ? (
+                <><Clock className="size-3" /> Waiting</>
+              ) : objectUrl ? (
+                <><CheckCircle2 className="size-3" /> Unlocked</>
+              ) : (
+                <><Lock className="size-3" /> Encrypted</>
+              )}
+            </Badge>
+            {objectUrl && hasDocument ? (
+              <Button asChild variant="outline" size="sm">
+                <a href={objectUrl} download={downloadName}>
+                  <Download className="size-4" />
+                  Download
+                </a>
+              </Button>
+            ) : null}
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">
-            {hasDocument ? metadata.fileName : "No document yet"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {hasDocument
-              ? `${formatBytes(metadata.fileSize)} · ${formatMimeLabel(metadata.mimeType)}`
-              : "The sender has not uploaded a file. Check back later."}
-          </p>
+      ) : !metadata.requiresNda ? (
+        /* No NDA required — show document row even without email auth */
+        <div className="flex flex-wrap items-center gap-3 border-y border-border py-4">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
+            <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">
+              {hasDocument ? metadata.fileName : "No document yet"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {hasDocument
+                ? `${formatBytes(metadata.fileSize)} · ${formatMimeLabel(metadata.mimeType)}`
+                : "The sender has not uploaded a file."}
+            </p>
+          </div>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Badge variant={objectUrl ? "secondary" : "outline"} className="gap-1.5 font-normal">
-            {!hasDocument ? (
-              <><Clock className="size-3" /> Waiting</>
-            ) : objectUrl ? (
-              <><CheckCircle2 className="size-3" /> Unlocked</>
-            ) : (
-              <><Lock className="size-3" /> Encrypted</>
-            )}
-          </Badge>
-          {objectUrl && hasDocument ? (
-            <Button asChild variant="outline" size="sm">
-              <a href={objectUrl} download={downloadName}>
-                <Download className="size-4" />
-                Download
-              </a>
-            </Button>
-          ) : null}
-        </div>
-      </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
@@ -430,6 +472,172 @@ export function ShareExperience({
           <AlertTitle>Done</AlertTitle>
           <AlertDescription>{success}</AlertDescription>
         </Alert>
+      ) : null}
+
+      {/* Return-visit email gate — shown first if not yet authenticated */}
+      {!accessGranted ? (
+        <Card>
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
+                <Mail className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-base">Access this room</CardTitle>
+                <CardDescription>
+                  Enter the email you used when signing the NDA. We&apos;ll send you a one-time code.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {returnStep === "email" ? (
+              <FieldGroup className="gap-3">
+                <Field>
+                  <FieldLabel htmlFor="return-email">Work email</FieldLabel>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="return-email"
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      className="pl-10"
+                      value={returnEmail}
+                      onChange={(e) => setReturnEmail(e.target.value)}
+                      placeholder="jane@company.com"
+                    />
+                  </div>
+                </Field>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full"
+                  disabled={
+                    isPending ||
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(returnEmail.trim())
+                  }
+                  onClick={() => {
+                    startTransition(async () => {
+                      setError("");
+                      try {
+                        const res = await fetch("/api/recipient/login-code", {
+                          method: "POST",
+                          headers: { "content-type": "application/json" },
+                          body: JSON.stringify({ email: returnEmail.trim(), slug: metadata.slug }),
+                        });
+                        const data = (await res.json()) as { error?: string };
+                        if (!res.ok) throw new Error(data.error || "Unable to send code.");
+                        setReturnStep("code");
+                      } catch (e) {
+                        setError(e instanceof Error ? e.message : "Unable to send code.");
+                      }
+                    });
+                  }}
+                >
+                  {isPending ? "Sending…" : "Send access code"}
+                </Button>
+              </FieldGroup>
+            ) : (
+              <FieldGroup className="gap-3">
+                <Field>
+                  <FieldLabel>Access code</FieldLabel>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    Check your inbox at <span className="font-medium text-foreground">{returnEmail}</span>.
+                  </p>
+                  <InputOTP
+                    autoFocus
+                    maxLength={6}
+                    value={returnCode}
+                    onChange={(v) => setReturnCode(v.replace(/\D/g, "").slice(0, 6))}
+                    containerClassName="justify-start"
+                  >
+                    <InputOTPGroup className="gap-2 border-0 bg-transparent">
+                      {Array.from({ length: 6 }, (_, i) => (
+                        <InputOTPSlot
+                          key={i}
+                          index={i}
+                          className="size-11 rounded-xl border border-border bg-white text-base font-semibold first:rounded-xl first:border last:rounded-xl"
+                        />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </Field>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="lg"
+                    disabled={isPending || returnCode.length !== 6}
+                    onClick={() => {
+                      startTransition(async () => {
+                        setError("");
+                        try {
+                          const res = await fetch("/api/recipient/verify-code", {
+                            method: "POST",
+                            headers: { "content-type": "application/json" },
+                            body: JSON.stringify({ email: returnEmail.trim(), code: returnCode, slug: metadata.slug }),
+                          });
+                          const data = (await res.json()) as {
+                            error?: string;
+                            success?: boolean;
+                            accessGranted?: boolean;
+                            hasAcceptedNda?: boolean;
+                            pendingEmail?: string;
+                            signerName?: string;
+                          };
+                          if (!res.ok) throw new Error(data.error || "Code expired or incorrect.");
+                          if (data.accessGranted && data.hasAcceptedNda) {
+                            setAccessGranted(true);
+                            if (data.signerName) {
+                              setSuccess(`Welcome back — access granted for ${data.signerName}.`);
+                            }
+                          } else if (data.pendingEmail) {
+                            // No NDA signed yet — pre-fill the identity step email
+                            setNdaDraft((d) => ({ ...d, signerEmail: data.pendingEmail ?? returnEmail }));
+                            setNdaStep("identity");
+                            setReturnStep("email");
+                            setReturnCode("");
+                          }
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Code expired or incorrect.");
+                        }
+                      });
+                    }}
+                  >
+                    {isPending ? "Verifying…" : "Verify and access"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={() => {
+                      setReturnStep("email");
+                      setReturnCode("");
+                    }}
+                  >
+                    Change email
+                  </Button>
+                </div>
+              </FieldGroup>
+            )}
+
+            {metadata.requiresNda ? (
+              <p className="text-xs text-muted-foreground">
+                Haven&apos;t signed the NDA yet?{" "}
+                <button
+                  type="button"
+                  className="underline hover:text-foreground"
+                  onClick={() => {
+                    setNdaDraft((d) => ({ ...d, signerEmail: returnEmail }));
+                    setNdaStep("identity");
+                  }}
+                >
+                  Sign the NDA first
+                </button>
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
       ) : null}
 
       {/* Step 1: NDA */}
@@ -489,6 +697,22 @@ export function ShareExperience({
                       </Field>
                     </div>
                   </FieldGroup>
+                  {/* Remember me — GDPR-consensual opt-in */}
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/20 p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 size-4 shrink-0 rounded border-input"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
+                    <span>
+                      <span className="font-medium text-foreground">Save my email for faster access.</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        We&apos;ll send you a one-time code so you can return without re-signing. Your email is
+                        stored securely and only used for room access.
+                      </span>
+                    </span>
+                  </label>
                   <div className="flex flex-wrap gap-3">
                     <Button
                       type="button"
@@ -661,7 +885,8 @@ export function ShareExperience({
         </Card>
       ) : null}
 
-      {/* Step 2: Unlock */}
+      {/* Step 2: Unlock — only shown after NDA (or if no NDA required) */}
+      {(accessGranted || !metadata.requiresNda) ? (
       <Card>
         <CardHeader>
           <div className="flex items-start gap-3">
@@ -784,6 +1009,7 @@ export function ShareExperience({
           )}
         </CardContent>
       </Card>
+      ) : null}
 
       <p className="mx-auto max-w-xl text-center text-[11px] leading-relaxed text-muted-foreground">
         {SHARE_RECIPIENT_DISCLAIMER}
