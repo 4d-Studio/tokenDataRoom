@@ -11,6 +11,7 @@ import {
   ImageIcon,
   Loader2,
   Lock,
+  ShieldCheck,
   Trash2,
   UploadCloud,
   X,
@@ -572,7 +573,7 @@ export function VaultOwnerDocumentUpload({
       )}
 
       {/* ── Section 2: Add files ───────────────────────────────── */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {/* Separator when there are existing files */}
         {existingFiles.length > 0 && (
           <div className="flex items-center gap-3">
@@ -584,13 +585,54 @@ export function VaultOwnerDocumentUpload({
           </div>
         )}
 
+        {/* How it works — shown when no files uploaded yet */}
+        {existingFiles.length === 0 && pending.length === 0 && (
+          <div className="rounded-xl border border-border bg-white p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <ShieldCheck className="size-4 text-emerald-600" strokeWidth={2} />
+              <p className="text-sm font-semibold text-foreground">
+                End-to-end encrypted uploads
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
+                  <span className="text-sm font-bold text-foreground">1</span>
+                </div>
+                <p className="text-xs leading-snug text-muted-foreground">
+                  Drop files below
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
+                  <span className="text-sm font-bold text-foreground">2</span>
+                </div>
+                <p className="text-xs leading-snug text-muted-foreground">
+                  Encrypted in your browser
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
+                  <span className="text-sm font-bold text-foreground">3</span>
+                </div>
+                <p className="text-xs leading-snug text-muted-foreground">
+                  Only the password unlocks them
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              We never see your files. Share the room password separately with recipients.
+            </p>
+          </div>
+        )}
+
         {/* Upload queue */}
         {pending.length > 0 && (
           <div className="overflow-hidden rounded-xl border border-border">
             <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2">
               <p className="text-xs font-medium text-muted-foreground">
                 {pending.length} file{pending.length !== 1 ? "s" : ""} queued
-                {hasActive ? " · uploading…" : ""}
+                {hasActive ? " · encrypting & uploading…" : ""}
               </p>
               <div className="flex items-center gap-2">
                 {doneCount > 0 && (
@@ -656,7 +698,7 @@ export function VaultOwnerDocumentUpload({
           </div>
         )}
 
-        {/* Drop zone */}
+        {/* Drop zone — with encryption context */}
         <div
           role="button"
           tabIndex={0}
@@ -683,12 +725,11 @@ export function VaultOwnerDocumentUpload({
               Drop files here
             </span>
             <span className="text-sm text-muted-foreground">
-              {" "}
-              or click to browse
+              {" "}or click to browse
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            PDF, Word, Excel, images, text
+            PDF, Word, Excel, images, text · max {(FILE_SIZE_LIMIT_BYTES / 1024 / 1024).toFixed(0)} MB each
           </p>
           <input
             ref={inputRef}
@@ -699,34 +740,39 @@ export function VaultOwnerDocumentUpload({
           />
         </div>
 
-        {/* Encryption password — collapsed when saved, explained when needed */}
+        {/* Encryption password */}
         {canAutoStart ? (
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
-            <Lock className="size-3.5 shrink-0 text-emerald-500" />
-            <p className="flex-1 text-xs text-muted-foreground">
-              Room password saved — files encrypt automatically on drop.
-            </p>
+          <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-2.5">
+            <ShieldCheck className="size-4 shrink-0 text-emerald-600" />
+            <div className="flex-1">
+              <p className="text-xs font-medium text-emerald-800">
+                Encryption active
+              </p>
+              <p className="text-[0.7rem] text-emerald-600/80">
+                Files encrypt in your browser before upload. The server never sees plaintext.
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => {
                 setPassword("");
                 sessionStorage.removeItem(PW_KEY(slug));
               }}
-              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              className="rounded-md border border-emerald-200 bg-white px-2.5 py-1 text-xs text-emerald-700 transition hover:bg-emerald-50"
             >
-              Change
+              Change password
             </button>
           </div>
         ) : (
-          <div className="rounded-xl border border-border bg-white p-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
             <div className="flex items-start gap-2.5">
-              <Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <Lock className="mt-0.5 size-4 shrink-0 text-amber-600" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">
-                  Room password
+                <p className="text-sm font-medium text-amber-900">
+                  Enter room password to upload
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Files are encrypted in your browser with this password before upload. Recipients use the same password to decrypt.
+                <p className="mt-0.5 text-xs text-amber-700/80">
+                  Every file is encrypted in your browser using this password before it leaves your device. Share this password separately with recipients so they can decrypt.
                 </p>
               </div>
             </div>
@@ -737,7 +783,7 @@ export function VaultOwnerDocumentUpload({
                   id="owner-upload-pw"
                   type={showPassword ? "text" : "password"}
                   autoComplete="off"
-                  placeholder="Enter room password"
+                  placeholder="Same password you set when creating this room"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyDown={(e) => {
@@ -746,7 +792,7 @@ export function VaultOwnerDocumentUpload({
                       retryAll();
                     }
                   }}
-                  className="h-9 w-full rounded-lg border border-border bg-muted/20 px-3 pr-14 text-sm placeholder:text-muted-foreground focus:border-[var(--color-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                  className="h-9 w-full rounded-lg border border-amber-200 bg-white px-3 pr-14 text-sm placeholder:text-muted-foreground focus:border-[var(--color-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
                 />
                 <button
                   type="button"
