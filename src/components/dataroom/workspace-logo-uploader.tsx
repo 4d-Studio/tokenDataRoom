@@ -21,6 +21,8 @@ export function WorkspaceLogoUploader({
   workspaceName,
   companyName,
 }: WorkspaceLogoUploaderProps) {
+  // savedLogoUrl tracks the confirmed-saved data URL so it persists across prop updates
+  const [savedLogoUrl, setSavedLogoUrl] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState("");
@@ -69,7 +71,8 @@ export function WorkspaceLogoUploader({
         throw new Error(data.error || "Unable to save logo.");
       }
 
-      // Keep preview as the saved URL
+      // Persist the data URL immediately so it shows without a page reload
+      setSavedLogoUrl(preview);
       setPreview(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save logo.");
@@ -93,6 +96,7 @@ export function WorkspaceLogoUploader({
         const data = (await res.json()) as { error?: string };
         throw new Error(data.error || "Unable to remove logo.");
       }
+      setSavedLogoUrl(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to remove logo.");
     } finally {
@@ -100,7 +104,7 @@ export function WorkspaceLogoUploader({
     }
   };
 
-  const currentLogo = preview ?? logoUrl;
+  const currentLogo = preview ?? savedLogoUrl ?? logoUrl;
   const displayName = workspaceName || companyName || "My Workspace";
 
   return (
