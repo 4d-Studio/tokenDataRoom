@@ -78,7 +78,7 @@ export default async function WorkspacePage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
             <ProductMetric
               icon={<LayoutPanelTop className="h-5 w-5" />}
               value={totalRooms}
@@ -99,7 +99,7 @@ export default async function WorkspacePage() {
             />
           </div>
 
-          <ProductSectionCard>
+          <ProductSectionCard className="mt-8">
             <ProductSectionHeader title="Data rooms" />
 
             <ProductSectionBody className="py-0.5">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  ChevronDown,
   Download,
   Eye,
   FileCheck2,
@@ -20,6 +21,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { AggregatedVaultEvent } from "@/lib/dataroom/auth-store";
 import type { VaultEventType } from "@/lib/dataroom/types";
+
+const INITIAL_COUNT = 5;
 
 export type WorkspaceActivityRow = AggregatedVaultEvent & {
   /** Short absolute time from the server so SSR and the first client paint match. */
@@ -191,18 +194,36 @@ export function WorkspaceActivityFeed({
   events: WorkspaceActivityRow[];
   hasRooms: boolean;
 }) {
+  const [showAll, setShowAll] = useState(false);
+
   if (!hasRooms) return null;
 
+  const visible = showAll ? events : events.slice(0, INITIAL_COUNT);
+  const hasMore = events.length > INITIAL_COUNT;
+
   return (
-    <ProductSectionCard>
+    <ProductSectionCard className="mt-6">
       <ProductSectionHeader
         title="Activity"
         description="Opens, NDA signers, downloads, and uploads across your rooms."
       />
 
       <ProductSectionBody className="py-0">
-        <ActivityFeedList events={events} />
+        <ActivityFeedList events={visible} />
       </ProductSectionBody>
+
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="flex w-full items-center justify-center gap-1.5 border-t border-border py-3 text-xs text-muted-foreground transition hover:text-foreground"
+        >
+          <ChevronDown
+            className={cn("size-3.5 transition-transform", showAll && "rotate-180")}
+          />
+          {showAll ? "Show less" : `View ${events.length - INITIAL_COUNT} more`}
+        </button>
+      )}
     </ProductSectionCard>
   );
 }
