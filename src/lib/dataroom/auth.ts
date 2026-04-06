@@ -53,14 +53,16 @@ export const ensureWorkspaceForUser = async (
   input: { name: string; companyName: string },
 ) => createWorkspaceForUser(userId, input);
 
-export const getWorkspaceRooms = async (): Promise<WorkspaceRoomSummary[]> => {
-  const workspace = await getCurrentWorkspace();
+export const getWorkspaceRooms = async (
+  workspace?: WorkspaceRecord | null,
+): Promise<WorkspaceRoomSummary[]> => {
+  const ws = workspace ?? (await getCurrentWorkspace());
 
-  if (!workspace) {
+  if (!ws) {
     return [];
   }
 
-  const rooms = await listRoomsForWorkspace(workspace.id);
+  const rooms = await listRoomsForWorkspace(ws.id);
   const storage = getVaultStorage();
   return Promise.all(
     rooms.map(async (room) => {
@@ -102,16 +104,16 @@ export const deleteCurrentUser = async () => {
   return deleteUserAccount(user.id);
 };
 
-export const getWorkspaceActivity = async () => {
-  const workspace = await getCurrentWorkspace();
-  if (!workspace) return [];
+export const getWorkspaceActivity = async (workspace?: WorkspaceRecord | null) => {
+  const ws = workspace ?? (await getCurrentWorkspace());
+  if (!ws) return [];
 
-  const rooms = await getWorkspaceRooms();
+  const rooms = await getWorkspaceRooms(ws);
   if (rooms.length === 0) return [];
 
   const storage = getVaultStorage();
   const events = await aggregateWorkspaceActivity(
-    workspace.id,
+    ws.id,
     (slug) => storage.getEvents(slug),
   );
 

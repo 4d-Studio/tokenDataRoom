@@ -35,7 +35,7 @@ export function ShareRecipientCompactHeader({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={workspaceLogoUrl}
-              alt=""
+              alt={workspaceCompanyName ? `${workspaceCompanyName} logo` : "Workspace logo"}
               className="max-h-full max-w-full object-contain"
             />
           </div>

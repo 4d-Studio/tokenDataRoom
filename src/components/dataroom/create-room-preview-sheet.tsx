@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { sanitizeHtml } from "@/lib/dataroom/sanitize";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -170,7 +171,7 @@ export function CreateRoomPreviewSheet({
                   <p className="label-title">Confidentiality agreement</p>
                   <div className="tkn-prose mt-3 max-h-40 overflow-hidden text-sm leading-relaxed text-[var(--tkn-text-support)]">
                     {/<[a-z][\s\S]*>/i.test(deferredNdaText) ? (
-                      <div dangerouslySetInnerHTML={{ __html: deferredNdaText }} />
+                      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(deferredNdaText) }} />
                     ) : (
                       <p className="whitespace-pre-wrap">{deferredNdaText}</p>
                     )}

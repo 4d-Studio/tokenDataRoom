@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Toggle } from "@/components/ui/toggle";
 import { RichTextEditor, isRichNdaContent, plainTextToHtml } from "@/components/dataroom/rich-text-editor";
+import { sanitizeHtml } from "@/lib/dataroom/sanitize";
 
 function ensureHtml(text: string): string {
   return isRichNdaContent(text) ? text : plainTextToHtml(text);
@@ -118,7 +119,7 @@ export function NdaTemplateEditor({
         {previewMode ? (
           <div
             className="prose prose-sm max-w-none rounded-xl border border-border bg-white p-6"
-            dangerouslySetInnerHTML={{ __html: html }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
           />
         ) : (
           <RichTextEditor

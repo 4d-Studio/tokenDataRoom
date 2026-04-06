@@ -419,20 +419,21 @@ export const aggregateWorkspaceActivity = async (
   limit = 10,
 ): Promise<AggregatedVaultEvent[]> => {
   const rooms = await listRoomsForWorkspace(workspaceId);
-  const allEvents: AggregatedVaultEvent[] = [];
 
-  for (const room of rooms) {
-    const events = await getEvents(room.slug);
-    for (const event of events) {
-      allEvents.push({
-        ...event,
-        vaultTitle: room.title,
-        vaultSlug: room.slug,
-      });
-    }
-  }
+  const roomEvents = await Promise.all(
+    rooms.map((room) =>
+      getEvents(room.slug).then((events) =>
+        events.map((event) => ({
+          ...event,
+          vaultTitle: room.title,
+          vaultSlug: room.slug,
+        })),
+      ),
+    ),
+  );
 
-  return allEvents
+  return roomEvents
+    .flat()
     .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
     .slice(0, limit);
 };

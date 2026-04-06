@@ -23,6 +23,7 @@ import { SignatureCanvas } from "@/components/dataroom/signature-canvas";
 import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-overlay";
 import { decryptFile } from "@/lib/dataroom/client-crypto";
 import { getOrCreateViewerBinding } from "@/lib/dataroom/viewer-binding-client";
+import { sanitizeHtml } from "@/lib/dataroom/sanitize";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
 import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
@@ -518,13 +519,14 @@ export function ShareExperience({
                     aria-label="NDA full text"
                   >
                     {isRichNdaContent(ndaDocumentText) ? (
-                      <div dangerouslySetInnerHTML={{ __html: ndaDocumentText }} />
+                      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(ndaDocumentText) }} />
                     ) : (
                       <div className="whitespace-pre-wrap">{ndaDocumentText}</div>
                     )}
                   </div>
-                  <label className="flex cursor-pointer items-start gap-3 text-sm text-foreground">
+                  <label htmlFor="nda-agree" className="flex cursor-pointer items-start gap-3 text-sm text-foreground">
                     <input
+                      id="nda-agree"
                       type="checkbox"
                       className="mt-1 size-4 shrink-0 rounded border-input"
                       checked={ndaReadConfirmed}

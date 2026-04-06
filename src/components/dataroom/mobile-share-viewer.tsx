@@ -27,6 +27,7 @@ import { ShareMobileWelcomeLayer } from "@/components/dataroom/share-entry-welco
 import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-overlay";
 import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
+import { sanitizeHtml } from "@/lib/dataroom/sanitize";
 import type { VaultAcceptanceRecord, VaultRecord } from "@/lib/dataroom/types";
 
 type Props = {
@@ -290,13 +291,14 @@ export function MobileShareViewer({
                         aria-label="NDA full text"
                       >
                         {isRichNdaContent(ndaDocumentText) ? (
-                          <div dangerouslySetInnerHTML={{ __html: ndaDocumentText }} />
+                          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(ndaDocumentText) }} />
                         ) : (
                           <p className="whitespace-pre-wrap">{ndaDocumentText}</p>
                         )}
                       </div>
-                      <label className="flex cursor-pointer items-start gap-2 text-xs text-neutral-700">
+                      <label htmlFor="nda-review-agree" className="flex cursor-pointer items-start gap-2 text-xs text-neutral-700">
                         <input
+                          id="nda-review-agree"
                           type="checkbox"
                           className="mt-0.5 size-4 shrink-0 rounded border-neutral-300"
                           checked={ndaReviewChecked}

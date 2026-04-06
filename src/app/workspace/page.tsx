@@ -41,7 +41,10 @@ export default async function WorkspacePage() {
     redirect("/onboarding");
   }
 
-  const rooms = await getWorkspaceRooms();
+  const [rooms, activityRows] = await Promise.all([
+    getWorkspaceRooms(workspace),
+    getWorkspaceActivity(workspace),
+  ]);
 
   const totalRooms = rooms.length;
   const activeRooms = rooms.filter((r) => r.status === "active").length;
@@ -51,7 +54,6 @@ export default async function WorkspacePage() {
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
   const roomsThisWeek = rooms.filter((r) => new Date(r.createdAt) >= oneWeekAgo).length;
 
-  const activityRows = await getWorkspaceActivity();
 
   const headersList = await headers();
   const protocol = headersList.get("x-forwarded-proto") ?? "http";

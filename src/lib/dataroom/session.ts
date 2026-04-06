@@ -1,6 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import { getAppSecret, requireAppSecretForTokens } from "@/lib/dataroom/app-secret";
+import { getAppSecret, requireAppSecretForTokens, validateEnvConfig } from "@/lib/dataroom/app-secret";
+
+// Fail fast at startup if env is misconfigured
+validateEnvConfig();
 
 export type UserSession = {
   userId: string;
