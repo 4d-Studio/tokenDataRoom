@@ -120,6 +120,7 @@ export function ShareExperience({
   // Return-visit email gate
   const [returnEmail, setReturnEmail] = useState("");
   const [returnStep, setReturnStep] = useState<"email" | "code">("email");
+  const [showReturnGate, setShowReturnGate] = useState(true);
   const [returnCode, setReturnCode] = useState("");
   const [savedAccessMessage, setSavedAccessMessage] = useState("");
   const [ndaDraft, setNdaDraft] = useState<NdaFormDraft>(() => ({
@@ -279,6 +280,7 @@ export function ShareExperience({
           }
           setAccessGranted(true);
           setSuccess("Access granted. Welcome back.");
+          router.refresh();
         } catch (e) {
           setError(e instanceof Error ? e.message : "Invalid access code.");
         }
@@ -520,8 +522,8 @@ export function ShareExperience({
         </Alert>
       ) : null}
 
-      {/* Return-visit email gate — shown first if not yet authenticated */}
-      {!accessGranted ? (
+      {/* Return-visit email gate — hidden once pendingEmail switches to NDA flow */}
+      {!accessGranted && showReturnGate ? (
         <Card>
           <CardHeader>
             <div className="flex items-start gap-3">
@@ -643,6 +645,7 @@ export function ShareExperience({
                             setNdaStep("identity");
                             setReturnStep("email");
                             setReturnCode("");
+                            setShowReturnGate(false);
                           }
                         } catch (e) {
                           setError(e instanceof Error ? e.message : "Code expired or incorrect.");

@@ -276,7 +276,8 @@ export function MobileShareViewer({
                       <Button
                         type="button"
                         className="w-full"
-                        disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(returnEmail.trim())}
+                        aria-busy={isPending}
+                        disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(returnEmail.trim()) || isPending}
                         onClick={() => {
                           setLocalError("");
                           onDismissError();
@@ -284,7 +285,7 @@ export function MobileShareViewer({
                           setReturnStep("code");
                         }}
                       >
-                        Send access code
+                        {isPending ? "Sending…" : "Send access code"}
                       </Button>
                     </div>
                   ) : (
@@ -317,14 +318,15 @@ export function MobileShareViewer({
                         <Button
                           type="button"
                           className="flex-1"
-                          disabled={returnCode.length < 6}
+                          aria-busy={isPending}
+                          disabled={returnCode.length < 6 || isPending}
                           onClick={() => {
                             setLocalError("");
                             onDismissError();
                             onReturnVerify(returnCode, returnEmail);
                           }}
                         >
-                          Verify
+                          {isPending ? "Verifying…" : "Verify"}
                         </Button>
                       </div>
                     </div>
