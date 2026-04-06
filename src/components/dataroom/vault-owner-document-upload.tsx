@@ -77,28 +77,45 @@ export function VaultOwnerDocumentUpload({
       setError("");
       if (!rawFiles?.length) return;
       const valid: File[] = [];
+      const sizeErrors: string[] = [];
       for (const f of Array.from(rawFiles)) {
         if (f.size > FILE_SIZE_LIMIT_BYTES) {
-          setError(`${f.name} exceeds ${(FILE_SIZE_LIMIT_BYTES / 1024 / 1024).toFixed(0)} MB limit.`);
-          return;
+          sizeErrors.push(f.name);
+        } else {
+          valid.push(f);
         }
-        valid.push(f);
       }
+      if (sizeErrors.length > 0) {
+        setError(
+          sizeErrors.length === 1
+            ? `${sizeErrors[0]} exceeds ${(FILE_SIZE_LIMIT_BYTES / 1024 / 1024).toFixed(0)} MB limit.`
+            : `${sizeErrors.length} files exceed the ${(FILE_SIZE_LIMIT_BYTES / 1024 / 1024).toFixed(0)} MB limit.`,
+        );
+      }
+      if (valid.length === 0) return;
+
       const newEntries: PendingEntry[] = valid.map((file) => ({
         id: crypto.randomUUID(),
         file,
         status: "pending",
       }));
-      setPending((prev) => {
-        const existing = new Set(prev.map((p) => p.file.name));
-        return [...prev, ...newEntries.filter((e) => !existing.has(e.file.name))];
-      });
-      // Focus password if not set
+
+      // Deduplicate against both pending queue and already-uploaded files
+      const existingNames = new Set([
+        ...pending.map((p) => p.file.name),
+        ...existingFiles.map((f) => f.name),
+      ]);
+
+      setPending((prev) => [
+        ...prev,
+        ...newEntries.filter((e) => !existingNames.has(e.file.name)),
+      ]);
+
       if (password.length < 8) {
         setTimeout(() => passwordRef.current?.focus(), 50);
       }
     },
-    [password.length],
+    [password.length, existingFiles],
   );
 
   // ── Start encrypting + uploading the queue ────────────────────────────
