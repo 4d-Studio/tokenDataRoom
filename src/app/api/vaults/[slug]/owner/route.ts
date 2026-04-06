@@ -4,7 +4,12 @@ import { z } from "zod";
 import { deleteWorkspaceRoom, syncWorkspaceRoomStatus } from "@/lib/dataroom/auth";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { verifyOwnerKey, isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
-import { setVanitySlug, removeVanitySlug, getVanitySlugForRoom, isValidVanitySlug } from "@/lib/dataroom/vanity-slugs";
+import {
+  setVanitySlug,
+  removeVanitySlug,
+  checkVanityAvailabilityForRoom,
+  isValidVanitySlug,
+} from "@/lib/dataroom/vanity-slugs";
 import { getRequestContext } from "@/lib/dataroom/request-context";
 import { createEvent } from "@/lib/dataroom/types";
 
@@ -46,6 +51,11 @@ const ownerPostSchema = z.discriminatedUnion("action", [
   z.object({
     ownerKey: z.string().min(32).max(128),
     action: z.literal("remove_vanity_slug"),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("check_vanity_availability"),
+    vanitySlug: z.string().trim().max(60),
   }),
 ]);
 
@@ -133,6 +143,12 @@ export async function POST(
     const latestMetadata = await storage.getVaultMetadata(slug);
     const events = await storage.getEvents(slug);
     return NextResponse.json({ metadata: latestMetadata, events, vanitySlug: null });
+  }
+
+  if (parsed.data.action === "check_vanity_availability") {
+    const { vanitySlug } = parsed.data;
+    const result = await checkVanityAvailabilityForRoom(slug, vanitySlug);
+    return NextResponse.json(result);
   }
 
   const nextStatus = parsed.data.action === "revoke" ? "revoked" : "active";

@@ -1,16 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
   Check,
   Download,
+  Eye,
+  ExternalLink,
   Link2,
   LockKeyhole,
   MapPin,
-  Pencil,
   ShieldCheck,
   Trash2,
 } from "lucide-react";
@@ -64,6 +65,56 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
+function ManageStepsStrip({
+  hasDocument,
+  onGo,
+}: {
+  hasDocument: boolean;
+  onGo: (id: SectionId) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5">
+      <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+        Typical flow
+      </p>
+      <ol className="flex list-none flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-2">
+        <li className="flex flex-wrap items-center gap-2 text-[12px]">
+          <button
+            type="button"
+            onClick={() => onGo("owner-document")}
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Upload files
+          </button>
+          {hasDocument ? (
+            <Check className="size-3.5 shrink-0 text-emerald-600" aria-hidden />
+          ) : (
+            <span className="text-[10px] text-amber-800/90 dark:text-amber-400/90">Do this first</span>
+          )}
+        </li>
+        <li className="hidden text-muted-foreground sm:block" aria-hidden>
+          →
+        </li>
+        <li className="flex flex-wrap items-center gap-2 text-[12px]">
+          <button
+            type="button"
+            onClick={() => onGo("owner-overview")}
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Copy share link
+          </button>
+        </li>
+        <li className="hidden text-muted-foreground sm:block" aria-hidden>
+          →
+        </li>
+        <li className="text-[11px] text-muted-foreground">
+          Send the room password out of band (email, call). It is not stored on our servers.
+        </li>
+      </ol>
+    </div>
+  );
+}
+
 function SectionNav({
   active,
   onSelect,
@@ -107,6 +158,7 @@ function OwnerLinkCard({
   url,
   copyLabel,
   dense,
+  sensitivity = "normal",
 }: {
   role: "recipient" | "private";
   title: string;
@@ -115,16 +167,22 @@ function OwnerLinkCard({
   copyLabel: string;
   /** Narrow right column: tighter padding and full-width copy. */
   dense?: boolean;
+  /** Secret links stay masked until the owner clicks Reveal. */
+  sensitivity?: "normal" | "secret";
 }) {
+  const [revealed, setRevealed] = useState(false);
   const isRecipient = role === "recipient";
   const preview = shortenUrlForDisplay(url, dense ? 34 : 52);
+  const showSecretChrome = sensitivity === "secret" && !revealed;
   return (
     <div
       className={cn(
         "relative overflow-hidden rounded-xl border p-px shadow-sm transition-shadow duration-200 hover:shadow-md",
         isRecipient
           ? "border-primary/25 bg-gradient-to-br from-primary/[0.1] via-transparent to-transparent"
-          : "border-border bg-gradient-to-br from-muted/40 via-transparent to-transparent",
+          : sensitivity === "secret"
+            ? "border-border/70 bg-gradient-to-br from-muted/25 via-transparent to-transparent"
+            : "border-border bg-gradient-to-br from-muted/40 via-transparent to-transparent",
       )}
     >
       <div
@@ -159,22 +217,40 @@ function OwnerLinkCard({
               <h3 className="text-[0.85rem] font-semibold tracking-[-0.02em] text-foreground">{title}</h3>
               <p className={cn("tkn-fine mt-0.5 leading-snug", dense && "line-clamp-2")}>{hint}</p>
             </div>
-            <div className="flex min-h-8 items-center gap-1 rounded-lg border border-border/80 bg-muted/30 py-0.5 pl-2 pr-0.5">
-              <span
-                className="min-w-0 flex-1 truncate font-mono text-[10px] leading-tight text-foreground"
-                title={url}
-              >
-                {preview}
-              </span>
-              <CopyButton
-                value={url}
-                size="icon"
-                variant={isRecipient ? "default" : "outline"}
-                className="size-7 shrink-0"
-                ariaLabel={copyLabel}
-                title={url}
-              />
-            </div>
+            {showSecretChrome ? (
+              <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border/80 bg-muted/20 p-2.5">
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  Hidden by default. Reveal only to copy — anyone with this link has owner-level control.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-full sm:w-auto"
+                  onClick={() => setRevealed(true)}
+                >
+                  <Eye className="size-3.5" />
+                  Reveal link
+                </Button>
+              </div>
+            ) : (
+              <div className="flex min-h-8 items-center gap-1 rounded-lg border border-border/80 bg-muted/30 py-0.5 pl-2 pr-0.5">
+                <span
+                  className="min-w-0 flex-1 truncate font-mono text-[10px] leading-tight text-foreground"
+                  title={url}
+                >
+                  {preview}
+                </span>
+                <CopyButton
+                  value={url}
+                  size="icon"
+                  variant={isRecipient ? "default" : "outline"}
+                  className="size-7 shrink-0"
+                  ariaLabel={copyLabel}
+                  title={url}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -254,20 +330,82 @@ export const VaultOwnerPanel = ({
   const [vanitySlugSaved, setVanitySlugSaved] = useState(false);
   const [vanitySlugError, setVanitySlugError] = useState("");
   const [currentVanitySlug, setCurrentVanitySlug] = useState(initialVanitySlug);
+  /** Result of last completed remote check; `slug` must match input to be trusted. */
+  const [remoteVanityCheck, setRemoteVanityCheck] = useState<{
+    slug: string;
+    result: "ok" | "taken" | "invalid";
+  } | null>(null);
 
   const [activeSection, setActiveSection] = useState<SectionId>("owner-settings");
+
+  const shareBase = useMemo(() => shareUrl.split("/s/")[0] ?? shareUrl.replace(/\/s\/[^/]+$/, ""), [shareUrl]);
+  const effectiveShareUrl = useMemo(() => {
+    const pathSlug = currentVanitySlug ?? metadata.slug;
+    return `${shareBase}/s/${pathSlug}`;
+  }, [shareBase, currentVanitySlug, metadata.slug]);
+
+  const trimmedVanityInput = vanitySlug.trim().toLowerCase();
+  const needsVanityRemoteCheck =
+    trimmedVanityInput.length >= 3 && trimmedVanityInput !== (currentVanitySlug ?? "");
 
   useEffect(() => {
     const raw = window.location.hash.replace(/^#/, "");
     if (SECTIONS.some((s) => s.id === raw)) {
-      setActiveSection(raw as SectionId);
+      queueMicrotask(() => setActiveSection(raw as SectionId));
     }
   }, []);
 
-  const selectSection = (id: SectionId) => {
+  const selectSection = useCallback((id: SectionId) => {
     setActiveSection(id);
     window.history.replaceState(null, "", `#${id}`);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!needsVanityRemoteCheck) return;
+
+    const ac = new AbortController();
+    const query = trimmedVanityInput;
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          signal: ac.signal,
+          body: JSON.stringify({
+            ownerKey,
+            action: "check_vanity_availability",
+            vanitySlug: query,
+          }),
+        });
+        const data = (await response.json()) as {
+          available?: boolean;
+          reason?: string;
+        };
+        if (ac.signal.aborted) return;
+        const result: "ok" | "taken" | "invalid" = data.available
+          ? "ok"
+          : data.reason === "taken"
+            ? "taken"
+            : "invalid";
+        setRemoteVanityCheck({ slug: query, result });
+      } catch {
+        if (!ac.signal.aborted) setRemoteVanityCheck(null);
+      }
+    }, 450);
+
+    return () => {
+      window.clearTimeout(timer);
+      ac.abort();
+    };
+  }, [needsVanityRemoteCheck, trimmedVanityInput, metadata.slug, ownerKey]);
+
+  const vanityAvailDisplay = (() => {
+    if (trimmedVanityInput.length === 0) return "idle" as const;
+    if (trimmedVanityInput.length < 3) return "short" as const;
+    if (trimmedVanityInput === (currentVanitySlug ?? "")) return "ok_same" as const;
+    if (!remoteVanityCheck || remoteVanityCheck.slug !== trimmedVanityInput) return "checking" as const;
+    return remoteVanityCheck.result;
+  })();
 
   const hasDocument = vaultHasEncryptedDocument(metadata);
 
@@ -375,6 +513,8 @@ export const VaultOwnerPanel = ({
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Unable to remove custom link.");
       setCurrentVanitySlug(null);
+      setVanitySlug("");
+      setRemoteVanityCheck(null);
       setVanitySlugSaved(true);
       setTimeout(() => setVanitySlugSaved(false), 2500);
       return;
@@ -431,19 +571,15 @@ export const VaultOwnerPanel = ({
   };
 
   const overviewShell = (
-    <SectionShell id="owner-overview" title="6. Links & access" className="border-primary/15 bg-gradient-to-b from-primary/[0.03] to-card">
+    <SectionShell id="owner-overview" title="Links & access" className="border-primary/15 bg-gradient-to-b from-primary/[0.03] to-card">
             <div className="space-y-3">
               <div>
                 <span className="inline-flex items-center rounded border border-primary/25 bg-primary/5 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-primary">
                   Owner
                 </span>
-                <p className="mt-2 text-[0.6rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Room name
-                </p>
-                <p className="text-[0.95rem] font-semibold tracking-tight text-foreground">{metadata.title}</p>
-                <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
-                  The management link is secret — it can revoke access or delete the room. Recipients use
-                  the share link only.
+                <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                  Recipients only need the <span className="font-medium text-foreground">share link</span> and the
+                  room password. The management link is equivalent to this page — keep it private.
                 </p>
               </div>
 
@@ -471,7 +607,7 @@ export const VaultOwnerPanel = ({
                   role="recipient"
                   title="Share link"
                   hint="Send with the room password. Recipients never see owner tools."
-                  url={shareUrl}
+                  url={effectiveShareUrl}
                   copyLabel="Copy room link"
                   dense
                 />
@@ -482,10 +618,18 @@ export const VaultOwnerPanel = ({
                   url={manageUrl}
                   copyLabel="Copy management link"
                   dense
+                  sensitivity="secret"
                 />
               </div>
 
-              <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+              <div className="rounded-lg border border-destructive/20 bg-destructive/[0.04] p-3">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-destructive/90">
+                  Danger zone
+                </p>
+                <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+                  Revoke blocks recipients until you restore. Delete removes the room and encrypted files permanently.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
               <Button
                 type="button"
                 size="sm"
@@ -565,6 +709,7 @@ export const VaultOwnerPanel = ({
                   </div>
                 </div>
               )}
+                </div>
               </div>
 
               {error ? (
@@ -580,21 +725,34 @@ export const VaultOwnerPanel = ({
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
       <SectionNav active={activeSection} onSelect={selectSection} />
 
-      <div
-        className={cn(
-          "grid min-w-0 flex-1 gap-4 lg:items-start",
-          activeSection !== "owner-overview" &&
-            "lg:grid-cols-[minmax(0,1fr)_min(18rem,100%)] xl:grid-cols-[minmax(0,1fr)_20.5rem]",
-        )}
-      >
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <ManageStepsStrip hasDocument={hasDocument} onGo={selectSection} />
+
+        <div
+          className={cn(
+            "grid min-w-0 flex-1 gap-4 lg:items-start",
+            activeSection !== "owner-overview" &&
+              "lg:grid-cols-[minmax(0,1fr)_min(18rem,100%)] xl:grid-cols-[minmax(0,1fr)_20.5rem]",
+          )}
+        >
         <div className="min-w-0">
           {activeSection === "owner-settings" ? (
             <SectionShell
               id="owner-settings"
-              title="1. Room settings"
-              description="Edit the room name, description, and sender details shown to recipients."
+              title="Room settings"
+              description="Name, message, and sender details shown on the share page."
             >
               <div className="space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  <button
+                    type="button"
+                    onClick={() => selectSection("owner-overview")}
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    Links & access
+                  </button>{" "}
+                  — copy the share link, optional custom URL, revoke or delete.
+                </p>
                 <Field>
                   <FieldLabel htmlFor="edit-room-title">Room name</FieldLabel>
                   <Input
@@ -667,11 +825,18 @@ export const VaultOwnerPanel = ({
                   <div>
                     <p className="text-sm font-semibold text-foreground">Custom share link</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Set a memorable URL for recipients instead of the auto-generated one.
+                      Optional short path instead of the auto-generated <span className="font-mono text-[10px]">{metadata.slug}</span>.
+                      Anyone can open the landing page; NDA and the room password still protect access.
                     </p>
                   </div>
+                  <p className="text-[11px] leading-snug text-muted-foreground">
+                    Preview:{" "}
+                    <span className="font-mono text-foreground">
+                      {shareBase}/s/{vanitySlug.trim() || metadata.slug}
+                    </span>
+                  </p>
                   <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
-                    <span className="shrink-0 text-muted-foreground">{shareUrl.split("/s/")[0]}/s/</span>
+                    <span className="shrink-0 text-muted-foreground">{shareBase}/s/</span>
                     <input
                       value={vanitySlug}
                       onChange={(e) => {
@@ -681,22 +846,51 @@ export const VaultOwnerPanel = ({
                       placeholder={metadata.slug}
                       maxLength={60}
                       className="min-w-0 flex-1 bg-transparent text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                      aria-label="Custom path after /s/"
                     />
                   </div>
-                  {currentVanitySlug && (
-                    <p className="text-xs text-muted-foreground">
-                      Current: <span className="font-medium text-foreground">{shareUrl.split("/s/")[0]}/s/{currentVanitySlug}</span>
+                  {trimmedVanityInput.length > 0 && vanityAvailDisplay !== "idle" && vanityAvailDisplay !== "ok_same" ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      {vanityAvailDisplay === "short" ? <span>Type at least 3 characters.</span> : null}
+                      {vanityAvailDisplay === "checking" ? "Checking availability…" : null}
+                      {vanityAvailDisplay === "ok" ? (
+                        <span className="text-emerald-700 dark:text-emerald-400">Available for this room.</span>
+                      ) : null}
+                      {vanityAvailDisplay === "taken" ? (
+                        <span className="text-destructive">Already in use — try another.</span>
+                      ) : null}
+                      {vanityAvailDisplay === "invalid" ? (
+                        <span className="text-destructive">
+                          Use 3–60 characters: lowercase letters, numbers, hyphens. Cannot start with fm-.
+                        </span>
+                      ) : null}
                     </p>
-                  )}
-                  {vanitySlugError && (
-                    <p className="text-xs text-destructive">{vanitySlugError}</p>
-                  )}
-                  <div className="flex items-center gap-2">
+                  ) : null}
+                  {vanityAvailDisplay === "ok_same" && trimmedVanityInput.length >= 3 ? (
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400">This is your active custom link.</p>
+                  ) : null}
+                  {currentVanitySlug ? (
+                    <p className="text-xs text-muted-foreground">
+                      Active link:{" "}
+                      <span className="font-medium text-foreground">
+                        {shareBase}/s/{currentVanitySlug}
+                      </span>
+                    </p>
+                  ) : null}
+                  {vanitySlugError ? <p className="text-xs text-destructive">{vanitySlugError}</p> : null}
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={isPending || (!vanitySlug.trim() && !currentVanitySlug)}
+                      disabled={
+                        isPending ||
+                        (!trimmedVanityInput && !currentVanitySlug) ||
+                        (trimmedVanityInput === (currentVanitySlug ?? "") && trimmedVanityInput !== "") ||
+                        (Boolean(trimmedVanityInput) &&
+                          trimmedVanityInput !== (currentVanitySlug ?? "") &&
+                          vanityAvailDisplay !== "ok")
+                      }
                       onClick={() =>
                         startTransition(() => {
                           void saveVanitySlug().catch((e: unknown) => {
@@ -711,6 +905,12 @@ export const VaultOwnerPanel = ({
                     {vanitySlugSaved ? (
                       <span className="text-xs text-muted-foreground">Saved.</span>
                     ) : null}
+                    <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" asChild>
+                      <a href={effectiveShareUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="size-3.5" />
+                        Open recipient page
+                      </a>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -720,7 +920,7 @@ export const VaultOwnerPanel = ({
           {activeSection === "owner-document" ? (
             <SectionShell
               id="owner-document"
-              title="2. Room documents"
+              title="Room documents"
               description="Files are encrypted in your browser before upload. Recipients only see the share link and password — not this page."
             >
               <VaultOwnerDocumentUpload
@@ -740,7 +940,7 @@ export const VaultOwnerPanel = ({
           {activeSection === "owner-notes" ? (
             <SectionShell
               id="owner-notes"
-              title="3. Notes on this file (private)"
+              title="Notes on this file (private)"
               description="Only you see these notes; they are not shown to recipients."
             >
               {hasDocument ? (
@@ -788,7 +988,7 @@ export const VaultOwnerPanel = ({
           ) : null}
 
           {activeSection === "owner-stats" ? (
-            <SectionShell id="owner-stats" title="4. Activity summary">
+            <SectionShell id="owner-stats" title="Activity summary">
               <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px]">
                 <span>
                   <span className="font-semibold tabular-nums text-foreground">{stats.views}</span>{" "}
@@ -813,7 +1013,7 @@ export const VaultOwnerPanel = ({
           {activeSection === "owner-reviewers" ? (
             <SectionShell
               id="owner-reviewers"
-              title="5. Signed reviewers"
+              title="Signed reviewers"
               description="Reviewer records attach to the room after NDA completion."
             >
               {acceptances.length ? (
@@ -867,7 +1067,7 @@ export const VaultOwnerPanel = ({
           {activeSection === "owner-timeline" ? (
             <SectionShell
               id="owner-timeline"
-              title="6. Timeline"
+              title="Timeline"
               description="Views, NDA acceptance, downloads, uploads, and status changes — newest at the top."
             >
               {events.length ? (
@@ -916,6 +1116,7 @@ export const VaultOwnerPanel = ({
         {activeSection !== "owner-overview" ? (
           <aside className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-20 lg:self-start">{overviewShell}</aside>
         ) : null}
+        </div>
       </div>
     </div>
   );

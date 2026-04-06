@@ -14,6 +14,7 @@ export const CopyButton = ({
   className,
   ariaLabel,
   title,
+  disabled,
 }: {
   value: string;
   label?: string;
@@ -24,12 +25,14 @@ export const CopyButton = ({
   ariaLabel?: string;
   /** Native tooltip (e.g. full URL). */
   title?: string;
+  disabled?: boolean;
 }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (disabled) return;
     await navigator.clipboard.writeText(value);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
@@ -38,36 +41,48 @@ export const CopyButton = ({
   if (size === "icon") {
     const iconVariant = variant === "default" ? "default" : variant === "outline" ? "outline" : "ghost";
     return (
-      <Button
-        type="button"
-        onClick={handleCopy}
-        variant={iconVariant}
-        size="icon"
-        className={cn("h-8 w-8", className)}
-        aria-label={ariaLabel ?? label}
-        title={title ?? label}
-      >
-        {copied ? (
-          <Check className="h-4 w-4 text-green-600" data-icon="inline-end" />
-        ) : (
-          <Copy className="h-4 w-4" data-icon="inline-end" />
-        )}
-      </Button>
+      <span className="inline-flex shrink-0">
+        <Button
+          type="button"
+          onClick={handleCopy}
+          variant={iconVariant}
+          size="icon"
+          disabled={disabled}
+          className={cn("h-8 w-8", className)}
+          aria-label={ariaLabel ?? label}
+          title={title ?? label}
+        >
+          {copied ? (
+            <Check className="h-4 w-4 text-green-600" data-icon="inline-end" />
+          ) : (
+            <Copy className="h-4 w-4" data-icon="inline-end" />
+          )}
+        </Button>
+        <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {copied ? "Copied to clipboard" : ""}
+        </span>
+      </span>
     );
   }
 
   return (
-    <Button
-      type="button"
-      onClick={handleCopy}
-      variant={variant === "default" ? "default" : variant}
-      size={size}
-      className={className}
-      aria-label={ariaLabel}
-      title={title}
-    >
-      {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-      {label && (copied ? "Copied" : label)}
-    </Button>
+    <span className="inline-flex flex-col gap-0">
+      <Button
+        type="button"
+        onClick={handleCopy}
+        variant={variant === "default" ? "default" : variant}
+        size={size}
+        disabled={disabled}
+        className={className}
+        aria-label={ariaLabel}
+        title={title}
+      >
+        {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+        {label && (copied ? "Copied" : label)}
+      </Button>
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {copied ? "Copied to clipboard" : ""}
+      </span>
+    </span>
   );
 };

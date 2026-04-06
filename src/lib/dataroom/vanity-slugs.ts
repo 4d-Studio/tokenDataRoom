@@ -44,6 +44,43 @@ export const resolveVanitySlug = async (vanitySlug: string): Promise<string | nu
   }
 };
 
+/**
+ * Whether a vanity slug can be assigned to this room (free or already mapped to realSlug).
+ */
+export const checkVanityAvailabilityForRoom = async (
+  realSlug: string,
+  vanitySlug: string,
+): Promise<{ available: boolean; reason?: "too_short" | "invalid" | "taken" }> => {
+  const trimmed = vanitySlug.trim().toLowerCase();
+  if (trimmed.length < 3) {
+    return { available: false, reason: "too_short" };
+  }
+  if (!isValidVanitySlug(trimmed)) {
+    return { available: false, reason: "invalid" };
+  }
+
+  if (!isPostgresAuthConfigured()) {
+    const existing = inMemoryMap.get(trimmed);
+    if (!existing) return { available: true };
+    if (existing === realSlug) return { available: true };
+    return { available: false, reason: "taken" };
+  }
+
+  try {
+    const pool = getPgPool();
+    const result = await pool.query<{ real_slug: string }>(
+      `SELECT real_slug FROM ${TABLE} WHERE vanity_slug = $1`,
+      [trimmed],
+    );
+    const row = result.rows[0];
+    if (!row) return { available: true };
+    if (row.real_slug === realSlug) return { available: true };
+    return { available: false, reason: "taken" };
+  } catch {
+    return { available: true };
+  }
+};
+
 /** Get the vanity slug for a real slug. Returns null if none set. */
 export const getVanitySlugForRoom = async (realSlug: string): Promise<string | null> => {
   if (!isPostgresAuthConfigured()) {
