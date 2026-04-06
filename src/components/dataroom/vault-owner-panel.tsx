@@ -5,10 +5,12 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
+  Check,
   Download,
   Link2,
   LockKeyhole,
   MapPin,
+  Pencil,
   ShieldCheck,
   Trash2,
 } from "lucide-react";
@@ -48,12 +50,13 @@ const EVENT_LABELS: Record<VaultEvent["type"], string> = {
 };
 
 const SECTIONS = [
-  { id: "owner-document", num: "1", label: "Room documents" },
-  { id: "owner-notes", num: "2", label: "File notes" },
-  { id: "owner-stats", num: "3", label: "Summary" },
-  { id: "owner-reviewers", num: "4", label: "Reviewers" },
-  { id: "owner-timeline", num: "5", label: "Timeline" },
-  { id: "owner-overview", num: "6", label: "Links & access" },
+  { id: "owner-settings", num: "1", label: "Room settings" },
+  { id: "owner-document", num: "2", label: "Room documents" },
+  { id: "owner-notes", num: "3", label: "File notes" },
+  { id: "owner-stats", num: "4", label: "Summary" },
+  { id: "owner-reviewers", num: "5", label: "Reviewers" },
+  { id: "owner-timeline", num: "6", label: "Timeline" },
+  { id: "owner-overview", num: "7", label: "Links & access" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -235,7 +238,14 @@ export const VaultOwnerPanel = ({
     initialMetadata.ownerNotes ?? "",
   );
   const [ownerNotesSaved, setOwnerNotesSaved] = useState(false);
-  const [activeSection, setActiveSection] = useState<SectionId>("owner-document");
+
+  const [editTitle, setEditTitle] = useState(initialMetadata.title ?? "");
+  const [editMessage, setEditMessage] = useState(initialMetadata.message ?? "");
+  const [editSenderName, setEditSenderName] = useState(initialMetadata.senderName ?? "");
+  const [editSenderCompany, setEditSenderCompany] = useState(initialMetadata.senderCompany ?? "");
+  const [roomSettingsSaved, setRoomSettingsSaved] = useState(false);
+
+  const [activeSection, setActiveSection] = useState<SectionId>("owner-settings");
 
   useEffect(() => {
     const raw = window.location.hash.replace(/^#/, "");
@@ -312,6 +322,34 @@ export const VaultOwnerPanel = ({
     setEvents(payload.events);
     setOwnerNotesSaved(true);
     setTimeout(() => setOwnerNotesSaved(false), 2500);
+  };
+
+  const saveRoomSettings = async () => {
+    setError("");
+    const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ownerKey,
+        action: "edit_room",
+        title: editTitle,
+        message: editMessage,
+        senderName: editSenderName,
+        senderCompany: editSenderCompany,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      metadata?: VaultRecord;
+      events?: VaultEvent[];
+    };
+    if (!response.ok || !payload.metadata || !payload.events) {
+      throw new Error(payload.error || "Unable to save room settings.");
+    }
+    setMetadata(payload.metadata);
+    setEvents(payload.events);
+    setRoomSettingsSaved(true);
+    setTimeout(() => setRoomSettingsSaved(false), 2500);
   };
 
   const deleteRoom = async () => {
@@ -494,10 +532,87 @@ export const VaultOwnerPanel = ({
         )}
       >
         <div className="min-w-0">
+          {activeSection === "owner-settings" ? (
+            <SectionShell
+              id="owner-settings"
+              title="1. Room settings"
+              description="Edit the room name, description, and sender details shown to recipients."
+            >
+              <div className="space-y-4">
+                <Field>
+                  <FieldLabel htmlFor="edit-room-title">Room name</FieldLabel>
+                  <Input
+                    id="edit-room-title"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="e.g. Series A Data Room"
+                    maxLength={80}
+                    className="text-sm"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="edit-room-message">Message to recipients</FieldLabel>
+                  <Textarea
+                    id="edit-room-message"
+                    value={editMessage}
+                    onChange={(e) => setEditMessage(e.target.value)}
+                    placeholder="Brief note shown to recipients before they access the room"
+                    maxLength={240}
+                    className="min-h-[4rem] resize-y text-sm"
+                  />
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="edit-sender-name">Sender name</FieldLabel>
+                    <Input
+                      id="edit-sender-name"
+                      value={editSenderName}
+                      onChange={(e) => setEditSenderName(e.target.value)}
+                      placeholder="Your name"
+                      maxLength={60}
+                      className="text-sm"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="edit-sender-company">Company</FieldLabel>
+                    <Input
+                      id="edit-sender-company"
+                      value={editSenderCompany}
+                      onChange={(e) => setEditSenderCompany(e.target.value)}
+                      placeholder="Company name"
+                      maxLength={60}
+                      className="text-sm"
+                    />
+                  </Field>
+                </div>
+                <div className="flex items-center gap-2 border-t border-border pt-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isPending || editTitle.trim().length < 3}
+                    onClick={() =>
+                      startTransition(() => {
+                        void saveRoomSettings().catch((e: unknown) => {
+                          setError(e instanceof Error ? e.message : "Unable to save settings.");
+                        });
+                      })
+                    }
+                  >
+                    <Check className="size-3.5" />
+                    Save changes
+                  </Button>
+                  {roomSettingsSaved ? (
+                    <span className="text-xs text-muted-foreground">Saved.</span>
+                  ) : null}
+                </div>
+              </div>
+            </SectionShell>
+          ) : null}
+
           {activeSection === "owner-document" ? (
             <SectionShell
               id="owner-document"
-              title="1. Room documents"
+              title="2. Room documents"
               description="Files are encrypted in your browser before upload. Recipients only see the share link and password — not this page."
             >
               <VaultOwnerDocumentUpload
@@ -517,7 +632,7 @@ export const VaultOwnerPanel = ({
           {activeSection === "owner-notes" ? (
             <SectionShell
               id="owner-notes"
-              title="2. Notes on this file (private)"
+              title="3. Notes on this file (private)"
               description="Only you see these notes; they are not shown to recipients."
             >
               {hasDocument ? (
@@ -565,7 +680,7 @@ export const VaultOwnerPanel = ({
           ) : null}
 
           {activeSection === "owner-stats" ? (
-            <SectionShell id="owner-stats" title="3. Activity summary">
+            <SectionShell id="owner-stats" title="4. Activity summary">
               <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px]">
                 <span>
                   <span className="font-semibold tabular-nums text-foreground">{stats.views}</span>{" "}
@@ -590,7 +705,7 @@ export const VaultOwnerPanel = ({
           {activeSection === "owner-reviewers" ? (
             <SectionShell
               id="owner-reviewers"
-              title="4. Signed reviewers"
+              title="5. Signed reviewers"
               description="Reviewer records attach to the room after NDA completion."
             >
               {acceptances.length ? (
@@ -644,7 +759,7 @@ export const VaultOwnerPanel = ({
           {activeSection === "owner-timeline" ? (
             <SectionShell
               id="owner-timeline"
-              title="5. Timeline"
+              title="6. Timeline"
               description="Views, NDA acceptance, downloads, uploads, and status changes — newest at the top."
             >
               {events.length ? (

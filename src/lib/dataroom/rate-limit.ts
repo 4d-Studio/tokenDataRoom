@@ -4,7 +4,6 @@
  * Reset on cold start (acceptable for auth endpoints).
  *
  * Strategy: sliding window per IP + email combo.
- * Allows burst of 3 requests per 60s window per (IP, email).
  */
 
 interface RateLimitEntry {
@@ -13,7 +12,7 @@ interface RateLimitEntry {
 }
 
 const WINDOW_MS = 60_000; // 1 minute
-const MAX_REQUESTS = 3;
+const MAX_REQUESTS = 100;
 
 const store = new Map<string, RateLimitEntry>();
 

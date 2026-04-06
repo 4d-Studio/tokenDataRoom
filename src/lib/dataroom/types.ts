@@ -124,6 +124,8 @@ export type VaultFileEntry = {
   name: string;
   mimeType: string;
   sizeBytes: number;
+  /** Owner-defined category/section name (e.g. "Agreements", "Pitch deck", "NDAs") */
+  category?: string;
   /** Base64-encoded random salt for this file's key derivation */
   salt: string;
   /** Base64-encoded random IV for AES-GCM */

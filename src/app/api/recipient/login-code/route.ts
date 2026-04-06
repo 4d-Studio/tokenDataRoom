@@ -77,7 +77,14 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Something went wrong.";
-    console.error("[recipient/login-code]", message);
-    return NextResponse.json({ error: "Unable to send access code. Try again." }, { status: 500 });
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error("[recipient/login-code]", message, stack);
+
+    const isDbError = message.includes("relation") || message.includes("does not exist") || message.includes("ECONNREFUSED");
+    const hint = isDbError
+      ? "Database tables may not be set up. Run `pnpm db:migrate` on the server."
+      : "Unable to send access code. Try again.";
+
+    return NextResponse.json({ error: hint }, { status: 500 });
   }
 }

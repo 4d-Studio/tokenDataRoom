@@ -8,10 +8,12 @@ import {
   Eye,
   FileSpreadsheet,
   FileText,
+  FolderOpen,
   ImageIcon,
   Loader2,
   Lock,
   ShieldCheck,
+  Tag,
   Trash2,
   UploadCloud,
   X,
@@ -71,13 +73,49 @@ const CATEGORY_META: Record<
   other: { label: "Other files", icon: FileText },
 };
 
-function groupByCategory(files: VaultFileEntry[]) {
-  const groups: Partial<Record<FileCategory, VaultFileEntry[]>> = {};
+/**
+ * Group files by custom category name first; uncategorized files fall
+ * back to auto-detection by mime type.
+ */
+function groupByLabel(files: VaultFileEntry[]): { label: string; icon: typeof FileText; files: VaultFileEntry[] }[] {
+  const customGroups = new Map<string, VaultFileEntry[]>();
+  const autoGroups: Partial<Record<FileCategory, VaultFileEntry[]>> = {};
+
   for (const f of files) {
-    const cat = categorize(f.mimeType);
-    (groups[cat] ??= []).push(f);
+    if (f.category) {
+      const list = customGroups.get(f.category) ?? [];
+      list.push(f);
+      customGroups.set(f.category, list);
+    } else {
+      const cat = categorize(f.mimeType);
+      (autoGroups[cat] ??= []).push(f);
+    }
   }
-  return groups;
+
+  const result: { label: string; icon: typeof FileText; files: VaultFileEntry[] }[] = [];
+
+  for (const [label, grouped] of customGroups) {
+    result.push({ label, icon: FolderOpen, files: grouped });
+  }
+
+  const autoOrder: FileCategory[] = ["documents", "images", "spreadsheets", "other"];
+  for (const cat of autoOrder) {
+    const grouped = autoGroups[cat];
+    if (grouped?.length) {
+      result.push({ label: CATEGORY_META[cat].label, icon: CATEGORY_META[cat].icon, files: grouped });
+    }
+  }
+
+  return result;
+}
+
+/** Collect all unique custom category names from existing files. */
+function collectCategories(files: VaultFileEntry[]): string[] {
+  const set = new Set<string>();
+  for (const f of files) {
+    if (f.category) set.add(f.category);
+  }
+  return Array.from(set).sort();
 }
 
 // ── Lightbox ──────────────────────────────────────────────────────────
@@ -214,21 +252,119 @@ function FileLightbox({
 
 // ── Category accordion ────────────────────────────────────────────────
 
+function CategoryPicker({
+  file,
+  existingCategories,
+  onPick,
+}: {
+  file: VaultFileEntry;
+  existingCategories: string[];
+  onPick: (fileId: string, category: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const apply = (cat: string) => {
+    onPick(file.id, cat);
+    setOpen(false);
+    setCustom("");
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        title="Move to category"
+      >
+        <Tag className="size-3" />
+        {file.category || "Uncategorized"}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-lg border border-border bg-white shadow-lg">
+          {existingCategories
+            .filter((c) => c !== file.category)
+            .map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => apply(c)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-muted/40"
+              >
+                <FolderOpen className="size-3 text-muted-foreground" />
+                {c}
+              </button>
+            ))}
+          {file.category && (
+            <button
+              type="button"
+              onClick={() => apply("")}
+              className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/40"
+            >
+              <X className="size-3" />
+              Remove category
+            </button>
+          )}
+          <div className="border-t border-border p-2">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (custom.trim()) apply(custom.trim());
+              }}
+              className="flex gap-1"
+            >
+              <input
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+                placeholder="New category…"
+                maxLength={60}
+                className="h-7 min-w-0 flex-1 rounded border border-border bg-muted/20 px-2 text-xs placeholder:text-muted-foreground focus:border-[var(--color-accent)] focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={!custom.trim()}
+                className="rounded bg-foreground px-2 py-1 text-xs font-medium text-white disabled:opacity-40"
+              >
+                Add
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CategoryGroup({
-  category,
+  label,
+  icon: Icon,
   files,
+  existingCategories,
   onRemove,
   onPreview,
+  onCategoryChange,
 }: {
-  category: FileCategory;
+  label: string;
+  icon: typeof FileText;
   files: VaultFileEntry[];
+  existingCategories: string[];
   onRemove: (fileId: string) => void;
   onPreview: (file: VaultFileEntry) => void;
+  onCategoryChange: (fileId: string, category: string) => void;
 }) {
   const [open, setOpen] = useState(true);
-  const meta = CATEGORY_META[category];
-  const Icon = meta.icon;
-  const isImage = category === "images";
+  const isImage = files.every((f) => f.mimeType.startsWith("image/"));
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-white">
@@ -239,7 +375,7 @@ function CategoryGroup({
       >
         <Icon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
         <span className="flex-1 text-sm font-semibold text-foreground">
-          {meta.label}
+          {label}
         </span>
         <span className="text-xs text-muted-foreground">
           {files.length} file{files.length !== 1 ? "s" : ""}
@@ -255,7 +391,6 @@ function CategoryGroup({
       {open && (
         <div className="border-t border-border">
           {isImage ? (
-            /* Image grid with thumbnails */
             <div className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-4">
               {files.map((f) => (
                 <div
@@ -268,7 +403,6 @@ function CategoryGroup({
                       strokeWidth={1}
                     />
                   </div>
-                  {/* Hover overlay */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       type="button"
@@ -287,7 +421,6 @@ function CategoryGroup({
                       Delete
                     </button>
                   </div>
-                  {/* Label */}
                   <div className="border-t border-border bg-white px-2 py-1.5">
                     <p className="truncate text-xs font-medium text-foreground">
                       {f.name}
@@ -300,7 +433,6 @@ function CategoryGroup({
               ))}
             </div>
           ) : (
-            /* Document list */
             <div className="divide-y divide-border">
               {files.map((f) => (
                 <div
@@ -324,11 +456,18 @@ function CategoryGroup({
                     <p className="truncate text-sm font-medium text-foreground">
                       {f.name}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatBytes(f.sizeBytes)} ·{" "}
-                      {formatMimeLabel(f.mimeType)}
-                    </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>
+                        {formatBytes(f.sizeBytes)} ·{" "}
+                        {formatMimeLabel(f.mimeType)}
+                      </span>
+                    </div>
                   </div>
+                  <CategoryPicker
+                    file={f}
+                    existingCategories={existingCategories}
+                    onPick={onCategoryChange}
+                  />
                   <button
                     type="button"
                     onClick={() => onPreview(f)}
@@ -382,7 +521,8 @@ export function VaultOwnerDocumentUpload({
 
   const isCompact = variant === "compact";
   const existingFiles: VaultFileEntry[] = vaultFilesList(metadata);
-  const grouped = groupByCategory(existingFiles);
+  const grouped = groupByLabel(existingFiles);
+  const allCategories = collectCategories(existingFiles);
 
   const hasActive = pending.some(
     (p) => p.status === "encrypting" || p.status === "uploading",
@@ -603,14 +743,33 @@ export function VaultOwnerDocumentUpload({
     startUploads(password);
   };
 
-  // ── Render ─────────────────────────────────────────────────────
+  const updateFileCategory = async (fileId: string, category: string) => {
+    try {
+      const res = await fetch(`/api/vaults/${slug}/owner`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ownerKey,
+          action: "update_file_category",
+          fileId,
+          category,
+        }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        metadata?: VaultRecord;
+        events?: VaultEvent[];
+      };
+      if (!res.ok || !data.metadata || !data.events) {
+        throw new Error(data.error || "Unable to update category.");
+      }
+      onUploaded(data.metadata, data.events);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to update category.");
+    }
+  };
 
-  const categoryOrder: FileCategory[] = [
-    "documents",
-    "images",
-    "spreadsheets",
-    "other",
-  ];
+  // ── Render ─────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col gap-6">
@@ -631,19 +790,18 @@ export function VaultOwnerDocumentUpload({
           </div>
 
           <div className="flex flex-col gap-2">
-            {categoryOrder.map((cat) => {
-              const files = grouped[cat];
-              if (!files?.length) return null;
-              return (
-                <CategoryGroup
-                  key={cat}
-                  category={cat}
-                  files={files}
-                  onRemove={removeUploaded}
-                  onPreview={setLightboxFile}
-                />
-              );
-            })}
+            {grouped.map((group) => (
+              <CategoryGroup
+                key={group.label}
+                label={group.label}
+                icon={group.icon}
+                files={group.files}
+                existingCategories={allCategories}
+                onRemove={removeUploaded}
+                onPreview={setLightboxFile}
+                onCategoryChange={updateFileCategory}
+              />
+            ))}
           </div>
         </div>
       )}

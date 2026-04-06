@@ -21,22 +21,22 @@ describe("checkRateLimit — sliding window", () => {
   it("allows first request in a new window", () => {
     const result = checkRateLimit("1.1.1.1::alice@example.com");
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(2); // 3 - 1
+    expect(result.remaining).toBe(99); // 100 - 1
   });
 
-  it("counts up to the limit", () => {
+  it("counts up within the limit", () => {
     const key = "2.2.2.2::bob@example.com";
-    expect(checkRateLimit(key).allowed).toBe(true);  // 1st — remaining 2
-    expect(checkRateLimit(key).allowed).toBe(true);  // 2nd — remaining 1
-    expect(checkRateLimit(key).allowed).toBe(true);  // 3rd — remaining 0
+    expect(checkRateLimit(key).allowed).toBe(true);
+    expect(checkRateLimit(key).allowed).toBe(true);
+    expect(checkRateLimit(key).allowed).toBe(true);
   });
 
-  it("blocks the 4th request within the window", () => {
+  it("blocks requests beyond the limit within the window", () => {
     const key = "3.3.3.3::carol@example.com";
-    checkRateLimit(key); // 1
-    checkRateLimit(key); // 2
-    checkRateLimit(key); // 3 — remaining 0
-    const result = checkRateLimit(key); // 4 — blocked
+    for (let i = 0; i < 100; i++) {
+      expect(checkRateLimit(key).allowed).toBe(true);
+    }
+    const result = checkRateLimit(key); // 101st — blocked
     expect(result.allowed).toBe(false);
     expect(result.remaining).toBe(0);
     expect(result.retryAfter).toBeGreaterThan(0);
@@ -44,30 +44,27 @@ describe("checkRateLimit — sliding window", () => {
 
   it("resets the window after 60 seconds", () => {
     const key = "4.4.4.4::dave@example.com";
-    checkRateLimit(key); // 1
-    checkRateLimit(key); // 2
-    checkRateLimit(key); // 3
+    for (let i = 0; i < 100; i++) {
+      checkRateLimit(key);
+    }
 
-    // Advance 61 seconds — new window
     vi.advanceTimersByTime(61_000);
 
     const result = checkRateLimit(key);
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(2); // Reset to 2 remaining
+    expect(result.remaining).toBe(99);
   });
 
   it("treats different keys independently", () => {
     const keyA = "5.5.5.5::eve@example.com";
     const keyB = "6.6.6.6::frank@example.com";
 
-    // Exhaust keyA
-    checkRateLimit(keyA); // 1
-    checkRateLimit(keyA); // 2
-    checkRateLimit(keyA); // 3 — exhausted
+    for (let i = 0; i < 100; i++) {
+      checkRateLimit(keyA);
+    }
 
-    // keyB should still be allowed
     const result = checkRateLimit(keyB);
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(2);
+    expect(result.remaining).toBe(99);
   });
 });

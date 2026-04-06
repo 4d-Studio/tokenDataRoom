@@ -22,6 +22,20 @@ const ownerPostSchema = z.discriminatedUnion("action", [
     action: z.literal("save_owner_notes"),
     ownerNotes: z.string().max(4000).optional(),
   }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("edit_room"),
+    title: z.string().trim().min(3).max(80).optional(),
+    message: z.string().trim().max(240).optional(),
+    senderName: z.string().trim().min(2).max(60).optional(),
+    senderCompany: z.string().trim().max(60).optional(),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("update_file_category"),
+    fileId: z.string().min(1),
+    category: z.string().trim().max(60),
+  }),
 ]);
 
 export async function POST(
@@ -50,6 +64,34 @@ export async function POST(
       ...metadata,
       ownerNotes: parsed.data.ownerNotes?.trim() || undefined,
     };
+    await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "edit_room") {
+    const updates: Partial<typeof metadata> = {};
+    if (parsed.data.title !== undefined) updates.title = parsed.data.title;
+    if (parsed.data.message !== undefined) updates.message = parsed.data.message;
+    if (parsed.data.senderName !== undefined) updates.senderName = parsed.data.senderName;
+    if (parsed.data.senderCompany !== undefined) updates.senderCompany = parsed.data.senderCompany;
+    const nextMetadata = { ...metadata, ...updates };
+    await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "update_file_category") {
+    const { fileId, category } = parsed.data;
+    const files = metadata.vaultFiles ?? [];
+    const idx = files.findIndex((f) => f.id === fileId);
+    if (idx === -1) {
+      return NextResponse.json({ error: "File not found." }, { status: 404 });
+    }
+    files[idx] = { ...files[idx], category: category || undefined };
+    const nextMetadata = { ...metadata, vaultFiles: files };
     await storage.updateVaultMetadata(nextMetadata);
     const latestMetadata = await storage.getVaultMetadata(slug);
     const events = await storage.getEvents(slug);

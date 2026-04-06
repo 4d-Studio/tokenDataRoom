@@ -155,7 +155,7 @@ export function ShareExperience({
   }, [metadata.slug]);
 
   // Fetch file manifest when access is granted or room doesn't require NDA
-  const [filesList, setFilesList] = useState<Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>>([]);
+  const [filesList, setFilesList] = useState<Array<{ id: string; name: string; mimeType: string; sizeBytes: number; category?: string }>>([]);
   const [fetchedFiles, setFetchedFiles] = useState(false);
   useEffect(() => {
     if (!accessGranted && metadata.requiresNda) return;
@@ -165,7 +165,7 @@ export function ShareExperience({
       try {
         const res = await fetch(`/api/vaults/${metadata.slug}/bundle`);
         if (res.ok) {
-          const data = (await res.json()) as { files?: Array<{ id: string; name: string; mimeType: string; sizeBytes: number }> };
+          const data = (await res.json()) as { files?: Array<{ id: string; name: string; mimeType: string; sizeBytes: number; category?: string }> };
           if (data.files) setFilesList(data.files);
         }
       } catch { /* non-fatal */ }
@@ -755,6 +755,7 @@ export function ShareExperience({
                   onClick={() => {
                     setNdaDraft((d) => ({ ...d, signerEmail: returnEmail }));
                     setNdaStep("identity");
+                    setShowReturnGate(false);
                   }}
                 >
                   Sign the NDA first
@@ -1163,14 +1164,17 @@ export function ShareExperience({
               </div>
             </div>
           ) : (
-            /* File grid */
+            /* File grid — grouped by category when categories exist */
             <div className="space-y-3">
               <p className="text-xs font-medium text-muted-foreground">
                 {Object.keys(decryptedFiles).length} file{Object.keys(decryptedFiles).length !== 1 ? "s" : ""}{" "}
                 decrypted — click to preview or download
               </p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {Object.entries(decryptedFiles).map(([fileId, { objectUrl: url, downloadName: fname }]) => {
+              {(() => {
+                const decryptedEntries = Object.entries(decryptedFiles);
+                const hasCategories = filesList.some((f) => f.category);
+
+                const renderFileCard = ([fileId, { objectUrl: url, downloadName: fname }]: [string, { objectUrl: string; downloadName: string }]) => {
                   const fileEntry = filesList.find((f) => f.id === fileId) ?? {
                     id: fileId,
                     name: fname,
@@ -1198,7 +1202,6 @@ export function ShareExperience({
                       }}
                       className="flex flex-col items-start gap-2 rounded-xl border border-border bg-white p-3 text-left transition-all hover:border-[var(--color-accent)] hover:shadow-sm active:scale-[0.98]"
                     >
-                      {/* File icon / thumbnail */}
                       <div className="flex h-16 w-full items-center justify-center rounded-lg bg-muted/50">
                         {fileEntry.mimeType.startsWith("image/") ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -1213,14 +1216,12 @@ export function ShareExperience({
                           <FileText className="size-8 text-muted-foreground" strokeWidth={1.5} />
                         )}
                       </div>
-                      {/* Name + meta */}
                       <div className="w-full min-w-0">
                         <p className="truncate text-sm font-medium text-foreground">{fname}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {formatBytes(fileEntry.sizeBytes)}
                         </p>
                       </div>
-                      {/* Action hint */}
                       <div className="mt-auto w-full">
                         {previewable ? (
                           <span className="text-xs font-medium text-[var(--color-accent)]">Preview →</span>
@@ -1230,8 +1231,57 @@ export function ShareExperience({
                       </div>
                     </button>
                   );
-                })}
-              </div>
+                };
+
+                if (!hasCategories) {
+                  return (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {decryptedEntries.map(renderFileCard)}
+                    </div>
+                  );
+                }
+
+                const categoryMap = new Map<string, [string, { objectUrl: string; downloadName: string }][]>();
+                const uncategorized: [string, { objectUrl: string; downloadName: string }][] = [];
+                for (const entry of decryptedEntries) {
+                  const fileEntry = filesList.find((f) => f.id === entry[0]);
+                  const cat = fileEntry?.category;
+                  if (cat) {
+                    const list = categoryMap.get(cat) ?? [];
+                    list.push(entry);
+                    categoryMap.set(cat, list);
+                  } else {
+                    uncategorized.push(entry);
+                  }
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {Array.from(categoryMap.entries()).map(([cat, entries]) => (
+                      <div key={cat}>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {cat}
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                          {entries.map(renderFileCard)}
+                        </div>
+                      </div>
+                    ))}
+                    {uncategorized.length > 0 && (
+                      <div>
+                        {categoryMap.size > 0 && (
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            Other files
+                          </p>
+                        )}
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                          {uncategorized.map(renderFileCard)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               <p className="text-center text-xs text-muted-foreground">
                 Previews are watermarked. Downloads are the original decrypted document.
               </p>
