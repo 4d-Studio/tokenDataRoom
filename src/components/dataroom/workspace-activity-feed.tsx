@@ -196,8 +196,8 @@ export function WorkspaceActivityFeed({
   return (
     <ProductSectionCard>
       <ProductSectionHeader
-        title="Recent activity"
-        description="Audit trail across your data rooms. Open a title to manage access on the owner page."
+        title="Activity"
+        description="Opens, NDA signers, downloads, and uploads across your rooms."
       />
 
       <ProductSectionBody className="py-0">

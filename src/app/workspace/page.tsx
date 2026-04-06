@@ -6,9 +6,9 @@ import { CalendarPlus, LayoutPanelTop, Zap } from "lucide-react";
 
 import { AuthenticatedShell } from "@/components/dataroom/authenticated-shell";
 import { RoomsListSkeleton } from "@/components/dataroom/route-loading";
+import { WorkspaceActivityFeed } from "@/components/dataroom/workspace-activity-feed";
 import { WorkspaceEmptyState } from "@/components/dataroom/workspace-empty-state";
 import {
-  ProductPageIntro,
   ProductSectionBody,
   ProductSectionCard,
   ProductSectionHeader,
@@ -78,38 +78,29 @@ export default async function WorkspacePage() {
         </div>
       ) : (
         <>
-          <ProductPageIntro
-            eyebrow="Workspace"
-            title="Data rooms"
-            description="Manage rooms from the list below (upload files, links, activity). Use Preview to open the recipient view in a new tab."
-          />
-
           <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <ProductMetric
               icon={<LayoutPanelTop className="h-5 w-5" />}
               value={totalRooms}
-              label="Total data rooms"
-              subtext="Including drafts and inactive."
+              label="Total rooms"
+              subtext="Including drafts."
             />
             <ProductMetric
               icon={<Zap className="h-5 w-5" />}
               value={activeRooms}
-              label="Active & shareable"
-              subtext="Recipients can open with the shared link."
+              label="Active"
+              subtext="Shareable with recipients."
             />
             <ProductMetric
               icon={<CalendarPlus className="h-5 w-5" />}
               value={roomsThisWeek}
-              label="New rooms (7 days)"
-              subtext="How many data rooms you created this week."
+              label="New (7 days)"
+              subtext="Created this week."
             />
           </div>
 
           <ProductSectionCard>
-            <ProductSectionHeader
-              title="Your data rooms"
-              description="Manage owner controls, or copy the share link to send to recipients."
-            />
+            <ProductSectionHeader title="Data rooms" />
 
             <ProductSectionBody className="py-0.5">
               <RoomsList
@@ -122,6 +113,11 @@ export default async function WorkspacePage() {
               />
             </ProductSectionBody>
           </ProductSectionCard>
+
+          <WorkspaceActivityFeed
+            events={activityRows}
+            hasRooms={rooms.length > 0}
+          />
         </>
       )}
     </AuthenticatedShell>

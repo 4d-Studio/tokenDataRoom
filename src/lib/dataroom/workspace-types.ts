@@ -4,6 +4,8 @@ export type WorkspaceRoomSummary = {
   slug: string;
   title: string;
   fileName: string;
+  /** Number of files in the room. Backfilled from vault metadata when missing. */
+  fileCount?: number;
   senderName: string;
   createdAt: string;
   status: "active" | "revoked";

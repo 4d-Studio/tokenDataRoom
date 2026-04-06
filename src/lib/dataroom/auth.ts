@@ -16,6 +16,7 @@ import {
   type WorkspaceRoomSummary,
 } from "@/lib/dataroom/auth-store";
 import { getVaultStorage } from "@/lib/dataroom/storage";
+import { vaultFilesList } from "@/lib/dataroom/types";
 import { formatDateTime } from "@/lib/dataroom/helpers";
 import {
   sessionCookieName,
@@ -66,12 +67,18 @@ export const getWorkspaceRooms = async (
   const storage = getVaultStorage();
   return Promise.all(
     rooms.map(async (room) => {
-      if (room.ownerKey) return room;
-      const meta = await storage.getVaultMetadata(room.slug);
-      if (meta?.ownerKey) {
-        return { ...room, ownerKey: meta.ownerKey };
+      if (room.ownerKey) {
+        // Enrich with fileCount from vault metadata
+        const meta = await storage.getVaultMetadata(room.slug);
+        const fileCount = meta ? vaultFilesList(meta).length : 0;
+        return { ...room, fileCount };
       }
-      return room;
+      const meta = await storage.getVaultMetadata(room.slug);
+      const fileCount = meta ? vaultFilesList(meta).length : 0;
+      if (meta?.ownerKey) {
+        return { ...room, ownerKey: meta.ownerKey, fileCount };
+      }
+      return { ...room, fileCount };
     }),
   );
 };

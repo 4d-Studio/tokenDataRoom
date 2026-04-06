@@ -65,7 +65,9 @@ export function RoomsList({ rooms, baseUrl }: RoomsListProps) {
               <div className="min-w-0">
                 <p className="text-[0.9375rem] font-semibold text-foreground truncate">{room.title}</p>
                 <p className="tkn-fine mt-0.5 truncate">
-                  {room.fileName ? `${room.fileName} · ` : ""}{room.createdAtFormatted}
+                  {room.fileCount
+                    ? `${room.fileCount} file${room.fileCount !== 1 ? "s" : ""} · `
+                    : ""}{room.createdAtFormatted}
                 </p>
               </div>
             </div>
