@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -251,17 +252,38 @@ export class S3VaultStorage {
 
   async deleteVault(slug: string) {
     const b = bucketName();
-    const keys = [
-      metadataPath(slug),
-      payloadPath(slug),
-      eventsPath(slug),
-      acceptancesPath(slug),
-    ];
-    await Promise.all(
-      keys.map((Key) =>
-        this.client.send(new DeleteObjectCommand({ Bucket: b, Key })),
-      ),
-    );
+    const vaultPrefix = `vaults/${slug}/`;
+
+    // Collect ALL object keys under the vault prefix (including files/)
+    const allKeys: string[] = [];
+    let continuationToken: string | undefined;
+    do {
+      const out = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: b,
+          Prefix: vaultPrefix,
+          ContinuationToken: continuationToken,
+        }),
+      );
+      for (const obj of out.Contents ?? []) {
+        if (obj.Key) allKeys.push(obj.Key);
+      }
+      continuationToken = out.IsTruncated ? out.NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    // Delete in batches of 100 (S3 limit)
+    for (let i = 0; i < allKeys.length; i += 100) {
+      const batch = allKeys.slice(i, i + 100);
+      await this.client.send(
+        new DeleteObjectsCommand({
+          Bucket: b,
+          Delete: {
+            Objects: batch.map((Key) => ({ Key })),
+            Quiet: true,
+          },
+        }),
+      );
+    }
   }
 
   async listVaultsForWorkspace(workspaceId: string): Promise<VaultRecord[]> {

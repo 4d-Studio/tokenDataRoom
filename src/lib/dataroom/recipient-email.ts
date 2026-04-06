@@ -50,7 +50,9 @@ export const sendRecipientMagicCode = async (
   roomName: string,
 ): Promise<SendResult> => {
   if (!isSendgridConfigured()) {
-    console.log(`[Token] recipient code for ${email} (${roomName}): ${code}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[Token] email not configured — local OTP for ${email} (${roomName})`);
+    }
     return { delivery: "local", debugCode: code };
   }
 

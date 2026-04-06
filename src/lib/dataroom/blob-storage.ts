@@ -156,12 +156,18 @@ export class BlobVaultStorage {
   }
 
   async deleteVault(slug: string) {
-    await del([
-      metadataPath(slug),
-      payloadPath(slug),
-      eventsPath(slug),
-      acceptancesPath(slug),
-    ]);
+    // List and delete all objects under the vault prefix (including files/ subdirectory)
+    const prefix = `vaults/${slug}/`;
+    const toDelete: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const { blobs, cursor: nextCursor } = await list({ cursor, prefix });
+      toDelete.push(...blobs.map((b) => b.url));
+      cursor = nextCursor;
+    } while (cursor);
+    if (toDelete.length > 0) {
+      await del(toDelete);
+    }
   }
 
   async listVaultsForWorkspace(workspaceId: string): Promise<VaultRecord[]> {
