@@ -77,10 +77,11 @@ export async function POST(
   const acceptedAt = new Date().toISOString();
   const acceptanceId = crypto.randomUUID();
 
-  // If "remember me" is checked, create/link a RecipientAccount
+  // If "remember me" is checked, create/link a RecipientAccount and mark email verified
   let recipientAccountId: string | undefined;
   if (parsed.data.rememberMe) {
     const account = await getOrCreateRecipientAccount(parsed.data.signerEmail);
+    await markRecipientEmailVerified(account.id);
     recipientAccountId = account.id;
   }
 
