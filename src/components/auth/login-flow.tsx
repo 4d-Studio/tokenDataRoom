@@ -159,6 +159,9 @@ export const LoginFlow = () => {
                 <p className="text-[0.9rem] leading-relaxed text-muted-foreground">
                   Enter the 6-digit code sent to <span className="font-medium text-foreground">{email}</span>.
                 </p>
+                <p className="text-[0.8rem] text-muted-foreground/70">
+                  Didn&apos;t receive it? Check your spam folder, or try resending after 30 seconds.
+                </p>
                 <div className="flex flex-wrap items-center gap-3">
                   <Button
                     type="button"

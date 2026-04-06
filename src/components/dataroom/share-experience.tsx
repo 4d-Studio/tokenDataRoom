@@ -651,6 +651,9 @@ export function ShareExperience({
                   <p className="mb-2 text-xs text-muted-foreground">
                     Check your inbox at <span className="font-medium text-foreground">{returnEmail}</span>.
                   </p>
+                  <p className="mb-3 text-[0.75rem] text-muted-foreground/70">
+                    Didn&apos;t receive it? Check your spam folder, or try resending after 30 seconds.
+                  </p>
                   <InputOTP
                     autoFocus
                     maxLength={6}

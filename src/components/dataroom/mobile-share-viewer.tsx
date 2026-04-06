@@ -291,6 +291,9 @@ export function MobileShareViewer({
                   ) : (
                     <div className="space-y-2.5">
                       <p className="text-xs text-neutral-500">Enter the code sent to {returnEmail}</p>
+                      <p className="text-[0.7rem] text-neutral-400">
+                        Didn&apos;t receive it? Check your spam folder, or try resending after 30 seconds.
+                      </p>
                       <InputOTP
                         value={returnCode}
                         onChange={setReturnCode}
