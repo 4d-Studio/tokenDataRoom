@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/input-otp";
 import { Textarea } from "@/components/ui/textarea";
 import { SignatureCanvas } from "@/components/dataroom/signature-canvas";
-import { ShareMobileWelcomeLayer } from "@/components/dataroom/share-entry-welcome";
 import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-overlay";
 import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
@@ -65,9 +64,6 @@ type Props = {
   onReturnVerify: (code: string, email: string) => void;
   onDismissError: () => void;
   objectUrl: string | null;
-  shareHostLabel?: string;
-  workspaceLogoUrl?: string | null;
-  workspaceCompanyName?: string | null;
 };
 
 export function MobileShareViewer({
@@ -90,9 +86,6 @@ export function MobileShareViewer({
   onReturnVerify,
   onDismissError,
   objectUrl,
-  shareHostLabel = "",
-  workspaceLogoUrl,
-  workspaceCompanyName,
 }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [password, setPassword] = useState("");
@@ -194,16 +187,22 @@ export function MobileShareViewer({
             </p>
           </div>
         ) : (
-          <ShareMobileWelcomeLayer
-            tone="clean"
-            shareHostLabel={shareHostLabel}
-            workspaceLogoUrl={workspaceLogoUrl}
-            workspaceCompanyName={workspaceCompanyName}
-            roomTitle={metadata.title}
-            hasDocument={hasDocument}
-            fileName={metadata.fileName}
-            onContinue={() => setSheetOpen(true)}
-          />
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+            <div className="flex size-12 items-center justify-center rounded-2xl border border-neutral-200 bg-white shadow-sm">
+              <FileText className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
+            </div>
+            <p className="text-base font-semibold text-foreground">{metadata.title}</p>
+            <p className="text-sm text-muted-foreground">
+              {hasDocument ? metadata.fileName : "No file uploaded yet"}
+            </p>
+            <button
+              type="button"
+              onClick={() => setSheetOpen(true)}
+              className="mt-2 rounded-xl border border-border bg-white px-6 py-2.5 text-sm font-medium text-foreground shadow-sm"
+            >
+              Continue
+            </button>
+          </div>
         )}
       </div>
 
@@ -231,14 +230,6 @@ export function MobileShareViewer({
 
             {/* Scrollable content */}
             <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-safe">
-              {/* Room meta */}
-              <div className="flex items-center gap-2 text-xs text-neutral-400">
-                <Clock className="size-3.5" />
-                Expires {formatDateTime(metadata.expiresAt)}
-                <span className="mx-0.5">·</span>
-                <span>{metadata.senderName}</span>
-              </div>
-
               {/* Error / success */}
               {displayError ? (
                 <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3">
@@ -339,34 +330,21 @@ export function MobileShareViewer({
 
               {/* NDA card — first-time signers only (no prior acceptance) */}
               {metadata.requiresNda && !initialAccessGranted && !initialAcceptance && (
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <div className="flex size-7 items-center justify-center rounded-full bg-[var(--color-accent)]/10">
-                      <ShieldCheck className="size-4 text-[var(--color-accent)]" />
-                    </div>
-                    <span className="text-sm font-semibold text-foreground">{ndaCardTitle}</span>
-                  </div>
-                  {ndaCardDescription ? (
-                    <p className="mb-3 text-xs leading-relaxed text-neutral-600">{ndaCardDescription}</p>
-                  ) : null}
-
+                <div className="space-y-3">
                   {ndaSheetStep === 1 ? (
                     <div className="space-y-3">
-                      <p className="text-xs text-neutral-500">
-                        Step 1 of 3 — Your name and work email.
-                      </p>
                       <Input
                         value={signerName}
                         onChange={(e) => setSignerName(e.target.value)}
                         placeholder="Full name"
-                        className="h-9 text-sm"
+                        className="h-10 text-sm"
                       />
                       <Input
                         value={signerEmail}
                         onChange={(e) => setSignerEmail(e.target.value)}
                         placeholder="Work email"
                         type="email"
-                        className="h-9 text-sm"
+                        className="h-10 text-sm"
                       />
                       <Button
                         type="button"
@@ -377,14 +355,13 @@ export function MobileShareViewer({
                         }
                         onClick={() => setNdaSheetStep(2)}
                       >
-                        Continue to review NDA
+                        Continue
                       </Button>
                     </div>
                   ) : null}
 
                   {ndaSheetStep === 2 ? (
                     <div className="space-y-3">
-                      <p className="text-xs text-neutral-500">Step 2 of 3 — Read the agreement.</p>
                       <div
                         className="min-h-[min(42vh,16rem)] max-h-[min(62vh,26rem)] touch-pan-y overflow-y-auto overscroll-contain rounded-lg border border-neutral-200 bg-white p-3 text-xs leading-relaxed text-neutral-700 [-webkit-overflow-scrolling:touch]"
                         tabIndex={0}
@@ -405,23 +382,16 @@ export function MobileShareViewer({
                           checked={ndaReviewChecked}
                           onChange={(e) => setNdaReviewChecked(e.target.checked)}
                         />
-                        <span>I have read this and agree to continue to sign.</span>
+                        <span>I have read and agree to the above.</span>
                       </label>
-                      <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-neutral-200 bg-white p-3">
+                      <label className="flex cursor-pointer items-start gap-2 text-xs text-neutral-700">
                         <input
                           type="checkbox"
                           className="mt-0.5 size-4 shrink-0 rounded border-neutral-300"
                           checked={rememberMe}
                           onChange={(e) => setRememberMe(e.target.checked)}
                         />
-                        <span>
-                          <span className="block text-xs font-medium text-foreground">
-                            Save my email for faster access
-                          </span>
-                          <span className="mt-0.5 block text-xs text-neutral-500">
-                            We&apos;ll send you a one-time code so you can return without re-signing.
-                          </span>
-                        </span>
+                        <span>Save my email for faster access next time.</span>
                       </label>
                       <div className="flex gap-2">
                         <Button
@@ -438,7 +408,7 @@ export function MobileShareViewer({
                           disabled={!ndaReviewChecked}
                           onClick={() => setNdaSheetStep(3)}
                         >
-                          Continue to sign
+                          Continue
                         </Button>
                       </div>
                     </div>

@@ -328,9 +328,6 @@ export function ShareExperience({
         onReturnVerify={handleReturnVerify}
         onDismissError={() => setError("")}
         objectUrl={objectUrl}
-        shareHostLabel={shareHostLabel}
-        workspaceLogoUrl={workspaceLogoUrl}
-        workspaceCompanyName={workspaceCompanyName}
       />
     );
   }
