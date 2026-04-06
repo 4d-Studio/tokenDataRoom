@@ -24,7 +24,7 @@ import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-o
 import { decryptFile } from "@/lib/dataroom/client-crypto";
 import { getOrCreateViewerBinding } from "@/lib/dataroom/viewer-binding-client";
 import { sanitizeHtml } from "@/lib/dataroom/sanitize";
-import { Mail } from "lucide-react";
+import { ChevronLeft, Mail } from "lucide-react";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
 import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
@@ -1082,86 +1082,151 @@ export function ShareExperience({
                 </Button>
               </div>
 
-              {/* Decrypted file list */}
+              {/* Decrypted file list — Dropbox-style grid + click-to-preview */}
               {Object.keys(decryptedFiles).length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {Object.keys(decryptedFiles).length} file{Object.keys(decryptedFiles).length !== 1 ? "s" : ""} decrypted
-                  </p>
-                  {Object.entries(decryptedFiles).map(([fileId, { objectUrl: url, downloadName: fname }]) => {
-                    const fileEntry = filesList.find((f) => f.id === fileId) ?? {
-                      id: fileId,
-                      name: fname,
-                      mimeType: metadata.mimeType,
-                      sizeBytes: metadata.fileSize,
-                    };
-                    const previewable =
-                      fileEntry.mimeType.startsWith("image/") ||
-                      fileEntry.mimeType === "application/pdf" ||
-                      fileEntry.mimeType.startsWith("text/");
-                    return (
-                      <div key={fileId} className="space-y-1.5">
+                <div>
+                  {/* Preview area — shown when a file is selected */}
+                  {objectUrl ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="truncate text-sm font-medium text-foreground">{downloadName}</p>
                         <div className="flex items-center gap-2">
-                          <FileText className="size-4 shrink-0 text-muted-foreground" />
-                          <span className="flex-1 truncate text-sm font-medium text-foreground">
-                            {fname}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatBytes(fileEntry.sizeBytes)}
-                          </span>
+                          <Button asChild variant="ghost" size="sm" className="gap-1.5">
+                            <a href={objectUrl} download={downloadName}>
+                              <Download className="size-4" />
+                              Download
+                            </a>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setObjectUrl(null)}
+                          >
+                            <ChevronLeft className="size-4" />
+                            All files
+                          </Button>
                         </div>
-                        {previewable && objectUrl && decryptedFiles[fileId]?.objectUrl === objectUrl ? (
-                          <div className="relative overflow-hidden rounded-lg border bg-background">
-                            <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
-                            {fileEntry.mimeType.startsWith("image/") ? (
+                      </div>
+                      <div className="relative overflow-hidden rounded-xl border bg-muted/20">
+                        <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
+                        {(() => {
+                          const activeFile = Object.entries(decryptedFiles).find(([, v]) => v.objectUrl === objectUrl);
+                          const fileEntry = activeFile
+                            ? filesList.find((f) => f.id === activeFile[0]) ?? {
+                                id: activeFile[0],
+                                name: activeFile[1].downloadName,
+                                mimeType: metadata.mimeType,
+                                sizeBytes: metadata.fileSize,
+                              }
+                            : { id: "", name: downloadName, mimeType: metadata.mimeType, sizeBytes: metadata.fileSize };
+                          if (fileEntry.mimeType.startsWith("image/")) {
+                            return (
                               <Image
-                                src={url}
-                                alt={fname}
+                                src={objectUrl}
+                                alt={downloadName}
                                 width={1600}
                                 height={1200}
                                 unoptimized
                                 className="relative z-0 h-auto w-full"
                               />
-                            ) : fileEntry.mimeType === "application/pdf" ? (
+                            );
+                          }
+                          if (fileEntry.mimeType === "application/pdf") {
+                            return (
                               <iframe
-                                title={fname}
-                                src={url}
-                                className="relative z-0 h-[60vh] min-h-[20rem] w-full"
+                                title={downloadName}
+                                src={objectUrl}
+                                className="relative z-0 h-[65vh] min-h-[24rem] w-full"
                               />
-                            ) : (
-                              <iframe
-                                title={fname}
-                                src={url}
-                                className="relative z-0 h-[56vh] min-h-[16rem] w-full"
-                              />
-                            )}
-                          </div>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              if (previewable) {
-                                setObjectUrl(url);
-                                setDownloadName(fname);
-                              } else {
-                                const a = document.createElement("a");
-                                a.href = url;
-                                a.download = fname;
-                                a.click();
-                              }
-                            }}
-                          >
-                            {previewable ? "Preview" : "Download"} {fname}
-                          </Button>
-                        )}
+                            );
+                          }
+                          return (
+                            <iframe
+                              title={downloadName}
+                              src={objectUrl}
+                              className="relative z-0 h-[65vh] min-h-[24rem] w-full"
+                            />
+                          );
+                        })()}
                       </div>
-                    );
-                  })}
-                  <p className="pt-1 text-center text-xs text-muted-foreground">
-                    Preview is watermarked. Downloads are the original decrypted document.
-                  </p>
+                    </div>
+                  ) : (
+                    /* File grid */
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {Object.keys(decryptedFiles).length} file{Object.keys(decryptedFiles).length !== 1 ? "s" : ""}{" "}
+                        decrypted — click to preview or download
+                      </p>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {Object.entries(decryptedFiles).map(([fileId, { objectUrl: url, downloadName: fname }]) => {
+                          const fileEntry = filesList.find((f) => f.id === fileId) ?? {
+                            id: fileId,
+                            name: fname,
+                            mimeType: metadata.mimeType,
+                            sizeBytes: metadata.fileSize,
+                          };
+                          const previewable =
+                            fileEntry.mimeType.startsWith("image/") ||
+                            fileEntry.mimeType === "application/pdf" ||
+                            fileEntry.mimeType.startsWith("text/");
+                          const isActive = false;
+                          return (
+                            <button
+                              key={fileId}
+                              type="button"
+                              onClick={() => {
+                                if (previewable) {
+                                  setObjectUrl(url);
+                                  setDownloadName(fname);
+                                } else {
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = fname;
+                                  a.click();
+                                }
+                              }}
+                              className="flex flex-col items-start gap-2 rounded-xl border border-border bg-white p-3 text-left transition-all hover:border-[var(--color-accent)] hover:shadow-sm active:scale-[0.98]"
+                            >
+                              {/* File icon / thumbnail */}
+                              <div className="flex h-16 w-full items-center justify-center rounded-lg bg-muted/50">
+                                {fileEntry.mimeType.startsWith("image/") ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={url}
+                                    alt={fname}
+                                    className="h-full w-full rounded-lg object-cover"
+                                  />
+                                ) : fileEntry.mimeType === "application/pdf" ? (
+                                  <FileText className="size-8 text-red-400" strokeWidth={1.5} />
+                                ) : (
+                                  <FileText className="size-8 text-muted-foreground" strokeWidth={1.5} />
+                                )}
+                              </div>
+                              {/* Name + meta */}
+                              <div className="w-full min-w-0">
+                                <p className="truncate text-sm font-medium text-foreground">{fname}</p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                  {formatBytes(fileEntry.sizeBytes)}
+                                </p>
+                              </div>
+                              {/* Action hint */}
+                              <div className="mt-auto w-full">
+                                {previewable ? (
+                                  <span className="text-xs font-medium text-[var(--color-accent)]">Preview →</span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Click to download</span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-center text-xs text-muted-foreground">
+                        Previews are watermarked. Downloads are the original decrypted document.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : null}
             </>
