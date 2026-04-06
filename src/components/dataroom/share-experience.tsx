@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -171,6 +171,25 @@ export function ShareExperience({
       } catch { /* non-fatal */ }
     })();
   }, [accessGranted, metadata.requiresNda, metadata.slug, fetchedFiles]);
+
+  // Auto-decrypt on mount/refresh if password is saved in sessionStorage
+  const autoDecryptAttempted = useRef(false);
+  useEffect(() => {
+    if (autoDecryptAttempted.current) return;
+    if (!fetchedFiles || !filesList.length) return;
+    if (Object.keys(decryptedFiles).length > 0) return;
+    if (!accessGranted && metadata.requiresNda) return;
+    try {
+      const savedPw = sessionStorage.getItem(`tkn_share_pw_${metadata.slug}`);
+      if (savedPw) {
+        autoDecryptAttempted.current = true;
+        handleUnlock(savedPw);
+      }
+    } catch {
+      // sessionStorage unavailable
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchedFiles, filesList.length, accessGranted]);
 
   useEffect(
     () => () => {
@@ -434,20 +453,15 @@ export function ShareExperience({
 
         setDecryptedFiles(newDecryptedFiles);
 
-        // Auto-preview first file if previewable
-        const firstEntry = results.find((r) => r.status === "fulfilled") as PromiseFulfilledResult<{ id: string; objectUrl: string; downloadName: string; mimeType: string }> | undefined;
-        if (firstEntry) {
-          const mime = firstEntry.value.mimeType;
-          const previewable = mime.startsWith("image/") || mime === "application/pdf" || mime.startsWith("text/");
-          setObjectUrl(previewable ? firstEntry.value.objectUrl : null);
-          setDownloadName(firstEntry.value.downloadName);
-        }
+        // Show grid view (don't auto-zoom into first file)
+        setObjectUrl(null);
 
-        setSuccess(
-          Object.keys(newDecryptedFiles).length === 1
-            ? "File decrypted locally. Preview or download it below."
-            : `${Object.keys(newDecryptedFiles).length} files decrypted locally. Preview or download below.`,
-        );
+        // Save password so files auto-decrypt on refresh
+        try {
+          sessionStorage.setItem(`tkn_share_pw_${metadata.slug}`, password);
+        } catch {
+          // sessionStorage may be unavailable in some contexts
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unable to unlock.");
       }
@@ -573,7 +587,7 @@ export function ShareExperience({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
-      {success ? (
+      {success && !Object.keys(decryptedFiles).length ? (
         <Alert>
           <CheckCircle2 />
           <AlertTitle>Done</AlertTitle>
@@ -1001,27 +1015,16 @@ export function ShareExperience({
       <Card>
         <CardHeader>
           <div className="flex items-start gap-3">
-            {stepNumber(metadata.requiresNda ? 2 : 1, Boolean(objectUrl))}
+            <Lock className="size-5 text-muted-foreground" />
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-base">Unlock and preview</CardTitle>
+              <CardTitle className="text-base">Decrypt files</CardTitle>
               <CardDescription>
                 {hasDocument
-                  ? "Enter the password from the sender to decrypt this file locally in your browser."
-                  : "The sender still needs to add a document from owner controls. You can complete the NDA now; unlock will work once a file is available."}
+                  ? "The sender shared a room password with you. Enter it below to decrypt the files in your browser — nothing is sent to the server."
+                  : "The sender still needs to upload files. You'll be able to decrypt once they're added."}
               </CardDescription>
             </div>
           </div>
-          <CardAction>
-            <Badge variant={objectUrl ? "secondary" : "outline"}>
-              {!hasDocument
-                ? "No file"
-                : objectUrl
-                  ? "Open"
-                  : ndaStepComplete
-                    ? "Ready"
-                    : "Locked"}
-            </Badge>
-          </CardAction>
         </CardHeader>
 
         <CardContent className="space-y-4">
