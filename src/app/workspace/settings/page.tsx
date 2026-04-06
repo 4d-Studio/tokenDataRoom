@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AuthenticatedShell } from "@/components/dataroom/authenticated-shell";
@@ -11,6 +12,7 @@ import { ProductPageIntro } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
 import { roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
+import { describePlanForWorkspace } from "@/lib/dataroom/plan-descriptions";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -37,6 +39,7 @@ export default async function WorkspaceSettingsPage() {
   const defaultTemplate = buildDefaultNdaText(workspace.companyName);
   const activityEvents = await getWorkspaceActivity();
   const rooms = await getWorkspaceRooms();
+  const planInfo = describePlanForWorkspace(user.plan);
 
   const logoPreview = workspace.logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -75,6 +78,27 @@ export default async function WorkspaceSettingsPage() {
       />
 
       <div className="mt-5 flex flex-col gap-3">
+        <SettingsSection
+          title="Plan & limits"
+          description={`You are on the ${planInfo.label} plan. Paid upgrades are coming soon; limits below match your account today.`}
+          preview={
+            <ul className="mt-1 list-inside list-disc space-y-0.5 text-sm text-[var(--tkn-text-fine)]">
+              {planInfo.bullets.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          }
+          defaultOpen
+        >
+          <p className="text-sm leading-relaxed text-[var(--tkn-text-support)]">
+            See every tier, file caps, and what ships next on the{" "}
+            <Link href="/pricing" className="font-medium text-primary underline-offset-4 hover:underline">
+              pricing page
+            </Link>
+            .
+          </p>
+        </SettingsSection>
+
         <SettingsSection
           title="Logo"
           description="Shown on shared room pages (recipient header) when NDA is enabled."
