@@ -314,6 +314,18 @@ export const CreateVaultForm = ({
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<CreationResult | null>(null);
+  const router = useRouter();
+  const [countdown, setCountdown] = useState(3);
+
+  useEffect(() => {
+    if (!result) return;
+    if (countdown <= 0) {
+      router.push(result.manageUrl);
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown, router, result]);
 
   const isFree = userPlan === "free" && currentRoomCount >= 3;
 
@@ -385,18 +397,6 @@ export const CreateVaultForm = ({
 
   // ── Success ────────────────────────────────────────────────────────────
   if (result) {
-    const router = useRouter();
-    const [countdown, setCountdown] = useState(3);
-
-    useEffect(() => {
-      if (countdown <= 0) {
-        router.push(result.manageUrl);
-        return;
-      }
-      const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-      return () => clearTimeout(t);
-    }, [countdown, router, result.manageUrl]);
-
     return (
       <div className="flex flex-col gap-4 pb-8">
         <Card className="rounded-2xl border border-border bg-white p-6">

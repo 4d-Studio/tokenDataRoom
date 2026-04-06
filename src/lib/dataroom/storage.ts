@@ -32,7 +32,10 @@ export const getVaultStorage = () => {
           "[storage] BLOB_READ_WRITE_TOKEN is set but ignored — S3/Railway Bucket env takes priority.",
         );
       }
-    } else if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+    } else if (
+      process.env.BLOB_READ_WRITE_TOKEN?.trim() &&
+      !process.env.BLOB_READ_WRITE_TOKEN.startsWith("your-")
+    ) {
       storage = new BlobVaultStorage();
     } else {
       if (process.env.NODE_ENV === "production") {
