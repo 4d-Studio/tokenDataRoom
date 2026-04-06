@@ -482,76 +482,79 @@ export function ShareExperience({
         roomTitle={metadata.title}
       />
 
-      {/* Document row — gated behind email authentication */}
+      {/* Room info — only shown after access is granted */}
       {accessGranted ? (
-        <div className="flex flex-wrap items-center gap-3 border-y border-border py-4">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
-            <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
+        <>
+          <div className="flex flex-wrap items-center gap-3 border-y border-border py-4">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
+              <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-foreground">
+                {hasDocument ? metadata.fileName : "No document yet"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {hasDocument
+                  ? `${formatBytes(metadata.fileSize)} · ${formatMimeLabel(metadata.mimeType)}`
+                  : "The sender has not uploaded a file. Check back later."}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Badge variant={objectUrl ? "secondary" : "outline"} className="gap-1.5 font-normal">
+                {!hasDocument ? (
+                  <><Clock className="size-3" /> Waiting</>
+                ) : objectUrl ? (
+                  <><CheckCircle2 className="size-3" /> Unlocked</>
+                ) : (
+                  <><Lock className="size-3" /> Encrypted</>
+                )}
+              </Badge>
+              {objectUrl && hasDocument ? (
+                <Button asChild variant="outline" size="sm">
+                  <a href={objectUrl} download={downloadName}>
+                    <Download className="size-4" />
+                    Download
+                  </a>
+                </Button>
+              ) : null}
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">
-              {hasDocument ? metadata.fileName : "No document yet"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {hasDocument
-                ? `${formatBytes(metadata.fileSize)} · ${formatMimeLabel(metadata.mimeType)}`
-                : "The sender has not uploaded a file. Check back later."}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Badge variant={objectUrl ? "secondary" : "outline"} className="gap-1.5 font-normal">
-              {!hasDocument ? (
-                <><Clock className="size-3" /> Waiting</>
-              ) : objectUrl ? (
-                <><CheckCircle2 className="size-3" /> Unlocked</>
-              ) : (
-                <><Lock className="size-3" /> Encrypted</>
-              )}
-            </Badge>
-            {objectUrl && hasDocument ? (
-              <Button asChild variant="outline" size="sm">
-                <a href={objectUrl} download={downloadName}>
-                  <Download className="size-4" />
-                  Download
-                </a>
-              </Button>
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="size-3.5 shrink-0" />
+              Expires {formatDateTime(metadata.expiresAt)}
+            </span>
+            <span>
+              Shared by {metadata.senderName}
+              {metadata.senderCompany ? ` · ${metadata.senderCompany}` : ""}
+            </span>
+            {metadata.message ? (
+              <span className="basis-full text-[13px] leading-relaxed text-foreground">
+                Note: {metadata.message}
+              </span>
             ) : null}
           </div>
-        </div>
-      ) : !metadata.requiresNda ? (
-        /* No NDA required — show document row even without email auth */
-        <div className="flex flex-wrap items-center gap-3 border-y border-border py-4">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
-            <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
+        </>
+      ) : (
+        /* Pre-access: don't reveal file details. Show a locked state. */
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+            <Lock className="size-5 text-muted-foreground" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">
-              {hasDocument ? metadata.fileName : "No document yet"}
+            <p className="text-sm font-medium text-foreground">
+              {filesList.length > 0
+                ? `${filesList.length} encrypted file${filesList.length !== 1 ? "s" : ""}`
+                : "Encrypted room"}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {hasDocument
-                ? `${formatBytes(metadata.fileSize)} · ${formatMimeLabel(metadata.mimeType)}`
-                : "The sender has not uploaded a file."}
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {metadata.requiresNda
+                ? "Sign the confidentiality agreement below to access this room."
+                : "Enter the room password to decrypt and view files."}
             </p>
           </div>
         </div>
-      ) : null}
-
-      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <Clock className="size-3.5 shrink-0" />
-          Expires {formatDateTime(metadata.expiresAt)}
-        </span>
-        <span>
-          Shared by {metadata.senderName}
-          {metadata.senderCompany ? ` · ${metadata.senderCompany}` : ""}
-        </span>
-        {metadata.message ? (
-          <span className="basis-full text-[13px] leading-relaxed text-foreground">
-            Note: {metadata.message}
-          </span>
-        ) : null}
-      </div>
+      )}
 
       {/* Alerts */}
       {needsBootstrapFromWorkspace ? (
@@ -748,8 +751,8 @@ export function ShareExperience({
         </Card>
       ) : null}
 
-      {/* Step 1: NDA */}
-      {metadata.requiresNda ? (
+      {/* Step 1: NDA — hidden when the return-visit gate is showing (returning users verify email first) */}
+      {metadata.requiresNda && !showReturnGate ? (
         <Card>
           <CardHeader>
             <div className="flex items-start gap-3">
@@ -993,8 +996,8 @@ export function ShareExperience({
         </Card>
       ) : null}
 
-      {/* Step 2: Unlock card — only shown after NDA (or if no NDA required) and no files decrypted yet */}
-      {(accessGranted || !metadata.requiresNda) && Object.keys(decryptedFiles).length === 0 ? (
+      {/* Step 2: Unlock card — only after access granted (or no NDA) and no files decrypted yet */}
+      {(accessGranted || !metadata.requiresNda) && !showReturnGate && Object.keys(decryptedFiles).length === 0 ? (
       <Card>
         <CardHeader>
           <div className="flex items-start gap-3">
