@@ -21,6 +21,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { decryptFile, encryptFile } from "@/lib/dataroom/client-crypto";
+import { ownerVaultPasswordSessionKey } from "@/lib/dataroom/owner-vault-session";
 import { FILE_SIZE_LIMIT_BYTES, vaultFilesList } from "@/lib/dataroom/types";
 import { formatBytes } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
@@ -43,7 +44,7 @@ type PendingEntry = {
   error?: string;
 };
 
-const PW_KEY = (slug: string) => `tkn_vault_pw_${slug}`;
+const PW_KEY = ownerVaultPasswordSessionKey;
 
 // ── File type categorization ──────────────────────────────────────────
 
@@ -533,6 +534,19 @@ export function VaultOwnerDocumentUpload({
   const doneCount = pending.filter((p) => p.status === "done").length;
   const errorCount = pending.filter((p) => p.status === "error").length;
   const canAutoStart = password.length >= 8;
+
+  // Keep sessionStorage in sync so invite emails use the same password (no separate invite field).
+  useEffect(() => {
+    try {
+      if (password.length >= 8) {
+        sessionStorage.setItem(PW_KEY(slug), password);
+      } else if (password.length === 0) {
+        sessionStorage.removeItem(PW_KEY(slug));
+      }
+    } catch {
+      /* quota / private mode */
+    }
+  }, [password, slug]);
 
   // ── Add files to queue ────────────────────────────────────────────
 

@@ -41,6 +41,7 @@ import {
   MAX_RECIPIENT_INVITES_PER_SEND,
   normalizeRecipientEmailList,
 } from "@/lib/dataroom/vault-recipient-access";
+import { ownerVaultPasswordSessionKey } from "@/lib/dataroom/owner-vault-session";
 import {
   vaultHasEncryptedDocument,
   type VaultAcceptanceRecord,
@@ -119,7 +120,7 @@ function ManageStepsStrip({
           →
         </li>
         <li className="text-[11px] text-muted-foreground">
-          Send the room password out of band (email, call). It is not stored on our servers.
+          Invite emails include the same password you use under Room documents (remembered on this device only).
         </li>
       </ol>
     </div>
@@ -372,8 +373,9 @@ export const VaultOwnerPanel = ({
     (initialMetadata.allowedRecipientEmails ?? []).join("\n"),
   );
   const [inviteBatchDraft, setInviteBatchDraft] = useState("");
-  const [invitePasswordDraft, setInvitePasswordDraft] = useState("");
   const [inviteFeedback, setInviteFeedback] = useState("");
+  /** Same browser session as Room documents password (8+ chars in sessionStorage). */
+  const [inviteVaultPasswordReady, setInviteVaultPasswordReady] = useState(false);
 
   const [activeSection, setActiveSection] = useState<SectionId>("owner-settings");
 
@@ -413,6 +415,15 @@ export const VaultOwnerPanel = ({
       queueMicrotask(() => setActiveSection(raw as SectionId));
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      const p = sessionStorage.getItem(ownerVaultPasswordSessionKey(metadata.slug)) ?? "";
+      setInviteVaultPasswordReady(p.trim().length >= 8);
+    } catch {
+      setInviteVaultPasswordReady(false);
+    }
+  }, [metadata.slug, activeSection, inviteBatchDraft]);
 
   const selectSection = useCallback((id: SectionId) => {
     setActiveSection(id);
@@ -662,10 +673,15 @@ export const VaultOwnerPanel = ({
         `You can invite up to ${MAX_RECIPIENT_INVITES_PER_SEND} people per send. Split into multiple batches or trim the list.`,
       );
     }
-    const pw = invitePasswordDraft.trim();
-    if (!pw) {
+    let pw = "";
+    try {
+      pw = (sessionStorage.getItem(ownerVaultPasswordSessionKey(metadata.slug)) ?? "").trim();
+    } catch {
+      pw = "";
+    }
+    if (pw.length < 8) {
       throw new Error(
-        "Enter the room password so it can be included in the invite emails. It is not stored on our servers.",
+        'Open "Room documents" first and enter the room password you used to encrypt files (8+ characters). Invites use that same password automatically — it stays in this browser only until you close the tab.',
       );
     }
     const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
@@ -691,7 +707,6 @@ export const VaultOwnerPanel = ({
     setEvents(payload.events);
     setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
     setInviteBatchDraft("");
-    setInvitePasswordDraft("");
     setInviteFeedback(`Invites completed for ${emails.length} recipient${emails.length === 1 ? "" : "s"}.`);
     setTimeout(() => setInviteFeedback(""), 5000);
   };
@@ -791,8 +806,9 @@ export const VaultOwnerPanel = ({
                         Invite-only access
                       </p>
                       <p className="max-w-prose text-[11px] leading-snug text-muted-foreground">
-                        Control who can request a code and download files. Invites add people to the list, turn this on,
-                        and email them the link plus the password you type (password is not stored on our servers).
+                        Control who can request a code and download files. Invites add people to the list and email them
+                        the link plus the same room password you use under Room documents (from this browser — we never
+                        store it on our servers).
                       </p>
                     </div>
                   </div>
@@ -918,8 +934,9 @@ export const VaultOwnerPanel = ({
                     <div className="min-w-0 flex-1 space-y-1">
                       <p className="text-xs font-semibold text-foreground">Send invitation emails</p>
                       <p className="text-[10px] leading-snug text-muted-foreground">
-                        Each person gets the share link and the password you enter. They are added to the access list
-                        and invite-only is turned on. Return visits still use email + one-time code.
+                        Each person gets the share link and the room password (the one you entered under Room documents
+                        on this device). They are added to the access list and invite-only is turned on. The email code
+                        only proves their inbox — it does not decrypt files.
                       </p>
                       <p className="flex flex-wrap items-center gap-x-1 text-[10px] text-muted-foreground">
                         <span className="font-medium text-foreground">Link in email:</span>
@@ -958,26 +975,26 @@ export const VaultOwnerPanel = ({
                       </p>
                     ) : null}
                   </Field>
-                  <Field>
-                    <FieldLabel htmlFor="invite-room-password" className="text-xs">
-                      Room password to include in the email
-                    </FieldLabel>
-                    <Input
-                      id="invite-room-password"
-                      type="password"
-                      autoComplete="off"
-                      className="text-sm"
-                      value={invitePasswordDraft}
-                      onChange={(e) => setInvitePasswordDraft(e.target.value)}
-                      placeholder="Same password recipients use to decrypt files"
-                    />
-                  </Field>
+                  {!inviteVaultPasswordReady ? (
+                    <p className="rounded-md border border-amber-500/25 bg-amber-500/[0.06] px-2.5 py-2 text-[10px] leading-snug text-amber-950 dark:text-amber-200">
+                      Enter your room password under <strong>Room documents</strong> first (8+ characters, same one you
+                      use to encrypt files). This browser remembers it for previews and invite emails only — not on our
+                      servers.
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground">
+                      Room password for this send comes from <strong>Room documents</strong> on this device.
+                    </p>
+                  )}
                   <Button
                     type="button"
                     size="sm"
                     className="w-full sm:w-auto"
                     disabled={
-                      isPending || inviteTooMany || inviteTokensUnbounded.length === 0 || !invitePasswordDraft.trim()
+                      isPending ||
+                      inviteTooMany ||
+                      inviteTokensUnbounded.length === 0 ||
+                      !inviteVaultPasswordReady
                     }
                     onClick={() =>
                       startTransition(() => {
