@@ -294,9 +294,7 @@ export default function PricingPage() {
                     <p className="mt-1 text-xs text-[var(--tkn-text-fine)]">
                       Planned from {plan.priceMonthly}
                       {plan.period}
-                      {plan.priceAnnual !== plan.priceMonthly ? (
-                        <span> · {plan.priceAnnual}/mo billed annually</span>
-                      ) : null}
+                      <span> · {plan.priceAnnual}/mo billed annually</span>
                     </p>
                   </div>
                 ) : (
@@ -310,20 +308,11 @@ export default function PricingPage() {
 
                 <p className="mt-3 text-sm leading-relaxed text-[var(--tkn-text-support)]">{plan.description}</p>
 
-                <Button
-                  asChild={plan.ctaHref !== "#"}
-                  variant={plan.featured || plan.accent ? "default" : "outline"}
-                  className="mt-6 w-full"
-                  size="lg"
-                >
-                  {plan.ctaHref === "#" ? (
-                    <span>{plan.cta}</span>
-                  ) : (
-                    <Link href={plan.ctaHref}>
-                      {plan.cta}
-                      <ArrowRight data-icon="inline-end" className="size-4" />
-                    </Link>
-                  )}
+                <Button asChild variant={plan.featured || plan.accent ? "default" : "outline"} className="mt-6 w-full" size="lg">
+                  <Link href={plan.ctaHref}>
+                    {plan.cta}
+                    <ArrowRight data-icon="inline-end" className="size-4" />
+                  </Link>
                 </Button>
 
                 <Separator className="my-6" />
@@ -334,7 +323,7 @@ export default function PricingPage() {
                     const isSoon =
                       (key === "customDomain" && plan.comingSoon) ||
                       (key === "boardMinutes" && plan.name !== "Unicorn") ||
-                      (key === "emailSupport" && plan.comingSoon && plan.name !== "Free");
+                      (key === "emailSupport" && plan.comingSoon);
                     return (
                       <li key={key} className="flex items-start justify-between gap-3">
                         <span className="text-[var(--tkn-text-support)]">{label}</span>
@@ -402,7 +391,7 @@ export default function PricingPage() {
                       const isSoon =
                         (key === "customDomain" && plan.comingSoon) ||
                         (key === "boardMinutes" && plan.name !== "Unicorn") ||
-                        (key === "emailSupport" && plan.comingSoon && plan.name !== "Free");
+                        (key === "emailSupport" && plan.comingSoon);
                       return (
                         <td
                           key={plan.name}
