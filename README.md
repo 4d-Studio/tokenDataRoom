@@ -63,10 +63,12 @@ Browser (React 19)          Next.js 15 App Router
 ### Installation
 
 ```bash
-git clone https://github.com/Tarzelf/openDataRoom.git
-cd openDataRoom
+git clone https://github.com/4d-Studio/tokenDataRoom.git
+cd tokenDataRoom
 pnpm install
 ```
+
+Use `.env.example` as the template for `.env.local`. **Never commit `.env.local`** (it is gitignored); it may hold production-like secrets during local dev.
 
 ### Local Development
 
@@ -90,6 +92,8 @@ cp .env.example .env.local
 | `BLOB_READ_WRITE_TOKEN` | No | Optional Vercel Blob (used only if S3/Railway bucket env is not set). |
 | `SENDGRID_API_KEY` | No | SendGrid API key for email delivery. Without it, magic codes print to the console. |
 | `SENDGRID_FROM_EMAIL` | No | Verified sender email for OTP delivery. |
+
+See [SECURITY.md](./SECURITY.md) for vulnerability reporting and a short pre-release secrets checklist.
 
 ---
 

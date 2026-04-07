@@ -28,12 +28,12 @@ describe("getPublicAppBaseUrl", () => {
 
   it("uses NEXT_PUBLIC_SITE_URL over bogus request.url (non-development)", () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://opendataroom-production.up.railway.app");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://example-dataroom.up.railway.app");
     vi.stubEnv("SITE_URL", "");
     vi.stubEnv("RAILWAY_PUBLIC_DOMAIN", "");
 
     const req = new Request("http://0.0.0.0:8080/api/vaults", { method: "POST" });
-    expect(getPublicAppBaseUrl(req)).toBe("https://opendataroom-production.up.railway.app");
+    expect(getPublicAppBaseUrl(req)).toBe("https://example-dataroom.up.railway.app");
 
     vi.unstubAllEnvs();
   });
@@ -42,10 +42,10 @@ describe("getPublicAppBaseUrl", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
     vi.stubEnv("SITE_URL", "");
-    vi.stubEnv("RAILWAY_PUBLIC_DOMAIN", "opendataroom-production.up.railway.app");
+    vi.stubEnv("RAILWAY_PUBLIC_DOMAIN", "example-dataroom.up.railway.app");
 
     const req = new Request("http://0.0.0.0:8080/api/vaults");
-    expect(getPublicAppBaseUrl(req)).toBe("https://opendataroom-production.up.railway.app");
+    expect(getPublicAppBaseUrl(req)).toBe("https://example-dataroom.up.railway.app");
 
     vi.unstubAllEnvs();
   });
@@ -56,10 +56,10 @@ describe("getPublicAppBaseUrl", () => {
     vi.stubEnv("RAILWAY_PUBLIC_DOMAIN", "");
 
     const h = new Headers();
-    h.set("x-forwarded-host", "opendataroom-production.up.railway.app");
+    h.set("x-forwarded-host", "example-dataroom.up.railway.app");
     h.set("x-forwarded-proto", "https");
     const req = new Request("http://0.0.0.0:8080/api/vaults", { headers: h });
-    expect(getPublicAppBaseUrl(req)).toBe("https://opendataroom-production.up.railway.app");
+    expect(getPublicAppBaseUrl(req)).toBe("https://example-dataroom.up.railway.app");
 
     vi.unstubAllEnvs();
   });
@@ -83,10 +83,10 @@ describe("shortenUrlForDisplay", () => {
 
   it("middle-ellipsis long host+path", () => {
     const u =
-      "https://opendataroom-production.up.railway.app/s/fm-30fbb408f6ef?key=abc123secret";
+      "https://example-dataroom.up.railway.app/s/fm-30fbb408f6ef?key=abc123secret";
     const out = shortenUrlForDisplay(u, 40);
     expect(out.length).toBeLessThanOrEqual(40);
     expect(out).toContain("…");
-    expect(out.startsWith("opendataroom")).toBe(true);
+    expect(out.startsWith("example-dataroom")).toBe(true);
   });
 });
