@@ -76,7 +76,12 @@ export async function GET(
     return NextResponse.json({ error: "File not found." }, { status: 404 });
   }
 
-  const encryptedFile = await storage.getVaultFile(slug, fileId);
+  let encryptedFile = await storage.getVaultFile(slug, fileId);
+  // Rooms created with encrypted upload on POST /api/vaults store a single blob at payloadPath.
+  // vaultFilesList() exposes that as id "legacy-primary", but storage is not under files/<id>.bin.
+  if (!encryptedFile && fileId === "legacy-primary") {
+    encryptedFile = await storage.getEncryptedFile(slug);
+  }
   if (!encryptedFile) {
     return NextResponse.json(
       { error: "The encrypted file could not be retrieved." },

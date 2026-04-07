@@ -29,6 +29,7 @@ import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
 import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
 import {
+  vaultFilesList,
   vaultHasEncryptedDocument,
   type VaultAcceptanceRecord,
   type VaultRecord,
@@ -187,7 +188,7 @@ export function ShareExperience({
   const autoDecryptAttempted = useRef(false);
   useEffect(() => {
     if (autoDecryptAttempted.current) return;
-    if (!fetchedFiles || !filesList.length) return;
+    if (!vaultFilesList(metadata).length) return;
     if (Object.keys(decryptedFiles).length > 0) return;
     if (!accessGranted && (metadata.requiresNda || metadata.restrictRecipientEmails)) return;
     try {
@@ -200,7 +201,7 @@ export function ShareExperience({
       // sessionStorage unavailable
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchedFiles, filesList.length, accessGranted]);
+  }, [metadata, accessGranted]);
 
   useEffect(
     () => () => {
@@ -269,7 +270,16 @@ export function ShareExperience({
       startTransition(async () => {
         setError("");
         try {
-          const res = await fetch(`/api/vaults/${metadata.slug}/bundle`, { method: "GET" });
+          const manifest = vaultFilesList(metadata);
+          const primary = manifest[0];
+          if (!primary) {
+            throw new Error("No encrypted file in this room yet.");
+          }
+          const pw = password.trim();
+          const params = new URLSearchParams({ fileId: primary.id });
+          const res = await fetch(`/api/vaults/${metadata.slug}/bundle?${params}`, {
+            method: "GET",
+          });
           if (!res.ok) {
             const data = (await res.json().catch(() => ({}))) as { error?: string };
             throw new Error(data.error || "Unable to fetch document.");
@@ -277,19 +287,24 @@ export function ShareExperience({
           const encryptedBytes = await res.arrayBuffer();
           const decrypted = await decryptFile({
             encryptedBytes,
-            password,
-            salt: metadata.salt,
-            iv: metadata.iv,
-            pbkdf2Iterations: metadata.pbkdf2Iterations,
+            password: pw,
+            salt: primary.salt,
+            iv: primary.iv,
+            pbkdf2Iterations: primary.pbkdf2Iterations,
           });
           if (objectUrl) URL.revokeObjectURL(objectUrl);
-          const blob = new Blob([decrypted], { type: metadata.mimeType });
+          const blob = new Blob([decrypted], { type: primary.mimeType });
           const url = URL.createObjectURL(blob);
           setObjectUrl(url);
-          setDownloadName(metadata.fileName);
+          setDownloadName(primary.name);
           setSuccess("Document decrypted locally. Review it below or download it.");
 
-          // Log decrypt event
+          try {
+            sessionStorage.setItem(`tkn_share_pw_${metadata.slug}`, pw);
+          } catch {
+            /* sessionStorage unavailable */
+          }
+
           void fetch(`/api/vaults/${metadata.slug}/view`, {
             method: "PUT",
             headers: { "content-type": "application/json" },
@@ -425,34 +440,34 @@ export function ShareExperience({
     startTransition(async () => {
       setError("");
       try {
+        const pw = password.trim();
+
         // Revoke previous blob URLs
         for (const { objectUrl: u } of Object.values(decryptedFiles)) {
           URL.revokeObjectURL(u);
         }
         setDecryptedFiles({});
 
-        // Fetch all encrypted files in parallel
-        const files = filesList.length ? filesList : [{ id: "legacy-primary", name: metadata.fileName, mimeType: metadata.mimeType, sizeBytes: metadata.fileSize }];
+        // Always use vaultFilesList(metadata) so file IDs match storage (never rely on synthetic
+        // "legacy-primary" when the server only knows UUID fileIds — that caused 404s and bad decrypt).
+        const manifest = vaultFilesList(metadata);
+        if (!manifest.length) {
+          throw new Error("No encrypted files in this room yet.");
+        }
 
         const results = await Promise.allSettled(
-          files.map(async (file) => {
+          manifest.map(async (file) => {
             const params = new URLSearchParams({ fileId: file.id });
             const res = await fetch(`/api/vaults/${metadata.slug}/bundle?${params}`, { method: "GET" });
             if (!res.ok) throw new Error(`Unable to fetch ${file.name}.`);
             const encryptedBytes = await res.arrayBuffer();
 
-            // Use per-file encryption params (vaultFiles) or fall back to legacy metadata fields
-            const fileEntry = filesList.find((f) => f.id === file.id);
-            const salt = fileEntry ? metadata.vaultFiles?.find((vf) => vf.id === file.id)?.salt ?? metadata.salt : metadata.salt;
-            const iv = fileEntry ? metadata.vaultFiles?.find((vf) => vf.id === file.id)?.iv ?? metadata.iv : metadata.iv;
-            const pbkdf2Iterations = fileEntry ? metadata.vaultFiles?.find((vf) => vf.id === file.id)?.pbkdf2Iterations ?? metadata.pbkdf2Iterations : metadata.pbkdf2Iterations;
-
             const decrypted = await decryptFile({
               encryptedBytes,
-              password,
-              salt,
-              iv,
-              pbkdf2Iterations,
+              password: pw,
+              salt: file.salt,
+              iv: file.iv,
+              pbkdf2Iterations: file.pbkdf2Iterations,
             });
             const blob = new Blob([decrypted], { type: file.mimeType });
             const url = URL.createObjectURL(blob);
@@ -482,9 +497,8 @@ export function ShareExperience({
         // Show grid view (don't auto-zoom into first file)
         setObjectUrl(null);
 
-        // Save password so files auto-decrypt on refresh
         try {
-          sessionStorage.setItem(`tkn_share_pw_${metadata.slug}`, password);
+          sessionStorage.setItem(`tkn_share_pw_${metadata.slug}`, pw);
         } catch {
           // sessionStorage may be unavailable in some contexts
         }
