@@ -450,22 +450,56 @@ export default async function Home() {
       </section>
 
       {/* ── Footer — main bg ──────────────────────────── */}
-      <footer className="mx-auto max-w-[1280px] px-5 py-8 sm:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-xs text-[var(--tkn-text-fine)]">
-            © {new Date().getFullYear()} Token. All rights reserved.
-          </p>
-          <nav className="flex flex-wrap gap-4 text-xs text-[var(--tkn-text-fine)]">
-            <Link href="/privacy" className="hover:text-foreground">
-              Privacy Policy
-            </Link>
-            <Link href="/dpa" className="hover:text-foreground">
-              DPA
-            </Link>
-            <Link href="/terms" className="hover:text-foreground">
-              Terms
-            </Link>
-          </nav>
+      <footer className="border-t border-border/60 bg-[var(--color-background)]">
+        <div className="mx-auto max-w-[1280px] px-5 py-10 sm:px-8">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="lg:col-span-2">
+              <BrandMark />
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--tkn-text-support)]">
+                Password-protected deal rooms for outsiders. Encrypt in the browser, share one link, track every open.
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Product</p>
+              <nav className="mt-3 flex flex-col gap-2 text-sm text-[var(--tkn-text-support)]">
+                <Link href="/pricing" className="hover:text-foreground">
+                  Pricing
+                </Link>
+                <Link href="/#how-it-works" className="hover:text-foreground">
+                  How it works
+                </Link>
+                <Link href="/login" className="hover:text-foreground">
+                  Sign in
+                </Link>
+                <Link href="/new" className="hover:text-foreground">
+                  Create a room
+                </Link>
+              </nav>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Legal</p>
+              <nav className="mt-3 flex flex-col gap-2 text-sm text-[var(--tkn-text-support)]">
+                <Link href="/privacy" className="hover:text-foreground">
+                  Privacy Policy
+                </Link>
+                <Link href="/dpa" className="hover:text-foreground">
+                  DPA
+                </Link>
+                <Link href="/terms" className="hover:text-foreground">
+                  Terms of Service
+                </Link>
+              </nav>
+            </div>
+          </div>
+          <Separator className="my-8 opacity-60" />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-[var(--tkn-text-fine)]">
+              © {new Date().getFullYear()} Token. All rights reserved.
+            </p>
+            <p className="text-xs text-[var(--tkn-text-fine)]">
+              Built for M&amp;A, legal, and fund ops teams.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
