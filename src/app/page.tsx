@@ -1,20 +1,9 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  Check,
-  Clock,
-  Download,
-  Eye,
-  FileText,
-  Lock,
-  Shield,
-  ShieldCheck,
-  Upload,
-  X,
-} from "lucide-react";
+import { ArrowRight, Check, Eye, Lock, Shield, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 import { BrandMark } from "@/components/dataroom/brand-mark";
+import { LandingHeroVideo } from "@/components/dataroom/landing-hero-video";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
 
@@ -104,94 +93,6 @@ const faqItems = [
   },
 ] as const;
 
-/* ── Fake room mockup for hero right ──────────────────────── */
-
-function HeroMockup() {
-  return (
-    <div className="w-full overflow-hidden rounded-2xl border border-border/80 bg-white shadow-lg">
-      {/* Title bar */}
-      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3.5">
-        <div>
-          <p className="text-[13px] font-semibold text-foreground">Series A Diligence</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">3 files · 2 viewers · NDA required</p>
-        </div>
-        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-          Active
-        </span>
-      </div>
-
-      {/* Files */}
-      <div className="border-b border-border/60 px-5 py-3">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Files</p>
-        {[
-          { name: "cap_table_q4.xlsx", size: "84 KB" },
-          { name: "pitch_deck_v3.pdf", size: "2.1 MB" },
-          { name: "financial_model.xlsx", size: "340 KB" },
-        ].map((f) => (
-          <div key={f.name} className="flex items-center justify-between py-1.5">
-            <div className="flex items-center gap-2">
-              <FileText className="size-3.5 text-muted-foreground" />
-              <span className="text-[12px] text-foreground">{f.name}</span>
-            </div>
-            <span className="text-[11px] tabular-nums text-muted-foreground">{f.size}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center gap-4 border-b border-border/60 px-5 py-3">
-        <div className="flex items-center gap-1.5">
-          <div className="size-3.5 rounded-sm border border-primary/40 bg-primary/10" />
-          <span className="text-[11px] text-foreground">NDA required</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Lock className="size-3 text-muted-foreground" />
-          <span className="text-[11px] text-foreground">Password protected</span>
-        </div>
-      </div>
-
-      {/* Activity log */}
-      <div className="px-5 py-3">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Activity
-        </p>
-        {[
-          {
-            icon: Eye,
-            text: "Sarah opened share page",
-            time: "2:14 PM",
-            color: "text-muted-foreground",
-          },
-          {
-            icon: ShieldCheck,
-            text: "Sarah signed NDA",
-            time: "2:15 PM",
-            color: "text-[var(--color-accent)]",
-          },
-          {
-            icon: Download,
-            text: "David downloaded cap_table.pdf",
-            time: "1:42 PM",
-            color: "text-muted-foreground",
-          },
-          {
-            icon: Clock,
-            text: "Access revoked by owner",
-            time: "Yesterday",
-            color: "text-destructive",
-          },
-        ].map((row) => (
-          <div key={row.text} className="flex items-start gap-2 py-1.5">
-            <row.icon className={`mt-0.5 size-3 shrink-0 ${row.color}`} />
-            <span className="flex-1 text-[11px] leading-snug text-foreground">{row.text}</span>
-            <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{row.time}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /* ── Page ──────────────────────────────────────────────────── */
 
 export default async function Home() {
@@ -228,9 +129,9 @@ export default async function Home() {
       </header>
 
       {/* ── Hero — main bg ────────────────────────────── */}
-      <section className="pb-16 pt-10 sm:pb-20 sm:pt-16">
-        <div className="mx-auto grid max-w-[1280px] items-center gap-10 px-5 sm:px-8 lg:grid-cols-[5fr_6fr] lg:gap-16">
-          <div className="max-w-xl">
+      <section className="hero-shell pb-16 pt-10 sm:pb-20 sm:pt-16">
+        <div className="mx-auto grid max-w-[1280px] items-center gap-8 px-5 sm:gap-10 sm:px-8 lg:grid-cols-[5fr_6fr] lg:items-stretch lg:gap-14">
+          <div className="max-w-xl lg:py-1">
             <p className="text-[0.8rem] font-semibold text-[var(--tkn-text-support)]">
               Secure external file sharing for deals, legal, and diligence
             </p>
@@ -262,8 +163,17 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="hidden lg:block">
-            <HeroMockup />
+          <div className="w-full min-w-0">
+            <div className="overflow-hidden rounded-2xl border border-border/80 bg-white shadow-lg ring-1 ring-black/[0.04]">
+              <LandingHeroVideo
+                videoSrc="/intro.mp4"
+                posterSrc="/banner.jpg"
+                ariaLabel="Token product overview: secure deal rooms and encrypted sharing"
+              />
+            </div>
+            <p className="mt-2 text-center text-[0.65rem] text-[var(--tkn-text-fine)] lg:text-left">
+              Muted autoplay · no audio
+            </p>
           </div>
         </div>
       </section>
