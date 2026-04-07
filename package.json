@@ -13,7 +13,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "node scripts/db-migrate.mjs"
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "secrets:scan": "bash scripts/secret-scan-trufflehog.sh",
+    "secrets:scan:ci": "bash scripts/secret-scan-trufflehog.sh --fail"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1023.0",
