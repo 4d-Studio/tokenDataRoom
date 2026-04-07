@@ -13,13 +13,16 @@ import {
   LockKeyhole,
   Mail,
   MapPin,
+  Send,
   ShieldCheck,
   Trash2,
+  Users,
 } from "lucide-react";
 
 import { CopyButton } from "@/components/dataroom/copy-button";
 import { VaultOwnerDocumentUpload } from "@/components/dataroom/vault-owner-document-upload";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -33,6 +36,11 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { formatDateTime, shortenUrlForDisplay } from "@/lib/dataroom/helpers";
+import {
+  MAX_ALLOWED_RECIPIENT_EMAILS,
+  MAX_RECIPIENT_INVITES_PER_SEND,
+  normalizeRecipientEmailList,
+} from "@/lib/dataroom/vault-recipient-access";
 import {
   vaultHasEncryptedDocument,
   type VaultAcceptanceRecord,
@@ -261,7 +269,8 @@ function OwnerLinkCard({
   );
 }
 
-function parseOwnerEmailList(raw: string): string[] {
+/** Parse valid emails from pasted text; no cap (use slice when saving). */
+function parseOwnerEmailTokens(raw: string): string[] {
   const tokens = raw
     .split(/[\s,;]+/g)
     .map((t) => t.trim().toLowerCase())
@@ -273,9 +282,12 @@ function parseOwnerEmailList(raw: string): string[] {
     if (seen.has(t)) continue;
     seen.add(t);
     out.push(t);
-    if (out.length >= 100) break;
   }
   return out;
+}
+
+function parseOwnerEmailList(raw: string): string[] {
+  return parseOwnerEmailTokens(raw).slice(0, MAX_ALLOWED_RECIPIENT_EMAILS);
 }
 
 function SectionShell({
@@ -370,6 +382,26 @@ export const VaultOwnerPanel = ({
     const pathSlug = currentVanitySlug ?? metadata.slug;
     return `${shareBase}/s/${pathSlug}`;
   }, [shareBase, currentVanitySlug, metadata.slug]);
+
+  const savedAllowedList = metadata.allowedRecipientEmails ?? [];
+  const allowedParsed = useMemo(
+    () => parseOwnerEmailList(allowedEmailsDraft),
+    [allowedEmailsDraft],
+  );
+  const inviteTokensUnbounded = useMemo(
+    () => parseOwnerEmailTokens(inviteBatchDraft),
+    [inviteBatchDraft],
+  );
+  const allowedListDirty = useMemo(() => {
+    const a = normalizeRecipientEmailList(allowedParsed);
+    const b = normalizeRecipientEmailList(savedAllowedList);
+    if (a.length !== b.length) return true;
+    const as = [...a].sort();
+    const bs = [...b].sort();
+    return as.some((v, i) => v !== bs[i]);
+  }, [allowedParsed, savedAllowedList]);
+  const slotsRemaining = Math.max(0, MAX_ALLOWED_RECIPIENT_EMAILS - savedAllowedList.length);
+  const inviteTooMany = inviteTokensUnbounded.length > MAX_RECIPIENT_INVITES_PER_SEND;
 
   const trimmedVanityInput = vanitySlug.trim().toLowerCase();
   const needsVanityRemoteCheck =
@@ -621,9 +653,14 @@ export const VaultOwnerPanel = ({
   const sendRecipientInvites = async () => {
     setError("");
     setInviteFeedback("");
-    const emails = parseOwnerEmailList(inviteBatchDraft);
+    const emails = parseOwnerEmailTokens(inviteBatchDraft);
     if (emails.length === 0) {
       throw new Error("Add at least one email address to invite.");
+    }
+    if (emails.length > MAX_RECIPIENT_INVITES_PER_SEND) {
+      throw new Error(
+        `You can invite up to ${MAX_RECIPIENT_INVITES_PER_SEND} people per send. Split into multiple batches or trim the list.`,
+      );
     }
     const pw = invitePasswordDraft.trim();
     if (!pw) {
@@ -655,7 +692,7 @@ export const VaultOwnerPanel = ({
     setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
     setInviteBatchDraft("");
     setInvitePasswordDraft("");
-    setInviteFeedback(`Invite email processed for ${emails.length} address(es).`);
+    setInviteFeedback(`Invites completed for ${emails.length} recipient${emails.length === 1 ? "" : "s"}.`);
     setTimeout(() => setInviteFeedback(""), 5000);
   };
 
@@ -743,91 +780,188 @@ export const VaultOwnerPanel = ({
                 />
               </div>
 
-              <div className="space-y-3 border-t border-border pt-3">
-                <div className="flex gap-2">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
-                    <Mail className="size-4" aria-hidden />
+              <div className="space-y-4 border-t border-border pt-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex gap-2.5">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
+                      <Users className="size-4" aria-hidden />
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Invite-only access
+                      </p>
+                      <p className="max-w-prose text-[11px] leading-snug text-muted-foreground">
+                        Control who can request a code and download files. Invites add people to the list, turn this on,
+                        and email them the link plus the password you type (password is not stored on our servers).
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Invite-only (optional)
-                    </p>
-                    <p className="text-[11px] leading-snug text-muted-foreground">
-                      Restrict who can request an access code and download ciphertext to addresses you add.
-                      Invite emails include the share link and room password you enter below; return visits still use the same email plus a one-time code.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-muted/20 px-3 py-2">
-                  <label
-                    htmlFor="restrict-recipient-emails"
-                    className="cursor-pointer text-xs leading-snug text-foreground"
+                  <Badge
+                    variant={metadata.restrictRecipientEmails ? "default" : "secondary"}
+                    className="shrink-0 text-[10px] font-semibold uppercase tracking-wide"
                   >
-                    Only invited emails can open this room
-                  </label>
-                  <Switch
-                    id="restrict-recipient-emails"
-                    checked={Boolean(metadata.restrictRecipientEmails)}
-                    disabled={isPending}
-                    onCheckedChange={(enabled) =>
-                      startTransition(() => {
-                        void setRecipientRestriction(enabled).catch((e: unknown) => {
-                          setError(e instanceof Error ? e.message : "Unable to update setting.");
-                        });
-                      })
-                    }
-                  />
+                    {metadata.restrictRecipientEmails ? "Enforced" : "Off"}
+                  </Badge>
                 </div>
 
-                <Field>
-                  <FieldLabel htmlFor="allowed-recipient-emails">Invited addresses (up to 100)</FieldLabel>
-                  <Textarea
-                    id="allowed-recipient-emails"
-                    className="min-h-[5.5rem] resize-y font-mono text-xs"
-                    value={allowedEmailsDraft}
-                    onChange={(e) => setAllowedEmailsDraft(e.target.value)}
-                    placeholder={"one@company.com\nother@company.com"}
-                    maxLength={8000}
-                  />
-                  <p className="mt-1 text-[10px] text-muted-foreground">
-                    {(metadata.allowedRecipientEmails ?? []).length} saved
-                    {metadata.restrictRecipientEmails ? " · restriction is on" : " · turn restriction on to enforce"}.
-                  </p>
-                </Field>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={isPending}
-                  onClick={() =>
-                    startTransition(() => {
-                      void saveAllowedRecipientEmails().catch((e: unknown) => {
-                        setError(e instanceof Error ? e.message : "Unable to save list.");
-                      });
-                    })
-                  }
-                >
-                  Save email list
-                </Button>
+                {/* — Access list — */}
+                <div className="space-y-3 rounded-xl border border-border/80 bg-muted/15 p-3.5 sm:p-4">
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/80 px-3 py-2">
+                    <label
+                      htmlFor="restrict-recipient-emails"
+                      className="cursor-pointer text-xs font-medium leading-snug text-foreground"
+                    >
+                      Only allow invited addresses
+                    </label>
+                    <Switch
+                      id="restrict-recipient-emails"
+                      checked={Boolean(metadata.restrictRecipientEmails)}
+                      disabled={isPending}
+                      onCheckedChange={(enabled) =>
+                        startTransition(() => {
+                          void setRecipientRestriction(enabled).catch((e: unknown) => {
+                            setError(e instanceof Error ? e.message : "Unable to update setting.");
+                          });
+                        })
+                      }
+                    />
+                  </div>
 
-                <div className="rounded-lg border border-dashed border-border/80 bg-muted/10 p-3 space-y-2">
-                  <p className="text-[11px] font-medium text-foreground">Send invite emails</p>
-                  <p className="text-[10px] leading-snug text-muted-foreground">
-                    Adds addresses to the list (if missing), turns restriction on, and emails each person the current share link plus the password you type. The password is not stored on our servers.
-                  </p>
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <FieldLabel htmlFor="allowed-recipient-emails" className="text-xs font-semibold">
+                        Who can access
+                      </FieldLabel>
+                      <span className="text-[10px] tabular-nums text-muted-foreground">
+                        {savedAllowedList.length} saved · {slotsRemaining} slot
+                        {slotsRemaining !== 1 ? "s" : ""} left (cap {MAX_ALLOWED_RECIPIENT_EMAILS})
+                      </span>
+                    </div>
+                    {savedAllowedList.length > 0 ? (
+                      <div className="mt-2 flex max-h-24 flex-wrap gap-1.5 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-2">
+                        {savedAllowedList.map((e) => (
+                          <Badge
+                            key={e}
+                            variant="outline"
+                            className="max-w-full truncate font-mono text-[10px] font-normal"
+                            title={e}
+                          >
+                            {e}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-2 rounded-md border border-dashed border-border/70 bg-background/40 px-2.5 py-2 text-[10px] text-muted-foreground">
+                        No saved addresses yet. Paste below, save, then send invites — or send invites to add people in
+                        one step.
+                      </p>
+                    )}
+                  </div>
+
                   <Field>
-                    <FieldLabel htmlFor="invite-batch-emails">Emails to invite now</FieldLabel>
+                    <Textarea
+                      id="allowed-recipient-emails"
+                      aria-label="Edit invited email addresses"
+                      className="min-h-[6rem] resize-y font-mono text-xs leading-relaxed"
+                      value={allowedEmailsDraft}
+                      onChange={(e) => setAllowedEmailsDraft(e.target.value)}
+                      placeholder={
+                        "Paste or type addresses — one per line, or separated by commas.\n" +
+                        "Example: counsel@firm.com, investor@lp.com"
+                      }
+                      maxLength={8000}
+                    />
+                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                      <span>
+                        <span className="font-medium text-foreground">{allowedParsed.length}</span> valid in editor
+                        {allowedParsed.length > MAX_ALLOWED_RECIPIENT_EMAILS ? (
+                          <span className="text-destructive"> · only first {MAX_ALLOWED_RECIPIENT_EMAILS} will save</span>
+                        ) : null}
+                      </span>
+                      <span>
+                        {metadata.restrictRecipientEmails ? (
+                          <span className="text-foreground">List is enforced</span>
+                        ) : (
+                          <span>Turn on &quot;Only allow invited&quot; to block everyone else</span>
+                        )}
+                      </span>
+                    </div>
+                  </Field>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={allowedListDirty ? "default" : "outline"}
+                      disabled={isPending || !allowedListDirty}
+                      onClick={() =>
+                        startTransition(() => {
+                          void saveAllowedRecipientEmails().catch((e: unknown) => {
+                            setError(e instanceof Error ? e.message : "Unable to save list.");
+                          });
+                        })
+                      }
+                    >
+                      Save list
+                    </Button>
+                    {allowedListDirty ? (
+                      <span className="self-center text-[10px] text-muted-foreground">Unsaved changes</span>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* — Send invites — */}
+                <div className="space-y-3 rounded-xl border border-dashed border-[var(--color-accent)]/35 bg-[var(--color-accent)]/[0.04] p-3.5 sm:p-4">
+                  <div className="flex gap-2.5">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--color-accent)]/25 bg-background text-[var(--color-accent)]">
+                      <Send className="size-4" aria-hidden />
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="text-xs font-semibold text-foreground">Send invitation emails</p>
+                      <p className="text-[10px] leading-snug text-muted-foreground">
+                        Each person gets the share link and the password you enter. They are added to the access list
+                        and invite-only is turned on. Return visits still use email + one-time code.
+                      </p>
+                      <p className="flex flex-wrap items-center gap-x-1 text-[10px] text-muted-foreground">
+                        <span className="font-medium text-foreground">Link in email:</span>
+                        <code className="max-w-full truncate rounded bg-muted/80 px-1 py-px font-mono text-[10px] text-foreground">
+                          {shortenUrlForDisplay(effectiveShareUrl, 56)}
+                        </code>
+                      </p>
+                    </div>
+                  </div>
+
+                  <Field>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <FieldLabel htmlFor="invite-batch-emails" className="text-xs">
+                        Recipients (this send)
+                      </FieldLabel>
+                      <span
+                        className={cn(
+                          "text-[10px] tabular-nums",
+                          inviteTooMany ? "font-medium text-destructive" : "text-muted-foreground",
+                        )}
+                      >
+                        {inviteTokensUnbounded.length} address
+                        {inviteTokensUnbounded.length !== 1 ? "es" : ""} · max {MAX_RECIPIENT_INVITES_PER_SEND} per send
+                      </span>
+                    </div>
                     <Textarea
                       id="invite-batch-emails"
-                      className="min-h-[3.5rem] resize-y font-mono text-xs"
+                      className="min-h-[4rem] resize-y font-mono text-xs leading-relaxed"
                       value={inviteBatchDraft}
                       onChange={(e) => setInviteBatchDraft(e.target.value)}
-                      placeholder="investor@firm.com"
+                      placeholder={"investor@firm.com\nops@company.com"}
                     />
+                    {inviteTooMany ? (
+                      <p className="mt-1.5 text-[10px] font-medium text-destructive">
+                        Too many for one batch. Send {MAX_RECIPIENT_INVITES_PER_SEND} or fewer, or run multiple sends.
+                      </p>
+                    ) : null}
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="invite-room-password">Room password for this send</FieldLabel>
+                    <FieldLabel htmlFor="invite-room-password" className="text-xs">
+                      Room password to include in the email
+                    </FieldLabel>
                     <Input
                       id="invite-room-password"
                       type="password"
@@ -835,13 +969,16 @@ export const VaultOwnerPanel = ({
                       className="text-sm"
                       value={invitePasswordDraft}
                       onChange={(e) => setInvitePasswordDraft(e.target.value)}
-                      placeholder="Same password recipients use to decrypt"
+                      placeholder="Same password recipients use to decrypt files"
                     />
                   </Field>
                   <Button
                     type="button"
                     size="sm"
-                    disabled={isPending}
+                    className="w-full sm:w-auto"
+                    disabled={
+                      isPending || inviteTooMany || inviteTokensUnbounded.length === 0 || !invitePasswordDraft.trim()
+                    }
                     onClick={() =>
                       startTransition(() => {
                         void sendRecipientInvites().catch((e: unknown) => {
@@ -850,13 +987,16 @@ export const VaultOwnerPanel = ({
                       })
                     }
                   >
-                    <Mail className="size-3.5" />
-                    Send invites
+                    <Send className="size-3.5" />
+                    Send invites now
                   </Button>
                 </div>
 
                 {inviteFeedback ? (
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400">{inviteFeedback}</p>
+                  <div className="flex items-start gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300">
+                    <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                    <span>{inviteFeedback}</span>
+                  </div>
                 ) : null}
               </div>
 

@@ -15,6 +15,7 @@ import { sendRoomInviteEmail } from "@/lib/dataroom/recipient-email";
 import { createEvent } from "@/lib/dataroom/types";
 import {
   clampRecipientEmailList,
+  MAX_RECIPIENT_INVITES_PER_SEND,
   normalizeRecipientEmailList,
 } from "@/lib/dataroom/vault-recipient-access";
 
@@ -75,7 +76,7 @@ const ownerPostSchema = z.discriminatedUnion("action", [
   z.object({
     ownerKey: z.string().min(32).max(128),
     action: z.literal("send_recipient_invites"),
-    emails: z.array(z.string().email()).min(1).max(25),
+    emails: z.array(z.string().email()).min(1).max(MAX_RECIPIENT_INVITES_PER_SEND),
     roomPassword: z.string().min(1).max(500),
     shareUrl: z.string().url().max(2048),
   }),

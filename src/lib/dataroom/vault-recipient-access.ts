@@ -3,7 +3,11 @@ import type { VaultAcceptanceRecord, VaultRecord } from "@/lib/dataroom/types";
 /** Stored on acceptance records created after email OTP when the room has no NDA. */
 export const EMAIL_GATE_NDA_VERSION = "tkn-email-verified-v1";
 
-const MAX_ALLOWED_RECIPIENT_EMAILS = 100;
+/** Allowed-address cap stored on room metadata. */
+export const MAX_ALLOWED_RECIPIENT_EMAILS = 100;
+
+/** Owner API accepts at most this many addresses per `send_recipient_invites` call. */
+export const MAX_RECIPIENT_INVITES_PER_SEND = 25;
 
 export function normalizeRecipientEmail(email: string): string {
   return email.trim().toLowerCase();
