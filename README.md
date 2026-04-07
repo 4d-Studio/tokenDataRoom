@@ -1,5 +1,7 @@
 # Token
 
+![Token — encrypted document rooms, one password-protected link](./public/banner.jpg)
+
 > Secure, encrypted document sharing rooms for deals, due diligence, and board communications.
 
 Token is a lightweight web app for sharing one sensitive document at a time through a calm, premium room experience. Documents are encrypted client-side with AES-256-GCM before they leave the browser — the server never holds plaintext files or encryption keys.

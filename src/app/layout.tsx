@@ -45,11 +45,20 @@ export const metadata: Metadata = {
     siteName,
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: "/banner.jpg",
+        width: 1280,
+        height: 720,
+        alt: `${siteName} — encrypted rooms, one link`,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: `${siteName} — Deal rooms for outsiders`,
     description: siteDescription,
+    images: ["/banner.jpg"],
   },
   robots: { index: true, follow: true },
 };
