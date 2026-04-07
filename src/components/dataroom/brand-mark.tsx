@@ -2,6 +2,6 @@
 export const BrandMark = () => (
   <div>
     <div className="text-base font-bold tracking-[-0.02em] text-foreground">Token</div>
-    <div className="tkn-fine leading-snug">Secure data rooms</div>
+    <div className="tkn-fine leading-snug">Deal rooms for outsiders</div>
   </div>
 );

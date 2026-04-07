@@ -19,6 +19,10 @@ import {
 } from "@/lib/dataroom/workspace-nda-access";
 import { createEvent, viewerBindingOnlySchema } from "@/lib/dataroom/types";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
+import {
+  isRecipientEmailAllowed,
+  recipientAccessError,
+} from "@/lib/dataroom/vault-recipient-access";
 
 export const runtime = "nodejs";
 
@@ -87,6 +91,16 @@ export async function POST(
       { error: "Workspace confidentiality agreement required first." },
       { status: 403 },
     );
+  }
+
+  if (metadata.restrictRecipientEmails) {
+    const list = metadata.allowedRecipientEmails ?? [];
+    if (list.length === 0) {
+      return NextResponse.json({ error: recipientAccessError.listEmpty }, { status: 403 });
+    }
+    if (!isRecipientEmailAllowed(metadata, ws.signerEmail)) {
+      return NextResponse.json({ error: recipientAccessError.notInvited }, { status: 403 });
+    }
   }
 
   const acceptedAt = new Date().toISOString();

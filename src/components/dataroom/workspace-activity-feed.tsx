@@ -96,6 +96,12 @@ const EVENT_CONFIG: Record<
     label: "Verified",
     action: "verified identity for",
   },
+  invite_sent: {
+    icon: Mail,
+    color: "text-[var(--color-accent)]",
+    label: "Invite sent",
+    action: "sent an invite for",
+  },
   files_decrypted: {
     icon: KeyRound,
     color: "text-[var(--color-accent)]",

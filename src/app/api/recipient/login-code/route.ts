@@ -19,6 +19,10 @@ import { sendRecipientMagicCode } from "@/lib/dataroom/recipient-email";
 import { getRequestContext } from "@/lib/dataroom/request-context";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { createEvent } from "@/lib/dataroom/types";
+import {
+  isRecipientEmailAllowed,
+  recipientAccessError,
+} from "@/lib/dataroom/vault-recipient-access";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -55,27 +59,39 @@ export async function POST(request: Request) {
   }
 
   try {
+    const storage = getVaultStorage();
+    const meta = await storage.getVaultMetadata(slug);
+    if (!meta) {
+      return NextResponse.json({ error: "Room not found." }, { status: 404 });
+    }
+    if (meta.status !== "active") {
+      return NextResponse.json(
+        { error: "This room is no longer accepting access." },
+        { status: 403 },
+      );
+    }
+    if (meta.restrictRecipientEmails) {
+      const list = meta.allowedRecipientEmails ?? [];
+      if (list.length === 0) {
+        return NextResponse.json({ error: recipientAccessError.listEmpty }, { status: 403 });
+      }
+      if (!isRecipientEmailAllowed(meta, email)) {
+        return NextResponse.json({ error: recipientAccessError.notInvited }, { status: 403 });
+      }
+    }
+
     // Ensure recipient account exists (created unverified)
     await getOrCreateRecipientAccount(email);
 
     // Create and store OTP
     const { code } = await createRecipientLoginCode(email, slug);
 
-    // Fetch room title for the email
-    let roomName = "your shared room";
-    try {
-      const storage = getVaultStorage();
-      const meta = await storage.getVaultMetadata(slug);
-      if (meta?.title) roomName = meta.title;
-    } catch {
-      // Non-fatal: email still goes out
-    }
+    const roomName = meta.title?.trim() ? meta.title : "your shared room";
 
     const delivery = await sendRecipientMagicCode(email, code, roomName);
 
     // Log access request event
     try {
-      const storage = getVaultStorage();
       await storage.appendEvent(
         slug,
         createEvent("access_requested", {

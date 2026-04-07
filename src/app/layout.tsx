@@ -17,7 +17,7 @@ const sansFont = Inter({
 export const siteName = "Token";
 
 const siteDescription =
-  "Token is a secure dataroom for deals, due diligence, and board communications. Password-protected rooms, optional NDAs, and client-side encryption.";
+  "Share sensitive files with outsiders—not your whole drive. Password-protected rooms, optional NDA, encryption in the browser before upload, and a clear activity trail.";
 
 function metadataBaseUrl(): URL {
   const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -34,13 +34,13 @@ function metadataBaseUrl(): URL {
 export const metadata: Metadata = {
   metadataBase: metadataBaseUrl(),
   title: {
-    default: `${siteName} — Secure data rooms`,
+    default: `${siteName} — Deal rooms for outsiders`,
     template: `%s · ${siteName}`,
   },
   description: siteDescription,
   applicationName: siteName,
   openGraph: {
-    title: `${siteName} — Secure data rooms`,
+    title: `${siteName} — Deal rooms for outsiders`,
     description: siteDescription,
     siteName,
     type: "website",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteName} — Secure data rooms`,
+    title: `${siteName} — Deal rooms for outsiders`,
     description: siteDescription,
   },
   robots: { index: true, follow: true },

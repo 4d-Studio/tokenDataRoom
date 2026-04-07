@@ -12,6 +12,7 @@ import { ProductPageIntro } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
 import { roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
+import { getPlanLimits } from "@/lib/dataroom/auth-store";
 import { describePlanForWorkspace } from "@/lib/dataroom/plan-descriptions";
 
 export const metadata: Metadata = {
@@ -40,6 +41,9 @@ export default async function WorkspaceSettingsPage() {
   const activityEvents = await getWorkspaceActivity();
   const rooms = await getWorkspaceRooms();
   const planInfo = describePlanForWorkspace(user.plan);
+  const limits = getPlanLimits(user.plan);
+  const totalFiles = rooms.reduce((sum, r) => sum + (r.fileCount ?? 0), 0);
+  const fmtLimit = (n: number) => (n < 0 ? "Unlimited" : String(n));
 
   const logoPreview = workspace.logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -90,13 +94,43 @@ export default async function WorkspaceSettingsPage() {
           }
           defaultOpen
         >
-          <p className="text-sm leading-relaxed text-[var(--tkn-text-support)]">
-            See every tier, file caps, and what ships next on the{" "}
-            <Link href="/pricing" className="font-medium text-primary underline-offset-4 hover:underline">
-              pricing page
-            </Link>
-            .
-          </p>
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-border bg-[var(--color-background)] px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rooms</p>
+                <p className="mt-1 text-lg font-bold tabular-nums text-foreground">
+                  {rooms.length} <span className="text-sm font-normal text-muted-foreground">/ {fmtLimit(limits.rooms)}</span>
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-[var(--color-background)] px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Files{user.plan === "free" ? " (pooled)" : ""}
+                </p>
+                <p className="mt-1 text-lg font-bold tabular-nums text-foreground">
+                  {totalFiles} <span className="text-sm font-normal text-muted-foreground">/ {fmtLimit(limits.filesPerRoom)}{user.plan !== "free" ? " per room" : ""}</span>
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-[var(--color-background)] px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Custom domain</p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {limits.customDomain ? "Included" : "Not on this plan"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-[var(--color-background)] px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Board minutes</p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {limits.boardRoomMinutes ? "Included" : "Not on this plan"}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm leading-relaxed text-[var(--tkn-text-support)]">
+              See every tier, file caps, and what ships next on the{" "}
+              <Link href="/pricing" className="font-medium text-primary underline-offset-4 hover:underline">
+                pricing page
+              </Link>
+              .
+            </p>
+          </div>
         </SettingsSection>
 
         <SettingsSection

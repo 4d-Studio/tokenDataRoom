@@ -20,9 +20,16 @@ import {
   accessCookieName,
   accessCookieOptions,
   createAccessToken,
+  vaultAcceptanceToAccessPayload,
   vaultViewerBindingCookieName,
   vaultViewerBindingCookieOptions,
 } from "@/lib/dataroom/access";
+import {
+  EMAIL_GATE_NDA_VERSION,
+  isEmailGateOnlyAcceptance,
+  isRecipientEmailAllowed,
+  recipientAccessError,
+} from "@/lib/dataroom/vault-recipient-access";
 import { createEvent } from "@/lib/dataroom/types";
 import {
   getRecipientAccountByEmail,
@@ -101,6 +108,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This room is no longer accepting access." }, { status: 403 });
   }
 
+  if (metadata.restrictRecipientEmails) {
+    const list = metadata.allowedRecipientEmails ?? [];
+    if (list.length === 0) {
+      return NextResponse.json({ error: recipientAccessError.listEmpty }, { status: 403 });
+    }
+    if (!isRecipientEmailAllowed(metadata, email)) {
+      return NextResponse.json({ error: recipientAccessError.notInvited }, { status: 403 });
+    }
+  }
+
   // Look up existing acceptance for this recipient in this room
   const acceptances = await storage.getAcceptances(slug);
   const existing = acceptances.find(
@@ -108,19 +125,10 @@ export async function POST(request: Request) {
   );
 
   if (existing) {
-    // Already signed NDA — issue access cookies directly
     const viewerBinding = crypto.randomUUID();
 
     const token = createAccessToken({
-      slug,
-      acceptanceId: existing.id,
-      signerName: existing.signerName,
-      signerEmail: existing.signerEmail,
-      signerCompany: existing.signerCompany,
-      signerAddress: existing.signerAddress,
-      signatureName: existing.signatureName,
-      ndaVersion: existing.ndaVersion,
-      acceptedAt: existing.acceptedAt,
+      ...vaultAcceptanceToAccessPayload(slug, existing),
       viewerBinding,
     });
 
@@ -137,10 +145,13 @@ export async function POST(request: Request) {
       }),
     );
 
+    const hasRealNda =
+      metadata.requiresNda && !isEmailGateOnlyAcceptance(existing);
+
     const response = NextResponse.json({
       success: true,
       accessGranted: true,
-      hasAcceptedNda: true,
+      hasAcceptedNda: hasRealNda || !metadata.requiresNda,
       signerName: existing.signerName,
     });
 
@@ -154,7 +165,56 @@ export async function POST(request: Request) {
     return response;
   }
 
-  // No NDA signed yet — let the UI know they need to sign first (pre-filled email)
+  // No-NDA rooms: OTP alone mints a lightweight access record so invite-only + bundle checks work.
+  if (!metadata.requiresNda) {
+    const acceptedAt = new Date().toISOString();
+    const acceptanceId = crypto.randomUUID();
+    const local = email.split("@")[0] ?? "Guest";
+    const gateAcceptance = {
+      id: acceptanceId,
+      acceptedAt,
+      ndaVersion: EMAIL_GATE_NDA_VERSION,
+      signerName: local,
+      signerEmail: email,
+      signerAddress: "Verified via one-time email code.",
+      signatureName: "Email verification",
+    };
+
+    await storage.saveAcceptance(slug, gateAcceptance);
+
+    const viewerBinding = crypto.randomUUID();
+    const token = createAccessToken({
+      ...vaultAcceptanceToAccessPayload(slug, gateAcceptance),
+      viewerBinding,
+    });
+
+    await storage.appendEvent(
+      slug,
+      createEvent("access_verified", {
+        actorEmail: email,
+        note: "Email verified (no NDA on this room)",
+        ...getRequestContext(request),
+      }),
+    );
+
+    const response = NextResponse.json({
+      success: true,
+      accessGranted: true,
+      hasAcceptedNda: true,
+      signerName: gateAcceptance.signerName,
+    });
+
+    response.cookies.set(accessCookieName(slug), token, accessCookieOptions);
+    response.cookies.set(
+      vaultViewerBindingCookieName(slug),
+      viewerBinding,
+      vaultViewerBindingCookieOptions,
+    );
+
+    return response;
+  }
+
+  // NDA required — let the UI know they need to sign first (pre-filled email)
   return NextResponse.json({
     success: true,
     accessGranted: false,

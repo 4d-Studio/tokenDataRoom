@@ -15,6 +15,10 @@ import { getRequestContext } from "@/lib/dataroom/request-context";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
 import {
+  isRecipientEmailAllowed,
+  recipientAccessError,
+} from "@/lib/dataroom/vault-recipient-access";
+import {
   getOrCreateRecipientAccount,
   createRecipientLoginCode,
   markRecipientEmailVerified,
@@ -73,6 +77,16 @@ export async function POST(
       { error: "Add your name, work email, address, and signature to continue." },
       { status: 400 },
     );
+  }
+
+  if (metadata.restrictRecipientEmails) {
+    const list = metadata.allowedRecipientEmails ?? [];
+    if (list.length === 0) {
+      return NextResponse.json({ error: recipientAccessError.listEmpty }, { status: 403 });
+    }
+    if (!isRecipientEmailAllowed(metadata, parsed.data.signerEmail)) {
+      return NextResponse.json({ error: recipientAccessError.notInvited }, { status: 403 });
+    }
   }
 
   const acceptedAt = new Date().toISOString();

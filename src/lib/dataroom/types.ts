@@ -90,7 +90,8 @@ export type VaultEventType =
   | "document_attached"
   | "access_requested"
   | "access_verified"
-  | "files_decrypted";
+  | "files_decrypted"
+  | "invite_sent";
 
 export type VaultEvent = {
   id: string;
@@ -156,6 +157,12 @@ export type VaultRecord = {
   message?: string;
   /** Owner-only; never shown on the recipient share page. */
   ownerNotes?: string;
+  /**
+   * When true, only emails in `allowedRecipientEmails` can request OTP, sign the NDA, or download ciphertext.
+   */
+  restrictRecipientEmails?: boolean;
+  /** Normalized lowercase emails invited by the owner (max 100). */
+  allowedRecipientEmails?: string[];
   requiresNda: boolean;
   ndaText?: string;
   ndaVersion: string;

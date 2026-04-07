@@ -59,7 +59,10 @@ type AccessResponse = {
   error?: string;
   signedNdaUrl?: string;
   success?: boolean;
-  pendingEmail?: boolean;
+  accessGranted?: boolean;
+  hasAcceptedNda?: boolean;
+  pendingEmail?: string;
+  signerName?: string;
 };
 
 type NdaFlowStep = "identity" | "review" | "sign";
@@ -158,7 +161,9 @@ export function ShareExperience({
   const [filesList, setFilesList] = useState<Array<{ id: string; name: string; mimeType: string; sizeBytes: number; category?: string }>>([]);
   const [fetchedFiles, setFetchedFiles] = useState(false);
   useEffect(() => {
-    if (!accessGranted && metadata.requiresNda) return;
+    const needsIdentity =
+      metadata.requiresNda || Boolean(metadata.restrictRecipientEmails);
+    if (!accessGranted && needsIdentity) return;
     if (fetchedFiles) return;
     setFetchedFiles(true);
     void (async () => {
@@ -170,7 +175,13 @@ export function ShareExperience({
         }
       } catch { /* non-fatal */ }
     })();
-  }, [accessGranted, metadata.requiresNda, metadata.slug, fetchedFiles]);
+  }, [
+    accessGranted,
+    metadata.requiresNda,
+    metadata.restrictRecipientEmails,
+    metadata.slug,
+    fetchedFiles,
+  ]);
 
   // Auto-decrypt on mount/refresh if password is saved in sessionStorage
   const autoDecryptAttempted = useRef(false);
@@ -178,7 +189,7 @@ export function ShareExperience({
     if (autoDecryptAttempted.current) return;
     if (!fetchedFiles || !filesList.length) return;
     if (Object.keys(decryptedFiles).length > 0) return;
-    if (!accessGranted && metadata.requiresNda) return;
+    if (!accessGranted && (metadata.requiresNda || metadata.restrictRecipientEmails)) return;
     try {
       const savedPw = sessionStorage.getItem(`tkn_share_pw_${metadata.slug}`);
       if (savedPw) {
@@ -320,13 +331,21 @@ export function ShareExperience({
           });
           const data = (await res.json()) as AccessResponse;
           if (!res.ok) throw new Error(data.error || "Invalid access code.");
+          if (data.accessGranted && data.hasAcceptedNda) {
+            setAccessGranted(true);
+            setSuccess(
+              data.signerName
+                ? `Welcome back — access granted for ${data.signerName}.`
+                : "Access granted. Welcome back.",
+            );
+            router.refresh();
+            return;
+          }
           if (data.pendingEmail) {
             setSuccess("Code verified — please complete the NDA to access the room.");
             return;
           }
-          setAccessGranted(true);
-          setSuccess("Access granted. Welcome back.");
-          router.refresh();
+          setError("Unexpected response from server. Refresh and try again.");
         } catch (e) {
           setError(e instanceof Error ? e.message : "Invalid access code.");
         }
@@ -620,7 +639,11 @@ export function ShareExperience({
               <div className="min-w-0 flex-1">
                 <CardTitle className="text-base">Access this room</CardTitle>
                 <CardDescription>
-                  Enter the email you used when signing the NDA. We&apos;ll send you a one-time code.
+                  {metadata.restrictRecipientEmails
+                    ? "This room only accepts invited addresses. Enter the email that received the invite. We’ll send a one-time code."
+                    : metadata.requiresNda
+                      ? "Enter the email you used when signing the NDA. We’ll send you a one-time code."
+                      : "Enter your email. We’ll send you a one-time code to verify it’s you."}
                 </CardDescription>
               </div>
             </div>
@@ -1026,7 +1049,9 @@ export function ShareExperience({
       ) : null}
 
       {/* Step 2: Unlock card — only after access granted (or no NDA) and no files decrypted yet */}
-      {(accessGranted || !metadata.requiresNda) && !showReturnGate && Object.keys(decryptedFiles).length === 0 ? (
+      {(accessGranted || !metadata.requiresNda) &&
+      (accessGranted || !showReturnGate) &&
+      Object.keys(decryptedFiles).length === 0 ? (
       <Card>
         <CardHeader>
           <div className="flex items-start gap-3">

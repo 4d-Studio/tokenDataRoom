@@ -327,7 +327,11 @@ export const CreateVaultForm = ({
     return () => clearTimeout(t);
   }, [countdown, router, result]);
 
-  const isFree = userPlan === "free" && currentRoomCount >= 3;
+  const planRoomCap = (() => {
+    const caps: Record<string, number> = { free: 3, plus: -1, unicorn: -1 };
+    return caps[userPlan] ?? -1;
+  })();
+  const isFree = planRoomCap >= 0 && currentRoomCount >= planRoomCap;
 
   const canNext = () => {
     if (step === 0) return title.trim().length > 0 && password.length >= 8;
@@ -384,9 +388,9 @@ export const CreateVaultForm = ({
   if (isFree) {
     return (
       <Card className="rounded-2xl border border-border bg-white p-6">
-        <p className="font-semibold text-foreground">Free plan limit reached</p>
+        <p className="font-semibold text-foreground">Plan limit reached</p>
         <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
-          Your Free plan allows 3 rooms. Upgrade to create more.
+          Your plan allows {planRoomCap} room{planRoomCap === 1 ? "" : "s"} and you&apos;ve used {currentRoomCount}. Upgrade to create more.
         </p>
         <Button asChild size="sm" className="mt-4">
           <Link href="/pricing">View plans</Link>

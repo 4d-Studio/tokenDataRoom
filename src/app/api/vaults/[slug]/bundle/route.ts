@@ -11,6 +11,7 @@ import {
   vaultHasEncryptedDocument,
 } from "@/lib/dataroom/types";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
+import { recipientAccessError } from "@/lib/dataroom/vault-recipient-access";
 
 export const runtime = "nodejs";
 
@@ -45,6 +46,13 @@ export async function GET(
   if (metadata.requiresNda && !access) {
     return NextResponse.json(
       { error: "Accept the NDA before requesting the encrypted file." },
+      { status: 403 },
+    );
+  }
+
+  if (metadata.restrictRecipientEmails && !access) {
+    return NextResponse.json(
+      { error: recipientAccessError.notInvited },
       { status: 403 },
     );
   }

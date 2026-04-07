@@ -11,7 +11,12 @@ import {
   isValidVanitySlug,
 } from "@/lib/dataroom/vanity-slugs";
 import { getRequestContext } from "@/lib/dataroom/request-context";
+import { sendRoomInviteEmail } from "@/lib/dataroom/recipient-email";
 import { createEvent } from "@/lib/dataroom/types";
+import {
+  clampRecipientEmailList,
+  normalizeRecipientEmailList,
+} from "@/lib/dataroom/vault-recipient-access";
 
 export const runtime = "nodejs";
 
@@ -56,6 +61,23 @@ const ownerPostSchema = z.discriminatedUnion("action", [
     ownerKey: z.string().min(32).max(128),
     action: z.literal("check_vanity_availability"),
     vanitySlug: z.string().trim().max(60),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("set_recipient_restriction"),
+    enabled: z.boolean(),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("replace_allowed_recipient_emails"),
+    emails: z.array(z.string().email()).max(100),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("send_recipient_invites"),
+    emails: z.array(z.string().email()).min(1).max(25),
+    roomPassword: z.string().min(1).max(500),
+    shareUrl: z.string().url().max(2048),
   }),
 ]);
 
@@ -149,6 +171,81 @@ export async function POST(
     const { vanitySlug } = parsed.data;
     const result = await checkVanityAvailabilityForRoom(slug, vanitySlug);
     return NextResponse.json(result);
+  }
+
+  if (parsed.data.action === "set_recipient_restriction") {
+    const nextMetadata = {
+      ...metadata,
+      restrictRecipientEmails: parsed.data.enabled,
+    };
+    await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "replace_allowed_recipient_emails") {
+    const merged = clampRecipientEmailList(parsed.data.emails);
+    const nextMetadata = {
+      ...metadata,
+      allowedRecipientEmails: merged,
+    };
+    await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "send_recipient_invites") {
+    let shareParsed: URL;
+    try {
+      shareParsed = new URL(parsed.data.shareUrl.trim());
+    } catch {
+      return NextResponse.json({ error: "Invalid share link." }, { status: 400 });
+    }
+    if (!shareParsed.pathname.includes("/s/")) {
+      return NextResponse.json(
+        {
+          error:
+            "Share link must be a recipient room URL (its path must include /s/). Paste the link from “Copy share link”.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const invitedNorm = normalizeRecipientEmailList(parsed.data.emails);
+    const prev = metadata.allowedRecipientEmails ?? [];
+    const merged = clampRecipientEmailList([...prev, ...invitedNorm]);
+    const nextMetadata = {
+      ...metadata,
+      restrictRecipientEmails: true,
+      allowedRecipientEmails: merged,
+    };
+    await storage.updateVaultMetadata(nextMetadata);
+
+    const roomName = metadata.title;
+    const ctx = getRequestContext(request);
+    const shareUrl = parsed.data.shareUrl.trim();
+
+    for (const toEmail of invitedNorm) {
+      try {
+        await sendRoomInviteEmail(toEmail, roomName, shareUrl, parsed.data.roomPassword);
+        await storage.appendEvent(
+          slug,
+          createEvent("invite_sent", {
+            actorEmail: toEmail,
+            note: `Invite email sent to ${toEmail}`,
+            ...ctx,
+          }),
+        );
+      } catch (err) {
+        console.error("[owner/send_recipient_invites]", toEmail, err);
+      }
+    }
+
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
   }
 
   const nextStatus = parsed.data.action === "revoke" ? "revoked" : "active";

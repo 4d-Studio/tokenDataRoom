@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Link2,
   LockKeyhole,
+  Mail,
   MapPin,
   ShieldCheck,
   Trash2,
@@ -22,6 +23,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Empty,
@@ -44,6 +46,7 @@ const EVENT_LABELS: Record<VaultEvent["type"], string> = {
   viewed: "Share page opened",
   access_requested: "Access code requested",
   access_verified: "Access code verified",
+  invite_sent: "Invite email sent",
   nda_accepted: "NDA signed",
   files_decrypted: "Files decrypted",
   downloaded: "File downloaded",
@@ -258,6 +261,23 @@ function OwnerLinkCard({
   );
 }
 
+function parseOwnerEmailList(raw: string): string[] {
+  const tokens = raw
+    .split(/[\s,;]+/g)
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of tokens) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+    if (out.length >= 100) break;
+  }
+  return out;
+}
+
 function SectionShell({
   id,
   title,
@@ -335,6 +355,13 @@ export const VaultOwnerPanel = ({
     slug: string;
     result: "ok" | "taken" | "invalid";
   } | null>(null);
+
+  const [allowedEmailsDraft, setAllowedEmailsDraft] = useState(() =>
+    (initialMetadata.allowedRecipientEmails ?? []).join("\n"),
+  );
+  const [inviteBatchDraft, setInviteBatchDraft] = useState("");
+  const [invitePasswordDraft, setInvitePasswordDraft] = useState("");
+  const [inviteFeedback, setInviteFeedback] = useState("");
 
   const [activeSection, setActiveSection] = useState<SectionId>("owner-settings");
 
@@ -538,6 +565,100 @@ export const VaultOwnerPanel = ({
     setTimeout(() => setVanitySlugSaved(false), 2500);
   };
 
+  const setRecipientRestriction = async (enabled: boolean) => {
+    setError("");
+    setInviteFeedback("");
+    const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ownerKey,
+        action: "set_recipient_restriction",
+        enabled,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      metadata?: VaultRecord;
+      events?: VaultEvent[];
+    };
+    if (!response.ok || !payload.metadata || !payload.events) {
+      throw new Error(payload.error || "Unable to update invite settings.");
+    }
+    setMetadata(payload.metadata);
+    setEvents(payload.events);
+    setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
+  };
+
+  const saveAllowedRecipientEmails = async () => {
+    setError("");
+    setInviteFeedback("");
+    const emails = parseOwnerEmailList(allowedEmailsDraft);
+    const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ownerKey,
+        action: "replace_allowed_recipient_emails",
+        emails,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      metadata?: VaultRecord;
+      events?: VaultEvent[];
+    };
+    if (!response.ok || !payload.metadata || !payload.events) {
+      throw new Error(payload.error || "Unable to save the email list.");
+    }
+    setMetadata(payload.metadata);
+    setEvents(payload.events);
+    setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
+    setInviteFeedback("Saved invited addresses.");
+    setTimeout(() => setInviteFeedback(""), 3000);
+  };
+
+  const sendRecipientInvites = async () => {
+    setError("");
+    setInviteFeedback("");
+    const emails = parseOwnerEmailList(inviteBatchDraft);
+    if (emails.length === 0) {
+      throw new Error("Add at least one email address to invite.");
+    }
+    const pw = invitePasswordDraft.trim();
+    if (!pw) {
+      throw new Error(
+        "Enter the room password so it can be included in the invite emails. It is not stored on our servers.",
+      );
+    }
+    const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ownerKey,
+        action: "send_recipient_invites",
+        emails,
+        roomPassword: pw,
+        shareUrl: effectiveShareUrl,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      metadata?: VaultRecord;
+      events?: VaultEvent[];
+    };
+    if (!response.ok || !payload.metadata || !payload.events) {
+      throw new Error(payload.error || "Unable to send invites.");
+    }
+    setMetadata(payload.metadata);
+    setEvents(payload.events);
+    setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
+    setInviteBatchDraft("");
+    setInvitePasswordDraft("");
+    setInviteFeedback(`Invite email processed for ${emails.length} address(es).`);
+    setTimeout(() => setInviteFeedback(""), 5000);
+  };
+
   const deleteRoom = async () => {
     setError("");
     const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
@@ -620,6 +741,123 @@ export const VaultOwnerPanel = ({
                   dense
                   sensitivity="secret"
                 />
+              </div>
+
+              <div className="space-y-3 border-t border-border pt-3">
+                <div className="flex gap-2">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
+                    <Mail className="size-4" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Invite-only (optional)
+                    </p>
+                    <p className="text-[11px] leading-snug text-muted-foreground">
+                      Restrict who can request an access code and download ciphertext to addresses you add.
+                      Invite emails include the share link and room password you enter below; return visits still use the same email plus a one-time code.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-muted/20 px-3 py-2">
+                  <label
+                    htmlFor="restrict-recipient-emails"
+                    className="cursor-pointer text-xs leading-snug text-foreground"
+                  >
+                    Only invited emails can open this room
+                  </label>
+                  <Switch
+                    id="restrict-recipient-emails"
+                    checked={Boolean(metadata.restrictRecipientEmails)}
+                    disabled={isPending}
+                    onCheckedChange={(enabled) =>
+                      startTransition(() => {
+                        void setRecipientRestriction(enabled).catch((e: unknown) => {
+                          setError(e instanceof Error ? e.message : "Unable to update setting.");
+                        });
+                      })
+                    }
+                  />
+                </div>
+
+                <Field>
+                  <FieldLabel htmlFor="allowed-recipient-emails">Invited addresses (up to 100)</FieldLabel>
+                  <Textarea
+                    id="allowed-recipient-emails"
+                    className="min-h-[5.5rem] resize-y font-mono text-xs"
+                    value={allowedEmailsDraft}
+                    onChange={(e) => setAllowedEmailsDraft(e.target.value)}
+                    placeholder={"one@company.com\nother@company.com"}
+                    maxLength={8000}
+                  />
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    {(metadata.allowedRecipientEmails ?? []).length} saved
+                    {metadata.restrictRecipientEmails ? " · restriction is on" : " · turn restriction on to enforce"}.
+                  </p>
+                </Field>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(() => {
+                      void saveAllowedRecipientEmails().catch((e: unknown) => {
+                        setError(e instanceof Error ? e.message : "Unable to save list.");
+                      });
+                    })
+                  }
+                >
+                  Save email list
+                </Button>
+
+                <div className="rounded-lg border border-dashed border-border/80 bg-muted/10 p-3 space-y-2">
+                  <p className="text-[11px] font-medium text-foreground">Send invite emails</p>
+                  <p className="text-[10px] leading-snug text-muted-foreground">
+                    Adds addresses to the list (if missing), turns restriction on, and emails each person the current share link plus the password you type. The password is not stored on our servers.
+                  </p>
+                  <Field>
+                    <FieldLabel htmlFor="invite-batch-emails">Emails to invite now</FieldLabel>
+                    <Textarea
+                      id="invite-batch-emails"
+                      className="min-h-[3.5rem] resize-y font-mono text-xs"
+                      value={inviteBatchDraft}
+                      onChange={(e) => setInviteBatchDraft(e.target.value)}
+                      placeholder="investor@firm.com"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="invite-room-password">Room password for this send</FieldLabel>
+                    <Input
+                      id="invite-room-password"
+                      type="password"
+                      autoComplete="off"
+                      className="text-sm"
+                      value={invitePasswordDraft}
+                      onChange={(e) => setInvitePasswordDraft(e.target.value)}
+                      placeholder="Same password recipients use to decrypt"
+                    />
+                  </Field>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() =>
+                      startTransition(() => {
+                        void sendRecipientInvites().catch((e: unknown) => {
+                          setError(e instanceof Error ? e.message : "Unable to send invites.");
+                        });
+                      })
+                    }
+                  >
+                    <Mail className="size-3.5" />
+                    Send invites
+                  </Button>
+                </div>
+
+                {inviteFeedback ? (
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400">{inviteFeedback}</p>
+                ) : null}
               </div>
 
               <div className="rounded-lg border border-destructive/20 bg-destructive/[0.04] p-3">

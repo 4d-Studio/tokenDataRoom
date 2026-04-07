@@ -15,6 +15,7 @@ import {
   ProductMetric,
 } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
+import { getPlanLimits } from "@/lib/dataroom/auth-store";
 import { formatDateTime } from "@/lib/dataroom/helpers";
 import { roomManageHref, roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 
@@ -46,13 +47,22 @@ export default async function WorkspacePage() {
     getWorkspaceActivity(workspace),
   ]);
 
+  const limits = getPlanLimits(user.plan);
   const totalRooms = rooms.length;
   const activeRooms = rooms.filter((r) => r.status === "active").length;
+  const totalFiles = rooms.reduce((sum, r) => sum + (r.fileCount ?? 0), 0);
 
   // Rooms created in the last 7 days
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
   const roomsThisWeek = rooms.filter((r) => new Date(r.createdAt) >= oneWeekAgo).length;
+
+  const fmtLimit = (n: number) => (n < 0 ? "Unlimited" : String(n));
+  const roomsMax = fmtLimit(limits.rooms);
+  const filesMax =
+    user.plan === "free"
+      ? `${limits.filesPerRoom} pooled`
+      : fmtLimit(limits.filesPerRoom);
 
 
   const headersList = await headers();
@@ -78,12 +88,12 @@ export default async function WorkspacePage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
             <ProductMetric
               icon={<LayoutPanelTop className="h-5 w-5" />}
               value={totalRooms}
               label="Total rooms"
-              subtext="Including drafts."
+              subtext={<>Limit: <span className="font-medium text-foreground">{roomsMax}</span></>}
             />
             <ProductMetric
               icon={<Zap className="h-5 w-5" />}
@@ -96,6 +106,12 @@ export default async function WorkspacePage() {
               value={roomsThisWeek}
               label="New (7 days)"
               subtext="Created this week."
+            />
+            <ProductMetric
+              icon={<LayoutPanelTop className="h-5 w-5" />}
+              value={totalFiles}
+              label="Total files"
+              subtext={<>Limit: <span className="font-medium text-foreground">{filesMax}{user.plan === "free" ? "" : " / room"}</span></>}
             />
           </div>
 
