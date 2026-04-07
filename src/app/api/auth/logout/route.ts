@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { getPublicAppBaseUrl } from "@/lib/dataroom/helpers";
 import { sessionCookieName } from "@/lib/dataroom/session";
 
 function logout(request: Request) {
-  const url = new URL("/login", request.url);
-  const response = NextResponse.redirect(url);
+  const loginUrl = new URL("/login", `${getPublicAppBaseUrl(request)}/`);
+  const response = NextResponse.redirect(loginUrl);
   response.cookies.delete(sessionCookieName);
   return response;
 }
