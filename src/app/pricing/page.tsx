@@ -60,7 +60,10 @@ const plans = [
     featured: true,
     accent: false,
     priceMonthly: "$9.99",
-    priceAnnual: "$7.99",
+    /** Effective monthly when paying yearly ($96/12). */
+    priceAnnual: "$8",
+    /** Shown after annual line — total yearly charge. */
+    annualTotalLabel: "$96/year",
     period: "/month",
     description:
       "For people who share sensitive files often. Checkout soon — included for new accounts now.",
@@ -294,7 +297,13 @@ export default function PricingPage() {
                     <p className="mt-1 text-xs text-[var(--tkn-text-fine)]">
                       Planned from {plan.priceMonthly}
                       {plan.period}
-                      <span> · {plan.priceAnnual}/mo billed annually</span>
+                      <span>
+                        {" "}
+                        · {plan.priceAnnual}/mo billed annually
+                        {"annualTotalLabel" in plan && plan.annualTotalLabel
+                          ? ` (${plan.annualTotalLabel})`
+                          : ""}
+                      </span>
                     </p>
                   </div>
                 ) : (
