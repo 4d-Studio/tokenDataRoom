@@ -1,6 +1,7 @@
 {
   "name": "token-fyi",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "engines": {
     "node": ">=20"
