@@ -520,39 +520,61 @@ function CategoryGroup({
               {files.map((f) => (
                 <div
                   key={f.id}
-                  className="group relative overflow-hidden rounded-lg border border-border bg-muted/30"
+                  className="flex flex-col overflow-hidden rounded-lg border border-border bg-muted/30"
                 >
-                  <div className="flex aspect-square items-center justify-center">
-                    <ImageIcon
-                      className="size-8 text-muted-foreground/40"
-                      strokeWidth={1}
-                    />
+                  {/* Thumbnail only — hover overlay must not cover the footer (was blocking rename/category). */}
+                  <div className="group relative aspect-square w-full shrink-0 overflow-hidden">
+                    <div className="flex size-full items-center justify-center bg-muted/40">
+                      <ImageIcon
+                        className="size-8 text-muted-foreground/40"
+                        strokeWidth={1}
+                      />
+                    </div>
+                    <div className="pointer-events-none absolute inset-0 z-10 hidden flex-col items-center justify-center gap-1.5 bg-black/50 opacity-0 transition-opacity pointer-fine:flex pointer-fine:group-hover:pointer-events-auto pointer-fine:group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => onPreview(f)}
+                        className="pointer-events-auto rounded-lg bg-white/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-white"
+                      >
+                        <Eye className="mr-1 inline-block size-3" />
+                        Details
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onRemove(f.id)}
+                        className="pointer-events-auto rounded-lg bg-red-500/90 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-red-500"
+                      >
+                        <Trash2 className="mr-1 inline-block size-3" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                  {/* Touch / coarse pointer: no hover — always tappable actions */}
+                  <div className="flex items-center justify-center gap-0.5 border-b border-border/70 bg-muted/15 py-1 pointer-coarse:flex pointer-fine:hidden">
                     <button
                       type="button"
                       onClick={() => onPreview(f)}
-                      className="rounded-lg bg-white/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-white"
+                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      aria-label={`Details for ${f.name}`}
                     >
-                      <Eye className="mr-1 inline-block size-3" />
-                      Details
+                      <Eye className="size-4" strokeWidth={1.75} />
                     </button>
                     <button
                       type="button"
                       onClick={() => onRemove(f.id)}
-                      className="rounded-lg bg-red-500/90 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-red-500"
+                      className="rounded-md p-2 text-destructive/85 transition-colors hover:bg-destructive/10"
+                      aria-label={`Delete ${f.name}`}
                     >
-                      <Trash2 className="mr-1 inline-block size-3" />
-                      Delete
+                      <Trash2 className="size-4" strokeWidth={1.75} />
                     </button>
                   </div>
-                  <div className="border-t border-border bg-white px-2 py-1.5">
+                  <div className="relative z-20 border-t border-border bg-white px-2 py-1.5">
                     <FileRenameControl file={f} onRename={onRenameFile} compact />
                     <p className="mt-1 text-[0.65rem] text-muted-foreground">
                       {formatBytes(f.sizeBytes)}
                       {f.addedAt ? ` · ${formatDateTime(f.addedAt)}` : ""}
                     </p>
-                    <div className="mt-1.5 flex justify-end">
+                    <div className="mt-1.5 flex flex-wrap items-center justify-end gap-1">
                       <CategoryPicker
                         file={f}
                         existingCategories={existingCategories}
