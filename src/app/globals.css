@@ -396,22 +396,6 @@ textarea {
   backdrop-filter: none;
 }
 
-.step-index {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
-  border-radius: 999px;
-  border: 1px solid rgba(243, 91, 45, 0.16);
-  background: rgba(243, 91, 45, 0.08);
-  color: var(--color-accent);
-  font-size: 0.74rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .label-title {
   font-size: 0.6875rem;
   font-weight: 600;

@@ -6,6 +6,7 @@ import {
   Download,
   Eye,
   FileText,
+  Link2,
   Lock,
   Shield,
   ShieldCheck,
@@ -72,16 +73,19 @@ const steps = [
     num: "01",
     title: "Create a room",
     body: "Name the room, set a password, toggle NDA on or off. Files are encrypted in your browser before upload.",
+    icon: Lock,
   },
   {
     num: "02",
     title: "Upload & protect",
     body: "Add files — they're encrypted locally and stored as ciphertext. Recipients never see your workspace or owner controls.",
+    icon: ShieldCheck,
   },
   {
     num: "03",
     title: "Share one link, track everything",
     body: "Send the share link and password. Watch opens, signatures, and downloads. Revoke or restore whenever you need to.",
+    icon: Link2,
   },
 ] as const;
 
@@ -129,9 +133,9 @@ const faqItems = [
 
 function HeroMockup() {
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-border/80 bg-white shadow-lg">
+    <div className="w-full overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_28px_rgba(35,31,26,0.08)]">
       {/* Title bar */}
-      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3.5">
+      <div className="flex items-center justify-between border-b border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/40 px-5 py-3.5">
         <div>
           <p className="text-[13px] font-semibold text-foreground">Series A Diligence</p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">3 files · 2 viewers · NDA required</p>
@@ -142,7 +146,7 @@ function HeroMockup() {
       </div>
 
       {/* Files */}
-      <div className="border-b border-border/60 px-5 py-3">
+      <div className="border-b border-[color:var(--tkn-panel-border)] px-5 py-3">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Files</p>
         {[
           { name: "cap_table_q4.xlsx", size: "84 KB" },
@@ -160,7 +164,7 @@ function HeroMockup() {
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-4 border-b border-border/60 px-5 py-3">
+      <div className="flex items-center gap-4 border-b border-[color:var(--tkn-panel-border)] px-5 py-3">
         <div className="flex items-center gap-1.5">
           <div className="size-3.5 rounded-sm border border-primary/40 bg-primary/10" />
           <span className="text-[11px] text-foreground">NDA required</span>
@@ -229,9 +233,9 @@ export default async function Home() {
       : "Create a room";
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {/* ── Nav — sits on main bg ─────────────────────── */}
-      <header className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-5 py-4 sm:px-8">
+      <header className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 border-b border-[color:var(--tkn-panel-border)]/70 px-5 py-4 sm:px-8">
         <BrandMark />
         <nav className="flex items-center gap-1 sm:gap-2">
           <Button asChild variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
@@ -259,14 +263,14 @@ export default async function Home() {
       </header>
 
       {/* ── Hero — main bg ────────────────────────────── */}
-      <section className="pb-16 pt-10 sm:pb-20 sm:pt-16">
+      <section className="pb-16 pt-10 sm:pb-24 sm:pt-14">
         <div className="mx-auto grid max-w-[1280px] items-center gap-10 px-5 sm:px-8 lg:grid-cols-[5fr_6fr] lg:gap-16">
           <div className="max-w-xl">
-            <p className="text-[0.8rem] font-semibold text-[var(--tkn-text-support)]">
-              Secure external file sharing for deals, legal, and diligence
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Deal rooms for outsiders
             </p>
 
-            <h1 className="mt-3 text-[2rem] font-bold leading-[1.05] tracking-[-0.04em] text-foreground sm:text-[2.75rem]">
+            <h1 className="mt-3 font-heading text-[2rem] font-semibold leading-[1.08] tracking-[-0.03em] text-foreground sm:text-[2.65rem]">
               Share sensitive files without exposing your whole drive
             </h1>
 
@@ -299,14 +303,16 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── Trust strip — white band ──────────────────── */}
-      <section className="border-y border-border/60 bg-white">
-        <div className="mx-auto max-w-[1280px] px-5 py-4 sm:px-8">
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+      {/* ── Trust strip ──────────────────── */}
+      <section className="border-y border-[color:var(--tkn-panel-border)] bg-card/90 py-5 backdrop-blur-[2px]">
+        <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 sm:gap-x-8">
             {trustBadges.map((label) => (
-              <div key={label} className="flex items-center gap-1.5">
-                <Check className="size-3.5 text-[var(--color-accent)]" />
-                <span className="text-[0.8rem] font-medium text-foreground">{label}</span>
+              <div key={label} className="flex items-center gap-2">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-md border border-emerald-200/90 bg-emerald-500/10 text-emerald-800 dark:text-emerald-600">
+                  <Check className="size-3" strokeWidth={2.5} />
+                </span>
+                <span className="text-[0.8125rem] font-medium text-foreground">{label}</span>
               </div>
             ))}
           </div>
@@ -314,19 +320,19 @@ export default async function Home() {
       </section>
 
       {/* ── Feature cards — main bg ───────────────────── */}
-      <section className="py-14 sm:py-20">
+      <section className="py-16 sm:py-24">
         <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
             {features.map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
-                className="rounded-xl border border-border/80 bg-white p-5 shadow-sm"
+                className="rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card p-5 shadow-[0_2px_28px_rgba(35,31,26,0.06)] sm:p-6"
               >
-                <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-[var(--color-background)] text-foreground">
-                  <Icon className="size-5" />
+                <div className="flex size-11 items-center justify-center rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                  <Icon className="size-5" strokeWidth={1.65} />
                 </div>
-                <h3 className="mt-3.5 text-[0.95rem] font-semibold text-foreground">{title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--tkn-text-support)]">
+                <h3 className="mt-4 text-base font-semibold tracking-tight text-foreground">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--tkn-text-support)]">
                   {body}
                 </p>
               </div>
@@ -335,46 +341,74 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── How it works — white band ─────────────────── */}
-      <section id="how-it-works" className="scroll-mt-24 border-y border-border/60 bg-white py-14 sm:py-20">
+      {/* ── How it works — editorial panel on canvas ─────────────────── */}
+      <section
+        id="how-it-works"
+        className="scroll-mt-24 border-y border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background)] py-16 sm:py-24"
+      >
         <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
-          <h2 className="text-center text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-            How it works
-          </h2>
-          <p className="mx-auto mt-2 max-w-lg text-center text-sm text-[var(--tkn-text-support)]">
-            Three steps. No webinar, no sales call, no surprise fourth.
-          </p>
-
-          <div className="mt-8 grid gap-6 sm:grid-cols-3">
-            {steps.map(({ num, title, body }) => (
-              <div key={num} className="flex flex-col gap-2">
-                <div className="step-index">{num}</div>
-                <h3 className="text-[0.95rem] font-semibold text-foreground">{title}</h3>
-                <p className="text-sm leading-relaxed text-[var(--tkn-text-support)]">{body}</p>
-              </div>
-            ))}
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              How it works
+            </p>
+            <h2 className="mt-2 font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl sm:tracking-[-0.02em]">
+              Three steps. No webinar, no sales call, no surprise fourth.
+            </h2>
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-[var(--tkn-text-support)] sm:text-base">
+              Client-side encryption, optional NDA, one link — then you’re done.
+            </p>
           </div>
-          <p className="mx-auto mt-8 max-w-2xl text-center text-sm font-medium leading-relaxed text-foreground">
-            The payoff: you move the deal forward without giving anyone a map to
-            the rest of your company — and you shut the door the moment the
-            conversation changes.
-          </p>
+
+          <div className="mt-10 overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card p-6 shadow-[0_2px_28px_rgba(35,31,26,0.06)] sm:p-8 lg:p-10">
+            <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
+              {steps.map(({ num, title, body, icon: Icon }) => (
+                <div
+                  key={num}
+                  className="flex flex-col rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/55 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:p-6"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--tkn-panel-border)] bg-card font-semibold tabular-nums tracking-wide text-[color:var(--color-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                      {num}
+                    </div>
+                    <div className="flex size-9 items-center justify-center rounded-lg border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/80 text-muted-foreground">
+                      <Icon className="size-4" strokeWidth={1.65} aria-hidden />
+                    </div>
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold leading-snug tracking-tight text-foreground">
+                    {title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--tkn-text-support)]">{body}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mx-auto mt-8 max-w-3xl border-t border-dashed border-[color:var(--tkn-panel-border)] pt-8">
+              <p className="text-pretty text-center text-sm leading-relaxed text-[var(--tkn-text-support)] sm:text-[0.9375rem]">
+                <span className="font-semibold text-foreground">The payoff:</span> you move the deal forward
+                without giving anyone a map to the rest of your company — and you shut the door the moment the
+                conversation changes.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ── Comparison table — main bg ────────────────── */}
-      <section className="py-14 sm:py-20">
+      <section className="py-16 sm:py-24">
         <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
-          <h2 className="text-center text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          <p className="text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Compare
+          </p>
+          <h2 className="mt-2 text-center font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             How Token compares
           </h2>
-          <p className="mx-auto mt-2 max-w-md text-center text-sm text-[var(--tkn-text-support)]">
+          <p className="mx-auto mt-3 max-w-md text-center text-sm leading-relaxed text-[var(--tkn-text-support)] sm:text-base">
             Built for controlled file sharing, not full signature workflows or
             internal sync.
           </p>
 
-          <div className="mx-auto mt-8 max-w-2xl overflow-hidden rounded-xl border border-border/80 bg-white shadow-sm">
-            <div className="grid grid-cols-4 border-b border-border/60 bg-[var(--color-background)]">
+          <div className="mx-auto mt-10 max-w-2xl overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_28px_rgba(35,31,26,0.06)]">
+            <div className="grid grid-cols-4 border-b border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/45">
               <div className="px-4 py-3 text-[11px] font-semibold text-muted-foreground" />
               <div className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-[var(--color-accent)]">
                 Token
@@ -389,7 +423,7 @@ export default async function Home() {
             {comparisonRows.map((row) => (
               <div
                 key={row.label}
-                className="grid grid-cols-4 border-b border-border/40 last:border-b-0"
+                className="grid grid-cols-4 border-b border-[color:var(--tkn-panel-border)]/80 last:border-b-0"
               >
                 <div className="flex items-center px-4 py-2.5 text-[12.5px] text-foreground">
                   {row.label}
@@ -409,22 +443,23 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── Use cases — white band ────────────────────── */}
-      <section className="border-y border-border/60 bg-white py-14 sm:py-20">
+      {/* ── Use cases ────────────────────── */}
+      <section className="border-y border-[color:var(--tkn-panel-border)] bg-card py-16 sm:py-24">
         <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
-          <h2 className="text-center text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          <p className="text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Use cases
+          </p>
+          <h2 className="mt-2 text-center font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Built for
           </h2>
-          <div className="mt-6 grid gap-5 sm:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-5">
             {useCases.map(({ title, body }) => (
               <div
                 key={title}
-                className="rounded-xl border border-border/80 bg-[var(--color-background)] p-5 shadow-sm"
+                className="rounded-2xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/50 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] sm:p-6"
               >
-                <h3 className="text-[0.95rem] font-semibold text-foreground">{title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--tkn-text-support)]">
-                  {body}
-                </p>
+                <h3 className="text-base font-semibold tracking-tight text-foreground">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--tkn-text-support)]">{body}</p>
               </div>
             ))}
           </div>
@@ -432,34 +467,35 @@ export default async function Home() {
       </section>
 
       {/* ── FAQ — main bg ─────────────────────────────── */}
-      <section className="py-14 sm:py-20">
+      <section className="py-16 sm:py-24">
         <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
-          <h2 className="text-center text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          <p className="text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            FAQ
+          </p>
+          <h2 className="mt-2 text-center font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Straight answers
           </h2>
-          <div className="mx-auto mt-6 max-w-2xl space-y-4">
+          <div className="mx-auto mt-8 max-w-2xl space-y-3">
             {faqItems.map((item) => (
               <div
                 key={item.q}
-                className="rounded-xl border border-border/80 bg-white p-5 shadow-sm"
+                className="rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card p-5 shadow-[0_2px_20px_rgba(35,31,26,0.05)] sm:p-6"
               >
                 <p className="text-sm font-semibold text-foreground">{item.q}</p>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--tkn-text-support)]">
-                  {item.a}
-                </p>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--tkn-text-support)]">{item.a}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Final CTA — white band ────────────────────── */}
-      <section className="border-y border-border/60 bg-white py-14 sm:py-20">
+      {/* ── Final CTA ────────────────────── */}
+      <section className="border-y border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background)] py-16 sm:py-24">
         <div className="mx-auto max-w-[1280px] px-5 text-center sm:px-8">
-          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          <h2 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Ready to share files the right way?
           </h2>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[var(--tkn-text-support)]">
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--tkn-text-support)] sm:text-base">
             Free plan, no credit card. Encryption happens in your browser before
             anything leaves your machine.
           </p>
@@ -481,7 +517,7 @@ export default async function Home() {
       </section>
 
       {/* ── Footer — main bg ──────────────────────────── */}
-      <footer className="border-t border-border/60 bg-[var(--color-background)]">
+      <footer className="border-t border-[color:var(--tkn-panel-border)] bg-background">
         <div className="mx-auto max-w-[1280px] px-5 py-10 sm:px-8">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div className="lg:col-span-2">
