@@ -98,6 +98,7 @@ export type VaultEventType =
   | "reactivated"
   | "document_attached"
   | "file_renamed"
+  | "files_reordered"
   | "access_requested"
   | "access_verified"
   | "files_decrypted"

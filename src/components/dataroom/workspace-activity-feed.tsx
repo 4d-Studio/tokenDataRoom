@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ChevronDown,
+  ChevronsUpDown,
   Download,
   Eye,
   FileCheck2,
@@ -90,6 +91,12 @@ const EVENT_CONFIG: Record<
     color: "text-muted-foreground",
     label: "File renamed",
     action: "renamed a file in",
+  },
+  files_reordered: {
+    icon: ChevronsUpDown,
+    color: "text-muted-foreground",
+    label: "Order changed",
+    action: "reordered files in",
   },
   access_requested: {
     icon: Mail,

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
   Eye,
   FileSpreadsheet,
   FileText,
@@ -468,6 +469,10 @@ function CategoryGroup({
   onPreview,
   onCategoryChange,
   onRenameFile,
+  orderedFiles,
+  reorderEnabled,
+  reorderBusy,
+  onReorderFile,
 }: {
   label: string;
   icon: typeof FileText;
@@ -477,6 +482,11 @@ function CategoryGroup({
   onPreview: (file: VaultFileEntry) => void;
   onCategoryChange: (fileId: string, category: string) => void;
   onRenameFile: (fileId: string, name: string) => Promise<void>;
+  /** Full room file list order (same as recipient order). */
+  orderedFiles: VaultFileEntry[];
+  reorderEnabled: boolean;
+  reorderBusy: boolean;
+  onReorderFile: (fileId: string, direction: "up" | "down") => Promise<void>;
 }) {
   const [open, setOpen] = useState(true);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
@@ -510,11 +520,40 @@ function CategoryGroup({
 
       {open && (
         <div className="divide-y divide-border">
-          {files.map((f) => (
+          {files.map((f) => {
+            const globalIdx = orderedFiles.findIndex((x) => x.id === f.id);
+            const canUp = reorderEnabled && globalIdx > 0;
+            const canDown = reorderEnabled && globalIdx >= 0 && globalIdx < orderedFiles.length - 1;
+            return (
             <div
               key={f.id}
               className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/20 sm:flex-row sm:items-center sm:gap-3"
             >
+              {reorderEnabled ? (
+                <div className="flex flex-row items-center gap-1.5 sm:flex-col sm:gap-0.5 sm:pt-0.5">
+                  <button
+                    type="button"
+                    disabled={reorderBusy || !canUp}
+                    onClick={() => void onReorderFile(f.id, "up")}
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30"
+                    aria-label={`Move ${f.name} earlier in the room list`}
+                  >
+                    <ChevronUp className="size-4" strokeWidth={2} />
+                  </button>
+                  <span className="min-w-[1.25rem] text-center text-[10px] font-semibold tabular-nums text-muted-foreground">
+                    {globalIdx >= 0 ? globalIdx + 1 : "—"}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={reorderBusy || !canDown}
+                    onClick={() => void onReorderFile(f.id, "down")}
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30"
+                    aria-label={`Move ${f.name} later in the room list`}
+                  >
+                    <ChevronDown className="size-4" strokeWidth={2} />
+                  </button>
+                </div>
+              ) : null}
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
                 {f.mimeType.startsWith("image/") ? (
                   <ImageIcon className="size-4 text-muted-foreground" strokeWidth={1.5} />
@@ -562,7 +601,8 @@ function CategoryGroup({
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -593,9 +633,11 @@ export function VaultOwnerDocumentUpload({
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const [, startRemoveTransition] = useTransition();
   const [lightboxFile, setLightboxFile] = useState<VaultFileEntry | null>(null);
+  const [reorderBusy, setReorderBusy] = useState(false);
 
   const isCompact = variant === "compact";
   const existingFiles: VaultFileEntry[] = vaultFilesList(metadata);
+  const canReorderFiles = Boolean(metadata.vaultFiles && metadata.vaultFiles.length >= 2);
   const grouped = groupByLabel(existingFiles);
   const allCategories = collectCategories(existingFiles);
 
@@ -851,7 +893,7 @@ export function VaultOwnerDocumentUpload({
       if (!res.ok || !data.metadata || !data.events) {
         throw new Error(data.error || "Unable to update category.");
       }
-           onUploaded(data.metadata, data.events);
+      onUploaded(data.metadata, data.events);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to update category.");
     }
@@ -885,6 +927,36 @@ export function VaultOwnerDocumentUpload({
     }
   };
 
+  const reorderVaultFile = async (fileId: string, direction: "up" | "down") => {
+    setReorderBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/vaults/${slug}/owner`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ownerKey,
+          action: "reorder_vault_file",
+          fileId,
+          direction,
+        }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        metadata?: VaultRecord;
+        events?: VaultEvent[];
+      };
+      if (!res.ok || !data.metadata || !data.events) {
+        throw new Error(data.error || "Unable to change file order.");
+      }
+      onUploaded(data.metadata, data.events);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to change file order.");
+    } finally {
+      setReorderBusy(false);
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────
 
   return (
@@ -898,6 +970,18 @@ export function VaultOwnerDocumentUpload({
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {existingFiles.length} file
                 {existingFiles.length !== 1 ? "s" : ""} uploaded · encrypted at rest
+                {canReorderFiles ? (
+                  <>
+                    {" "}
+                    · Recipients see files in this order (#1 is the default preview).
+                    {reorderBusy ? (
+                      <span className="ml-1 inline-flex items-center gap-1 text-[var(--color-accent)]">
+                        <Loader2 className="size-3 animate-spin" aria-hidden />
+                        Updating order…
+                      </span>
+                    ) : null}
+                  </>
+                ) : null}
               </p>
             </div>
           </div>
@@ -914,6 +998,10 @@ export function VaultOwnerDocumentUpload({
                 onPreview={setLightboxFile}
                 onCategoryChange={updateFileCategory}
                 onRenameFile={renameVaultFile}
+                orderedFiles={existingFiles}
+                reorderEnabled={canReorderFiles}
+                reorderBusy={reorderBusy}
+                onReorderFile={reorderVaultFile}
               />
             ))}
           </div>

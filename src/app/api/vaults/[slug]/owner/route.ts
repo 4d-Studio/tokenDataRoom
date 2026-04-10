@@ -70,6 +70,12 @@ const ownerPostSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     ownerKey: z.string().min(32).max(128),
+    action: z.literal("reorder_vault_file"),
+    fileId: z.string().min(1),
+    direction: z.enum(["up", "down"]),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
     action: z.literal("set_vanity_slug"),
     vanitySlug: z.string().trim().min(3).max(60),
   }),
@@ -226,6 +232,42 @@ export async function POST(
       slug,
       createEvent("file_renamed", {
         note: `Renamed file: ${prevName} → ${newName}`,
+        ...getRequestContext(request),
+      }),
+    );
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "reorder_vault_file") {
+    const { fileId, direction } = parsed.data;
+    const vf = metadata.vaultFiles;
+    if (!vf || vf.length < 2) {
+      return NextResponse.json(
+        { error: "At least two uploaded files are required to change order." },
+        { status: 400 },
+      );
+    }
+    const idx = vf.findIndex((f) => f.id === fileId);
+    if (idx === -1) {
+      return NextResponse.json({ error: "File not found." }, { status: 404 });
+    }
+    const j = direction === "up" ? idx - 1 : idx + 1;
+    if (j < 0 || j >= vf.length) {
+      const latestMetadata = await storage.getVaultMetadata(slug);
+      const events = await storage.getEvents(slug);
+      return NextResponse.json({ metadata: latestMetadata, events });
+    }
+    const nextFiles = [...vf];
+    [nextFiles[idx], nextFiles[j]] = [nextFiles[j], nextFiles[idx]];
+    const nextMetadata = syncLegacyFieldsFromFirstFile({ ...metadata, vaultFiles: nextFiles });
+    await storage.updateVaultMetadata(nextMetadata);
+    const label = nextFiles.find((f) => f.id === fileId)?.name ?? "file";
+    await storage.appendEvent(
+      slug,
+      createEvent("files_reordered", {
+        note: `Moved “${label}” ${direction === "up" ? "earlier" : "later"} in the file list`,
         ...getRequestContext(request),
       }),
     );
@@ -471,6 +513,21 @@ export async function DELETE(
   }
 
   return NextResponse.json({ deleted: true });
+}
+
+/** Keep legacy single-file metadata fields aligned with the first vault file (recipient / old clients). */
+function syncLegacyFieldsFromFirstFile(meta: VaultRecord): VaultRecord {
+  if (!meta.vaultFiles?.length) return meta;
+  const first = meta.vaultFiles[0];
+  return {
+    ...meta,
+    fileName: first.name,
+    mimeType: first.mimeType,
+    fileSize: first.sizeBytes,
+    salt: first.salt,
+    iv: first.iv,
+    pbkdf2Iterations: first.pbkdf2Iterations,
+  };
 }
 
 function parseShareBannerDataUrl(
