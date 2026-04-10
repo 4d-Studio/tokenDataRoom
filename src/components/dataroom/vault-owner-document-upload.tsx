@@ -358,12 +358,9 @@ function CategoryPicker({
 function FileRenameControl({
   file,
   onRename,
-  compact,
 }: {
   file: VaultFileEntry;
   onRename: (fileId: string, nextName: string) => Promise<void>;
-  /** Smaller type + stacked layout for image tiles */
-  compact?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(file.name);
@@ -389,6 +386,8 @@ function FileRenameControl({
     try {
       await onRename(file.id, next);
       setEditing(false);
+    } catch {
+      /* error surfaced by parent setError; stay in edit mode */
     } finally {
       setSaving(false);
     }
@@ -396,65 +395,62 @@ function FileRenameControl({
 
   if (editing) {
     return (
-      <div className={cn("flex flex-col gap-1.5", compact ? "w-full" : "min-w-0 flex-1")}>
-        <div className="flex flex-wrap gap-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             maxLength={200}
             disabled={saving}
-            className="h-8 min-w-0 flex-1 rounded border border-border bg-muted/20 px-2 text-xs focus:border-[var(--color-accent)] focus:outline-none"
+            className="h-9 min-w-0 flex-1 rounded-md border border-border bg-muted/20 px-2.5 text-sm focus:border-[var(--color-accent)] focus:outline-none sm:min-w-[12rem]"
             autoFocus
             aria-label="New file name"
+            aria-busy={saving}
             onKeyDown={(e) => {
               if (e.key === "Escape") cancel();
-              if (e.key === "Enter") void submit();
+              if (e.key === "Enter" && !saving) void submit();
             }}
           />
           <button
             type="button"
             disabled={saving || !draft.trim()}
             onClick={() => void submit()}
-            className="rounded bg-foreground px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-40"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-foreground px-3 text-xs font-semibold text-white disabled:opacity-40"
           >
-            Save
+            {saving ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                Saving…
+              </>
+            ) : (
+              "Save"
+            )}
           </button>
           <button
             type="button"
             disabled={saving}
             onClick={cancel}
-            className="rounded border border-border px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/50"
+            className="h-9 shrink-0 rounded-md border border-border px-3 text-xs text-muted-foreground hover:bg-muted/50"
           >
             Cancel
           </button>
         </div>
         <p className="text-[0.65rem] leading-snug text-muted-foreground">
-          Shown to recipients and used for download names (encrypted payload unchanged).
+          Recipients see this name; downloads use it too (file contents unchanged).
         </p>
       </div>
     );
   }
 
   return (
-    <div
-      className={cn(
-        "flex min-w-0 items-center gap-1.5",
-        compact ? "w-full justify-between" : "",
-      )}
-    >
-      <p
-        className={cn(
-          "min-w-0 truncate font-medium text-foreground",
-          compact ? "max-w-[10rem] text-xs" : "text-sm",
-        )}
-        title={file.name}
-      >
+    <div className="flex min-w-0 items-center gap-2">
+      <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground" title={file.name}>
         {file.name}
       </p>
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-label={`Rename ${file.name}`}
       >
         <PencilLine className="size-3.5" strokeWidth={1.75} />
@@ -484,7 +480,6 @@ function CategoryGroup({
 }) {
   const [open, setOpen] = useState(true);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
-  const isImage = files.every((f) => f.mimeType.startsWith("image/"));
 
   return (
     <div
@@ -514,137 +509,60 @@ function CategoryGroup({
       </button>
 
       {open && (
-        <div className="border-t border-border">
-          {isImage ? (
-            <div className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-4">
-              {files.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex flex-col overflow-hidden rounded-lg border border-border bg-muted/30"
-                >
-                  {/* Thumbnail only — hover overlay must not cover the footer (was blocking rename/category). */}
-                  <div className="group relative aspect-square w-full shrink-0 overflow-hidden">
-                    <div className="flex size-full items-center justify-center bg-muted/40">
-                      <ImageIcon
-                        className="size-8 text-muted-foreground/40"
-                        strokeWidth={1}
-                      />
-                    </div>
-                    <div className="pointer-events-none absolute inset-0 z-10 hidden flex-col items-center justify-center gap-1.5 bg-black/50 opacity-0 transition-opacity pointer-fine:flex pointer-fine:group-hover:pointer-events-auto pointer-fine:group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => onPreview(f)}
-                        className="pointer-events-auto rounded-lg bg-white/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-white"
-                      >
-                        <Eye className="mr-1 inline-block size-3" />
-                        Details
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRemove(f.id)}
-                        className="pointer-events-auto rounded-lg bg-red-500/90 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-red-500"
-                      >
-                        <Trash2 className="mr-1 inline-block size-3" />
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                  {/* Touch / coarse pointer: no hover — always tappable actions */}
-                  <div className="flex items-center justify-center gap-0.5 border-b border-border/70 bg-muted/15 py-1 pointer-coarse:flex pointer-fine:hidden">
-                    <button
-                      type="button"
-                      onClick={() => onPreview(f)}
-                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                      aria-label={`Details for ${f.name}`}
-                    >
-                      <Eye className="size-4" strokeWidth={1.75} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onRemove(f.id)}
-                      className="rounded-md p-2 text-destructive/85 transition-colors hover:bg-destructive/10"
-                      aria-label={`Delete ${f.name}`}
-                    >
-                      <Trash2 className="size-4" strokeWidth={1.75} />
-                    </button>
-                  </div>
-                  <div className="relative z-20 border-t border-border bg-white px-2 py-1.5">
-                    <FileRenameControl file={f} onRename={onRenameFile} compact />
-                    <p className="mt-1 text-[0.65rem] text-muted-foreground">
-                      {formatBytes(f.sizeBytes)}
-                      {f.addedAt ? ` · ${formatDateTime(f.addedAt)}` : ""}
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap items-center justify-end gap-1">
-                      <CategoryPicker
-                        file={f}
-                        existingCategories={existingCategories}
-                        onPick={onCategoryChange}
-                        onOpenChange={setCategoryMenuOpen}
-                      />
-                    </div>
-                  </div>
+        <div className="divide-y divide-border">
+          {files.map((f) => (
+            <div
+              key={f.id}
+              className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/20 sm:flex-row sm:items-center sm:gap-3"
+            >
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
+                {f.mimeType.startsWith("image/") ? (
+                  <ImageIcon className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                ) : f.mimeType === "application/pdf" ? (
+                  <FileText className="size-4 text-red-400" strokeWidth={1.5} />
+                ) : (
+                  <Icon className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <FileRenameControl file={f} onRename={onRenameFile} />
+                <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                  <span>
+                    {formatBytes(f.sizeBytes)} · {formatMimeLabel(f.mimeType)}
+                  </span>
+                  {f.addedAt ? (
+                    <span className="text-[0.65rem] text-muted-foreground/90">
+                      Added {formatDateTime(f.addedAt)}
+                    </span>
+                  ) : null}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {files.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/20"
+              </div>
+              <div className="flex shrink-0 items-center justify-end gap-1 sm:justify-start">
+                <CategoryPicker
+                  file={f}
+                  existingCategories={existingCategories}
+                  onPick={onCategoryChange}
+                  onOpenChange={setCategoryMenuOpen}
+                />
+                <button
+                  type="button"
+                  onClick={() => onPreview(f)}
+                  className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label={`Preview ${f.name}`}
                 >
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
-                    {f.mimeType === "application/pdf" ? (
-                      <FileText
-                        className="size-4 text-red-400"
-                        strokeWidth={1.5}
-                      />
-                    ) : (
-                      <Icon
-                        className="size-4 text-muted-foreground"
-                        strokeWidth={1.5}
-                      />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <FileRenameControl file={f} onRename={onRenameFile} />
-                    <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
-                      <span>
-                        {formatBytes(f.sizeBytes)} · {formatMimeLabel(f.mimeType)}
-                      </span>
-                      {f.addedAt ? (
-                        <span className="text-[0.65rem] text-muted-foreground/90">
-                          Added {formatDateTime(f.addedAt)}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <CategoryPicker
-                    file={f}
-                    existingCategories={existingCategories}
-                    onPick={onCategoryChange}
-                    onOpenChange={setCategoryMenuOpen}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => onPreview(f)}
-                    className="shrink-0 rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    aria-label={`Preview ${f.name}`}
-                  >
-                    <Eye className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onRemove(f.id)}
-                    className="shrink-0 rounded p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    aria-label={`Delete ${f.name}`}
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              ))}
+                  <Eye className="size-4" strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemove(f.id)}
+                  className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  aria-label={`Delete ${f.name}`}
+                >
+                  <Trash2 className="size-4" strokeWidth={1.75} />
+                </button>
+              </div>
             </div>
-          )}
+          ))}
         </div>
       )}
     </div>
@@ -933,7 +851,7 @@ export function VaultOwnerDocumentUpload({
       if (!res.ok || !data.metadata || !data.events) {
         throw new Error(data.error || "Unable to update category.");
       }
-      onUploaded(data.metadata, data.events);
+           onUploaded(data.metadata, data.events);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to update category.");
     }
@@ -961,7 +879,9 @@ export function VaultOwnerDocumentUpload({
       }
       onUploaded(data.metadata, data.events);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to rename file.");
+      const msg = e instanceof Error ? e.message : "Unable to rename file.";
+      setError(msg);
+      throw e;
     }
   };
 
