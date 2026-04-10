@@ -104,11 +104,13 @@ export async function POST(
     }
 
     const fileId = crypto.randomUUID();
+    const addedAt = new Date().toISOString();
     const fileEntry: VaultFileEntry = {
       id: fileId,
       name: parsed.data.fileName,
       mimeType: parsed.data.mimeType,
       sizeBytes: parsed.data.fileSize,
+      addedAt,
       salt: parsed.data.salt,
       iv: parsed.data.iv,
       pbkdf2Iterations: parsed.data.pbkdf2Iterations,

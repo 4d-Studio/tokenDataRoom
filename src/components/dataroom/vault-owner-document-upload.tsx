@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { decryptFile, encryptFile } from "@/lib/dataroom/client-crypto";
 import { ownerVaultPasswordSessionKey } from "@/lib/dataroom/owner-vault-session";
 import { FILE_SIZE_LIMIT_BYTES, vaultFilesList } from "@/lib/dataroom/types";
-import { formatBytes } from "@/lib/dataroom/helpers";
+import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
 import type { VaultEvent, VaultFileEntry, VaultRecord } from "@/lib/dataroom/types";
 import { cn } from "@/lib/utils";
@@ -368,11 +368,11 @@ function CategoryGroup({
   const isImage = files.every((f) => f.mimeType.startsWith("image/"));
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-white">
+    <div className="overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_16px_rgba(35,31,26,0.04)]">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[color:var(--color-background-muted)]/40"
       >
         <Icon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
         <span className="flex-1 text-sm font-semibold text-foreground">
@@ -390,13 +390,13 @@ function CategoryGroup({
       </button>
 
       {open && (
-        <div className="border-t border-border">
+        <div className="border-t border-[color:var(--tkn-panel-border)]">
           {isImage ? (
             <div className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-4">
               {files.map((f) => (
                 <div
                   key={f.id}
-                  className="group relative overflow-hidden rounded-lg border border-border bg-muted/30"
+                  className="group relative overflow-hidden rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/40"
                 >
                   <div className="flex aspect-square items-center justify-center">
                     <ImageIcon
@@ -422,7 +422,7 @@ function CategoryGroup({
                       Delete
                     </button>
                   </div>
-                  <div className="border-t border-border bg-white px-2 py-1.5">
+                  <div className="border-t border-[color:var(--tkn-panel-border)] bg-card px-2 py-1.5">
                     <p className="truncate text-xs font-medium text-foreground">
                       {f.name}
                     </p>
@@ -434,16 +434,16 @@ function CategoryGroup({
               ))}
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-[color:var(--tkn-panel-border)]">
               {files.map((f) => (
                 <div
                   key={f.id}
-                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/20"
+                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[color:var(--color-background-muted)]/35"
                 >
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
                     {f.mimeType === "application/pdf" ? (
                       <FileText
-                        className="size-4 text-red-400"
+                        className="size-4 text-[color:var(--color-accent)]"
                         strokeWidth={1.5}
                       />
                     ) : (
@@ -457,11 +457,15 @@ function CategoryGroup({
                     <p className="truncate text-sm font-medium text-foreground">
                       {f.name}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       <span>
-                        {formatBytes(f.sizeBytes)} ·{" "}
-                        {formatMimeLabel(f.mimeType)}
+                        {formatBytes(f.sizeBytes)} · {formatMimeLabel(f.mimeType)}
                       </span>
+                      {f.addedAt ? (
+                        <span className="mt-0.5 block text-[0.65rem] text-[color:var(--tkn-text-support)]">
+                          Added {formatDateTime(f.addedAt)}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <CategoryPicker
@@ -791,14 +795,16 @@ export function VaultOwnerDocumentUpload({
       {existingFiles.length > 0 && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Room files
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {existingFiles.length} file
-                {existingFiles.length !== 1 ? "s" : ""} uploaded · encrypted at
-                rest
+              </p>
+              <p className="text-sm font-medium text-foreground">
+                {existingFiles.length} encrypted file
+                {existingFiles.length !== 1 ? "s" : ""}
+              </p>
+              <p className="text-xs leading-snug text-[color:var(--tkn-text-support)]">
+                Stored encrypted — only your room password decrypts them for preview or download.
               </p>
             </div>
           </div>
@@ -825,59 +831,59 @@ export function VaultOwnerDocumentUpload({
         {/* Separator when there are existing files */}
         {existingFiles.length > 0 && (
           <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <div className="h-px flex-1 bg-[color:var(--tkn-panel-border)]" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Add more files
             </span>
-            <div className="h-px flex-1 bg-border" />
+            <div className="h-px flex-1 bg-[color:var(--tkn-panel-border)]" />
           </div>
         )}
 
         {/* How it works — shown when no files uploaded yet */}
         {existingFiles.length === 0 && pending.length === 0 && (
-          <div className="rounded-xl border border-border bg-white p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <ShieldCheck className="size-4 text-emerald-600" strokeWidth={2} />
-              <p className="text-sm font-semibold text-foreground">
-                End-to-end encrypted uploads
-              </p>
+          <div className="rounded-2xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/35 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] sm:p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--tkn-panel-border)] bg-card text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:text-emerald-400/95">
+                <ShieldCheck className="size-5" strokeWidth={1.75} />
+              </div>
+              <div className="min-w-0 flex-1 space-y-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    How it works
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    End-to-end encrypted uploads
+                  </p>
+                </div>
+                <ol className="grid gap-2.5 sm:grid-cols-3 sm:gap-3">
+                  {[
+                    { n: "1", line: "Drop files in the zone below" },
+                    { n: "2", line: "Encrypted in your browser before upload" },
+                    { n: "3", line: "Only your room password unlocks them" },
+                  ].map((step) => (
+                    <li
+                      key={step.n}
+                      className="flex gap-2.5 rounded-xl border border-[color:var(--tkn-panel-border)]/80 bg-card/90 px-3 py-2.5 text-left shadow-[0_1px_6px_rgba(35,31,26,0.04)]"
+                    >
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-background-muted)]/80 text-xs font-semibold tabular-nums text-foreground">
+                        {step.n}
+                      </span>
+                      <span className="text-[11px] leading-snug text-[color:var(--tkn-text-support)]">{step.line}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="border-t border-dashed border-[color:var(--tkn-panel-border)] pt-3 text-center text-[11px] leading-relaxed text-[color:var(--tkn-text-support)]">
+                  We never see plaintext files. Share the room password with recipients separately.
+                </p>
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
-                  <span className="text-sm font-bold text-foreground">1</span>
-                </div>
-                <p className="text-xs leading-snug text-muted-foreground">
-                  Drop files below
-                </p>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
-                  <span className="text-sm font-bold text-foreground">2</span>
-                </div>
-                <p className="text-xs leading-snug text-muted-foreground">
-                  Encrypted in your browser
-                </p>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
-                  <span className="text-sm font-bold text-foreground">3</span>
-                </div>
-                <p className="text-xs leading-snug text-muted-foreground">
-                  Only the password unlocks them
-                </p>
-              </div>
-            </div>
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              We never see your files. Share the room password separately with recipients.
-            </p>
           </div>
         )}
 
         {/* Upload queue */}
         {pending.length > 0 && (
-          <div className="overflow-hidden rounded-xl border border-border">
-            <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2">
+          <div className="overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_16px_rgba(35,31,26,0.04)]">
+            <div className="flex items-center justify-between border-b border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/45 px-4 py-2">
               <p className="text-xs font-medium text-muted-foreground">
                 {pending.length} file{pending.length !== 1 ? "s" : ""} queued
                 {hasActive ? " · encrypting & uploading…" : ""}
@@ -896,16 +902,16 @@ export function VaultOwnerDocumentUpload({
                 )}
               </div>
             </div>
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-[color:var(--tkn-panel-border)]">
               {pending.map((entry) => (
                 <div
                   key={entry.id}
                   className={cn(
-                    "flex items-center gap-3 bg-white px-4 py-2.5",
+                    "flex items-center gap-3 bg-card px-4 py-2.5",
                     entry.status === "error" && "bg-red-50/50",
                   )}
                 >
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/50">
                     {entry.status === "encrypting" ||
                     entry.status === "uploading" ? (
                       <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
@@ -962,21 +968,23 @@ export function VaultOwnerDocumentUpload({
             addFiles(e.dataTransfer.files);
           }}
           className={cn(
-            "upload-zone flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-white py-8 text-center transition-colors",
-            "hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5",
+            "upload-zone flex cursor-pointer flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-[color:var(--tkn-panel-border)] bg-card py-9 text-center transition-[border-color,background-color,box-shadow]",
+            "hover:border-[color:var(--color-accent)] hover:bg-[var(--color-accent)]/[0.04] hover:shadow-[0_2px_20px_rgba(243,91,45,0.08)]",
           )}
           onClick={() => inputRef.current?.click()}
         >
-          <UploadCloud className="size-7 text-muted-foreground" />
+          <div className="flex size-11 items-center justify-center rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+            <UploadCloud className="size-5" strokeWidth={1.75} />
+          </div>
           <div>
-            <span className="text-sm font-medium text-foreground">
+            <span className="text-sm font-semibold text-foreground">
               Drop files here
             </span>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-[color:var(--tkn-text-support)]">
               {" "}or click to browse
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-[color:var(--tkn-text-support)]">
             PDF, Word, Excel, images, text · max {(FILE_SIZE_LIMIT_BYTES / 1024 / 1024).toFixed(0)} MB each
           </p>
           <input
@@ -990,13 +998,15 @@ export function VaultOwnerDocumentUpload({
 
         {/* Encryption password */}
         {canAutoStart ? (
-          <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-2.5">
-            <ShieldCheck className="size-4 shrink-0 text-emerald-600" />
-            <div className="flex-1">
-              <p className="text-xs font-medium text-emerald-800">
+          <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/45 px-4 py-3 shadow-[0_2px_16px_rgba(16,185,129,0.06)] sm:flex-row sm:items-center sm:gap-3 sm:py-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-emerald-200/90 bg-white/80 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300">
+              <ShieldCheck className="size-4" strokeWidth={1.75} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100/95">
                 Encryption active
               </p>
-              <p className="text-[0.7rem] text-emerald-600/80">
+              <p className="mt-0.5 text-[11px] leading-snug text-emerald-800/85 dark:text-emerald-200/75">
                 Files encrypt in your browser before upload. The server never sees plaintext.
               </p>
             </div>
@@ -1006,25 +1016,28 @@ export function VaultOwnerDocumentUpload({
                 setPassword("");
                 sessionStorage.removeItem(PW_KEY(slug));
               }}
-              className="rounded-md border border-emerald-200 bg-white px-2.5 py-1 text-xs text-emerald-700 transition hover:bg-emerald-50"
+              className="shrink-0 rounded-xl border border-emerald-300/80 bg-white px-3 py-1.5 text-xs font-medium text-emerald-900 transition hover:bg-emerald-50/90 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 dark:hover:bg-emerald-950/50"
             >
               Change password
             </button>
           </div>
         ) : (
-          <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-            <div className="flex items-start gap-2.5">
-              <Lock className="mt-0.5 size-4 shrink-0 text-amber-600" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-amber-900">
+          <div className="rounded-2xl border border-amber-200/85 bg-amber-50/50 p-4 shadow-[0_2px_16px_rgba(245,158,11,0.07)]">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-200/90 bg-white/75 text-amber-800 dark:bg-amber-950/25 dark:text-amber-200">
+                <Lock className="size-4" strokeWidth={1.75} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-amber-950 dark:text-amber-100/95">
                   Enter room password to upload
                 </p>
-                <p className="mt-0.5 text-xs text-amber-700/80">
-                  Every file is encrypted in your browser using this password before it leaves your device. Share this password separately with recipients so they can decrypt.
+                <p className="mt-1 text-xs leading-relaxed text-amber-900/80 dark:text-amber-200/75">
+                  Every file is encrypted in your browser with this password before it leaves your device. Share it
+                  separately with recipients so they can decrypt.
                 </p>
               </div>
             </div>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-4 flex gap-2">
               <div className="relative flex-1">
                 <input
                   ref={passwordRef}
@@ -1040,7 +1053,7 @@ export function VaultOwnerDocumentUpload({
                       retryAll();
                     }
                   }}
-                  className="h-9 w-full rounded-lg border border-amber-200 bg-white px-3 pr-14 text-sm placeholder:text-muted-foreground focus:border-[var(--color-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                  className="h-10 w-full rounded-xl border-2 border-amber-200/90 bg-white px-3 pr-14 text-sm placeholder:text-muted-foreground shadow-[0_1px_6px_rgba(35,31,26,0.04)] focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/20 dark:bg-card"
                 />
                 <button
                   type="button"

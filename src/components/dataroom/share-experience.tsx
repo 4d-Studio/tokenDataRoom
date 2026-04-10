@@ -7,14 +7,18 @@ import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronLeft,
   Clock,
   Download,
   FileText,
   Lock,
+  Mail,
   ShieldCheck,
 } from "lucide-react";
 
 import { MobileShareViewer } from "@/components/dataroom/mobile-share-viewer";
+import { RecipientRecordPanel } from "@/components/dataroom/recipient-record-panel";
+import { ShareRecipientAppBar } from "@/components/dataroom/share-recipient-app-bar";
 import {
   SHARE_RECIPIENT_DISCLAIMER,
   ShareRecipientCompactHeader,
@@ -24,13 +28,12 @@ import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-o
 import { decryptFile } from "@/lib/dataroom/client-crypto";
 import { getOrCreateViewerBinding } from "@/lib/dataroom/viewer-binding-client";
 import { sanitizeHtml } from "@/lib/dataroom/sanitize";
-import { ChevronLeft, Mail } from "lucide-react";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
 import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
 import {
-  vaultFilesList,
-  vaultHasEncryptedDocument,
+  recipientVisibleVaultFiles,
+  vaultHasRecipientVisibleDocument,
   type VaultAcceptanceRecord,
   type VaultRecord,
 } from "@/lib/dataroom/types";
@@ -54,6 +57,10 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
+const ndaFormInputClassName =
+  "h-11 rounded-xl border-2 border-foreground/10 bg-card px-3.5 text-sm shadow-[0_2px_8px_rgba(35,31,26,0.06)] transition-[box-shadow,border-color] placeholder:text-foreground/40 focus-visible:border-[color:var(--color-accent)] focus-visible:shadow-[0_0_0_3px_rgba(243,91,45,0.18),0_2px_10px_rgba(35,31,26,0.07)] focus-visible:ring-0";
 
 type AccessResponse = {
   acceptance?: VaultAcceptanceRecord;
@@ -89,6 +96,8 @@ export function ShareExperience({
   shareHostLabel = "",
   workspaceLogoUrl,
   workspaceCompanyName,
+  shareExpiresLabel,
+  recipientShareUrl,
 }: {
   metadata: VaultRecord;
   initialAcceptance: VaultAcceptanceRecord | null;
@@ -102,6 +111,10 @@ export function ShareExperience({
   shareHostLabel?: string;
   workspaceLogoUrl?: string | null;
   workspaceCompanyName?: string | null;
+  /** From the server page — avoids client Intl timezone hydration mismatches. */
+  shareExpiresLabel: string;
+  /** Canonical HTTPS share URL (vanity slug when set) — built on the server. */
+  recipientShareUrl: string;
 }) {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
@@ -137,12 +150,16 @@ export function ShareExperience({
     signatureName: initialAcceptance?.signatureName ?? "",
   }));
 
-  const hasDocument = vaultHasEncryptedDocument(metadata);
+  const hasRecipientVaultFiles = vaultHasRecipientVisibleDocument(metadata);
+  const shareBannerSrc = metadata.shareBanner
+    ? `/api/vaults/${metadata.slug}/share-banner`
+    : null;
+  const headRecipientFile = recipientVisibleVaultFiles(metadata)[0];
 
   const viewerWatermarkLabel =
-    acceptance?.signerEmail && objectUrl && hasDocument
-      ? `${acceptance.signerEmail} · ${acceptance.signerName || "Viewer"} · ${new Date().toLocaleDateString()}`
-      : objectUrl && hasDocument
+    acceptance?.signerEmail && objectUrl && hasRecipientVaultFiles
+      ? `${acceptance.signerEmail} · ${acceptance.signerName || "Viewer"} · ${new Date().toLocaleDateString("en-US", { dateStyle: "medium" })}`
+      : objectUrl && hasRecipientVaultFiles
         ? `Confidential · ${metadata.title}`
         : "";
 
@@ -159,7 +176,9 @@ export function ShareExperience({
   }, [metadata.slug]);
 
   // Fetch file manifest when access is granted or room doesn't require NDA
-  const [filesList, setFilesList] = useState<Array<{ id: string; name: string; mimeType: string; sizeBytes: number; category?: string }>>([]);
+  const [filesList, setFilesList] = useState<
+    Array<{ id: string; name: string; mimeType: string; sizeBytes: number; category?: string; addedAt?: string }>
+  >([]);
   const [fetchedFiles, setFetchedFiles] = useState(false);
   useEffect(() => {
     const needsIdentity =
@@ -171,7 +190,16 @@ export function ShareExperience({
       try {
         const res = await fetch(`/api/vaults/${metadata.slug}/bundle`);
         if (res.ok) {
-          const data = (await res.json()) as { files?: Array<{ id: string; name: string; mimeType: string; sizeBytes: number; category?: string }> };
+          const data = (await res.json()) as {
+            files?: Array<{
+              id: string;
+              name: string;
+              mimeType: string;
+              sizeBytes: number;
+              category?: string;
+              addedAt?: string;
+            }>;
+          };
           if (data.files) setFilesList(data.files);
         }
       } catch { /* non-fatal */ }
@@ -188,7 +216,7 @@ export function ShareExperience({
   const autoDecryptAttempted = useRef(false);
   useEffect(() => {
     if (autoDecryptAttempted.current) return;
-    if (!vaultFilesList(metadata).length) return;
+    if (!recipientVisibleVaultFiles(metadata).length) return;
     if (Object.keys(decryptedFiles).length > 0) return;
     if (!accessGranted && (metadata.requiresNda || metadata.restrictRecipientEmails)) return;
     try {
@@ -270,7 +298,7 @@ export function ShareExperience({
       startTransition(async () => {
         setError("");
         try {
-          const manifest = vaultFilesList(metadata);
+          const manifest = recipientVisibleVaultFiles(metadata);
           const primary = manifest[0];
           if (!primary) {
             throw new Error("No encrypted file in this room yet.");
@@ -368,8 +396,11 @@ export function ShareExperience({
     };
 
     return (
-      <MobileShareViewer
-        hasDocument={hasDocument}
+      <>
+        <ShareRecipientAppBar accessGranted={accessGranted} recipientShareUrl={recipientShareUrl} />
+        <MobileShareViewer
+        hasDocument={hasRecipientVaultFiles}
+        shareBannerSrc={shareBannerSrc ?? undefined}
         viewerWatermarkLabel={viewerWatermarkLabel}
         metadata={metadata}
         initialAcceptance={initialAcceptance}
@@ -390,6 +421,7 @@ export function ShareExperience({
         objectUrl={objectUrl}
         signingInProgress={isPending}
       />
+      </>
     );
   }
 
@@ -400,6 +432,10 @@ export function ShareExperience({
     startTransition(async () => {
       setError("");
       try {
+        const typedSig = ndaDraft.signatureName.trim();
+        const signatureNameForApi = signatureImage
+          ? typedSig || ndaDraft.signerName.trim()
+          : typedSig;
         const res = await fetch(ndaPostPath, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -408,7 +444,7 @@ export function ShareExperience({
             signerEmail: ndaDraft.signerEmail,
             signerCompany: ndaDraft.signerCompany,
             signerAddress: ndaDraft.signerAddress,
-            signatureName: ndaDraft.signatureName,
+            signatureName: signatureNameForApi,
             signatureImage,
             rememberMe,
             viewerBinding: getOrCreateViewerBinding(metadata.slug),
@@ -448,9 +484,8 @@ export function ShareExperience({
         }
         setDecryptedFiles({});
 
-        // Always use vaultFilesList(metadata) so file IDs match storage (never rely on synthetic
-        // "legacy-primary" when the server only knows UUID fileIds — that caused 404s and bad decrypt).
-        const manifest = vaultFilesList(metadata);
+        // Recipient-visible files only (owner may hide banner duplicates from the bundle).
+        const manifest = recipientVisibleVaultFiles(metadata);
         if (!manifest.length) {
           throw new Error("No encrypted files in this room yet.");
         }
@@ -515,233 +550,156 @@ export function ShareExperience({
     });
   };
 
-  const stepNumber = (n: number, done: boolean) => (
+  const ndaHeaderStepBadge = (n: number, done: boolean) => (
     <div
-      className={
-        "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold " +
-        (done
-          ? "bg-foreground text-background"
-          : "border-2 border-border text-muted-foreground")
-      }
+      className={cn(
+        "flex size-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 text-sm font-semibold tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+        done ? "text-foreground" : "text-muted-foreground",
+      )}
     >
-      {done ? <CheckCircle2 className="size-4" /> : n}
+      {done ? <CheckCircle2 className="size-5" strokeWidth={1.75} /> : n}
     </div>
   );
 
   const previewable =
-    hasDocument &&
-    (metadata.mimeType.startsWith("image/") ||
-      metadata.mimeType === "application/pdf" ||
-      metadata.mimeType.startsWith("text/"));
+    hasRecipientVaultFiles &&
+    Boolean(
+      headRecipientFile?.mimeType.startsWith("image/") ||
+        headRecipientFile?.mimeType === "application/pdf" ||
+        headRecipientFile?.mimeType.startsWith("text/"),
+    );
+
+  const senderAttribution =
+    metadata.senderName.trim() +
+    (metadata.senderCompany?.trim() ? ` · ${metadata.senderCompany.trim()}` : "");
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-8">
-      <ShareRecipientCompactHeader
-        shareHostLabel={shareHostLabel}
-        workspaceLogoUrl={workspaceLogoUrl}
-        workspaceCompanyName={workspaceCompanyName}
-        roomTitle={metadata.title}
-      />
-
-      {/* Room info — only shown after access is granted */}
+    <div className="mx-auto w-full max-w-3xl space-y-8 sm:space-y-10">
+      <ShareRecipientAppBar accessGranted={accessGranted} recipientShareUrl={recipientShareUrl} />
       {accessGranted ? (
-        <>
-          <div className="flex flex-wrap items-center gap-3 border-y border-border py-4">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
-              <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">
-                {hasDocument ? metadata.fileName : "No document yet"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {hasDocument
-                  ? `${formatBytes(metadata.fileSize)} · ${formatMimeLabel(metadata.mimeType)}`
-                  : "The sender has not uploaded a file. Check back later."}
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <Badge variant={objectUrl ? "secondary" : "outline"} className="gap-1.5 font-normal">
-                {!hasDocument ? (
-                  <><Clock className="size-3" /> Waiting</>
-                ) : objectUrl ? (
-                  <><CheckCircle2 className="size-3" /> Unlocked</>
-                ) : (
-                  <><Lock className="size-3" /> Encrypted</>
-                )}
-              </Badge>
-              {objectUrl && hasDocument ? (
-                <Button asChild variant="outline" size="sm">
-                  <a href={objectUrl} download={downloadName}>
-                    <Download className="size-4" />
-                    Download
-                  </a>
-                </Button>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="size-3.5 shrink-0" />
-              Expires {formatDateTime(metadata.expiresAt)}
-            </span>
-            <span>
-              Shared by {metadata.senderName}
-              {metadata.senderCompany ? ` · ${metadata.senderCompany}` : ""}
-            </span>
-            {metadata.message ? (
-              <span className="basis-full text-[13px] leading-relaxed text-foreground">
-                Note: {metadata.message}
-              </span>
-            ) : null}
-          </div>
-        </>
+        <ShareRecipientCompactHeader
+          shareHostLabel={shareHostLabel}
+          workspaceLogoUrl={workspaceLogoUrl}
+          workspaceCompanyName={workspaceCompanyName}
+          roomTitle={metadata.title}
+          shareBannerSrc={shareBannerSrc}
+          senderAttribution={senderAttribution}
+          expiresLabel={shareExpiresLabel}
+          roomNote={metadata.message?.trim() || null}
+        />
       ) : (
-        /* Pre-access: don't reveal file details. Show a locked state. */
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-4">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
-            <Lock className="size-5 text-muted-foreground" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground">
-              {filesList.length > 0
-                ? `${filesList.length} encrypted file${filesList.length !== 1 ? "s" : ""}`
-                : "Encrypted room"}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {metadata.requiresNda
-                ? "Sign the confidentiality agreement below to access this room."
-                : "Enter the room password to decrypt and view files."}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Alerts */}
-      {needsBootstrapFromWorkspace ? (
-        <Alert>
-          <ShieldCheck />
-          <AlertTitle>Applying workspace access</AlertTitle>
-          <AlertDescription>
-            You already signed this workspace&apos;s NDA. Linking it to this room…
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      {error ? (
-        <Alert variant="destructive">
-          <AlertCircle />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-      {success && !Object.keys(decryptedFiles).length ? (
-        <Alert>
-          <CheckCircle2 />
-          <AlertTitle>Done</AlertTitle>
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      {/* Return-visit email gate — hidden once pendingEmail switches to NDA flow */}
-      {!accessGranted && showReturnGate ? (
-        <Card>
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
-                <Mail className="size-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-base">Access this room</CardTitle>
-                <CardDescription>
+        <div className="overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_28px_rgba(35,31,26,0.06)]">
+          <ShareRecipientCompactHeader
+            shareHostLabel={shareHostLabel}
+            workspaceLogoUrl={workspaceLogoUrl}
+            workspaceCompanyName={workspaceCompanyName}
+            roomTitle={metadata.title}
+            shareBannerSrc={shareBannerSrc}
+            senderAttribution={senderAttribution}
+            expiresLabel={shareExpiresLabel}
+            roomNote={metadata.message?.trim() || null}
+            embedInParent
+            suppressHostBadge
+          />
+          {showReturnGate ? (
+            <Card className="rounded-none border-0 shadow-none ring-0 gap-0 rounded-b-none border-t border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/60">
+              <CardHeader className="rounded-none space-y-2.5 px-5 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
+                <CardTitle className="text-sm font-medium tracking-tight text-foreground">
+                  Access this room
+                </CardTitle>
+                <CardDescription className="text-xs leading-relaxed text-[color:var(--tkn-text-support)]">
                   {metadata.restrictRecipientEmails
-                    ? "This room only accepts invited addresses. Enter the email that received the invite. We’ll send a one-time code."
+                    ? "We’ll email a code to the invited address only."
                     : metadata.requiresNda
-                      ? "Enter the email you used when signing the NDA. We’ll send you a one-time code."
-                      : "Enter your email. We’ll send you a one-time code to verify it’s you."}
+                      ? "Use the same email as your NDA — we’ll send a one-time code."
+                      : "We’ll email you a one-time code to verify it’s you."}
                 </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+              </CardHeader>
+              <CardContent className="space-y-5 px-5 pb-6 pt-1 sm:space-y-6 sm:px-6 sm:pb-7 sm:pt-2">
             {returnStep === "email" ? (
-              <FieldGroup className="gap-3">
-                <Field>
-                  <FieldLabel htmlFor="return-email">Work email</FieldLabel>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <div className="mx-auto w-full max-w-md space-y-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/70">
+                  Work email
+                </p>
+                <div className="flex h-11 overflow-hidden rounded-xl border-2 border-foreground/10 bg-card shadow-[0_2px_8px_rgba(35,31,26,0.06)] transition-[box-shadow,border-color] focus-within:border-[color:var(--color-accent)] focus-within:shadow-[0_0_0_3px_rgba(243,91,45,0.18),0_2px_10px_rgba(35,31,26,0.07)]">
+                  <div className="relative min-w-0 flex-1 bg-[color:var(--color-background-muted)]/80">
+                    <Mail
+                      className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/35"
+                      aria-hidden
+                    />
                     <Input
                       id="return-email"
                       type="email"
                       autoComplete="email"
                       inputMode="email"
-                      className="pl-10"
+                      className="h-11 rounded-none border-0 bg-transparent py-0 pl-10 pr-3 text-sm text-foreground placeholder:text-foreground/40 shadow-none focus-visible:ring-0"
                       value={returnEmail}
                       onChange={(e) => setReturnEmail(e.target.value)}
-                      placeholder="jane@company.com"
+                      placeholder="you@company.com"
                     />
                   </div>
-                </Field>
-                <Button
-                  type="button"
-                  size="lg"
-                  className="w-full"
-                  disabled={
-                    isPending ||
-                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(returnEmail.trim())
-                  }
-                  onClick={() => {
-                    startTransition(async () => {
-                      setError("");
-                      try {
-                        const res = await fetch("/api/recipient/login-code", {
-                          method: "POST",
-                          headers: { "content-type": "application/json" },
-                          body: JSON.stringify({ email: returnEmail.trim(), slug: metadata.slug }),
-                        });
-                        const data = (await res.json()) as { error?: string };
-                        if (!res.ok) throw new Error(data.error || "Unable to send code.");
-                        setReturnStep("code");
-                      } catch (e) {
-                        setError(e instanceof Error ? e.message : "Unable to send code.");
-                      }
-                    });
-                  }}
-                >
-                  {isPending ? "Sending…" : "Send access code"}
-                </Button>
-              </FieldGroup>
+                  <Button
+                    type="button"
+                    variant="default"
+                    className="h-11 min-w-[7.25rem] shrink-0 rounded-none border-0 border-l-2 border-foreground/10 px-5 text-sm font-semibold shadow-none sm:min-w-[8rem]"
+                    disabled={
+                      isPending ||
+                      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(returnEmail.trim())
+                    }
+                    onClick={() => {
+                      startTransition(async () => {
+                        setError("");
+                        try {
+                          const res = await fetch("/api/recipient/login-code", {
+                            method: "POST",
+                            headers: { "content-type": "application/json" },
+                            body: JSON.stringify({ email: returnEmail.trim(), slug: metadata.slug }),
+                          });
+                          const data = (await res.json()) as { error?: string };
+                          if (!res.ok) throw new Error(data.error || "Unable to send code.");
+                          setReturnStep("code");
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Unable to send code.");
+                        }
+                      });
+                    }}
+                  >
+                    {isPending ? "…" : "Send code"}
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <FieldGroup className="gap-3">
-                <Field>
-                  <FieldLabel>Access code</FieldLabel>
-                  <p className="mb-2 text-xs text-muted-foreground">
-                    Check your inbox at <span className="font-medium text-foreground">{returnEmail}</span>.
-                  </p>
-                  <p className="mb-3 text-[0.75rem] text-muted-foreground/70">
-                    Didn&apos;t receive it? Check your spam folder, or try resending after 30 seconds.
+              <FieldGroup className="mx-auto w-full max-w-md gap-5">
+                <Field className="gap-3">
+                  <FieldLabel className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
+                    6-digit code
+                  </FieldLabel>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Sent to{" "}
+                    <span className="font-medium text-foreground">{returnEmail}</span>
                   </p>
                   <InputOTP
                     autoFocus
                     maxLength={6}
                     value={returnCode}
                     onChange={(v) => setReturnCode(v.replace(/\D/g, "").slice(0, 6))}
-                    containerClassName="justify-start"
+                    containerClassName="max-w-full justify-start py-1"
                   >
-                    <InputOTPGroup className="gap-2 border-0 bg-transparent">
+                    <InputOTPGroup className="gap-2 border-0 bg-transparent sm:gap-2.5">
                       {Array.from({ length: 6 }, (_, i) => (
                         <InputOTPSlot
                           key={i}
                           index={i}
-                          className="size-11 rounded-xl border border-border bg-white text-base font-semibold first:rounded-xl first:border last:rounded-xl"
+                          className="size-8 rounded-md border border-border bg-white text-xs font-semibold tabular-nums first:rounded-md first:border last:rounded-md sm:size-8"
                         />
                       ))}
                     </InputOTPGroup>
                   </InputOTP>
                 </Field>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3 pt-2">
                   <Button
                     type="button"
-                    size="lg"
+                    className="h-8 px-4 text-xs font-medium"
                     disabled={isPending || returnCode.length !== 6}
                     onClick={() => {
                       startTransition(async () => {
@@ -767,7 +725,6 @@ export function ShareExperience({
                               setSuccess(`Welcome back — access granted for ${data.signerName}.`);
                             }
                           } else if (data.pendingEmail) {
-                            // No NDA signed yet — pre-fill the identity step email
                             setNdaDraft((d) => ({ ...d, signerEmail: data.pendingEmail ?? returnEmail }));
                             setNdaStep("identity");
                             setReturnStep("email");
@@ -780,12 +737,12 @@ export function ShareExperience({
                       });
                     }}
                   >
-                    {isPending ? "Verifying…" : "Verify and access"}
+                    {isPending ? "…" : "Verify"}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
-                    size="lg"
+                    className="h-8 border-[color:var(--tkn-panel-border)] px-4 text-xs bg-card"
                     onClick={() => {
                       setReturnStep("email");
                       setReturnCode("");
@@ -798,7 +755,7 @@ export function ShareExperience({
             )}
 
             {metadata.requiresNda ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-2 border-t border-[color:var(--tkn-panel-border)] pt-5 text-center text-[11px] leading-relaxed text-muted-foreground sm:mt-3 sm:pt-6">
                 Haven&apos;t signed the NDA yet?{" "}
                 <button
                   type="button"
@@ -813,45 +770,146 @@ export function ShareExperience({
                 </button>
               </p>
             ) : null}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="border-t border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/50 px-5 py-4 sm:px-6">
+              <p className="text-pretty text-sm leading-relaxed text-[color:var(--tkn-text-support)]">
+                {metadata.requiresNda
+                  ? "Sign the confidentiality agreement below to access this room."
+                  : "Use the password from the sender to decrypt files below — nothing is sent to the server."}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Alerts — kept high on the page so errors sit above the access form */}
+      {needsBootstrapFromWorkspace ? (
+        <Alert>
+          <ShieldCheck />
+          <AlertTitle>Applying workspace access</AlertTitle>
+          <AlertDescription>
+            You already signed this workspace&apos;s NDA. Linking it to this room…
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      {success && !Object.keys(decryptedFiles).length ? (
+        <Alert>
+          <CheckCircle2 />
+          <AlertTitle>Done</AlertTitle>
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {/* Room info — only shown after access is granted */}
+      {accessGranted ? (
+        <>
+          <div className="rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card px-4 py-4 shadow-[0_2px_28px_rgba(35,31,26,0.06)] sm:px-5 sm:py-5">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Primary file
+                </p>
+                <p className="mt-1 truncate text-sm font-medium text-foreground sm:text-[0.9375rem]">
+                  {headRecipientFile ? headRecipientFile.name : "No document yet"}
+                </p>
+                <p className="mt-0.5 text-xs text-[color:var(--tkn-text-support)]">
+                  {headRecipientFile
+                    ? `${formatBytes(headRecipientFile.sizeBytes)} · ${formatMimeLabel(headRecipientFile.mimeType)}`
+                    : "The sender has not uploaded a file. Check back later."}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <Badge variant={objectUrl ? "secondary" : "outline"} className="gap-1.5 border-[color:var(--tkn-panel-border)] font-normal">
+                  {!hasRecipientVaultFiles ? (
+                    <><Clock className="size-3" /> Waiting</>
+                  ) : objectUrl ? (
+                    <><CheckCircle2 className="size-3" /> Unlocked</>
+                  ) : (
+                    <><Lock className="size-3" /> Encrypted</>
+                  )}
+                </Badge>
+                {objectUrl && hasRecipientVaultFiles ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/50"
+                  >
+                    <a href={objectUrl} download={downloadName}>
+                      <Download className="size-4" />
+                      Download
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </>
       ) : null}
 
       {/* Step 1: NDA — hidden when the return-visit gate is showing (returning users verify email first) */}
       {metadata.requiresNda && !showReturnGate ? (
-        <Card>
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              {stepNumber(1, ndaStepComplete)}
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-base">{ndaCardTitle}</CardTitle>
-                <CardDescription>{ndaCardDescription}</CardDescription>
+        <Card className="overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_28px_rgba(35,31,26,0.06)] ring-0">
+          <CardHeader className="gap-4 border-b border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/40 px-5 py-5 sm:px-6 sm:py-6">
+            <div className="flex items-start gap-4">
+              {ndaHeaderStepBadge(1, ndaStepComplete)}
+              <div className="min-w-0 flex-1 space-y-1">
+                <CardTitle className="text-pretty font-heading text-lg font-semibold leading-snug tracking-tight sm:text-xl">
+                  {ndaCardTitle}
+                </CardTitle>
+                <CardDescription className="text-sm leading-relaxed">{ndaCardDescription}</CardDescription>
               </div>
             </div>
             {acceptance ? (
               <CardAction>
-                <Badge variant="secondary">Signed {formatDateTime(acceptance.acceptedAt)}</Badge>
+                <Badge
+                  variant="outline"
+                  className="border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/50 font-normal text-foreground"
+                >
+                  Signed {formatDateTime(acceptance.acceptedAt)}
+                </Badge>
               </CardAction>
             ) : null}
           </CardHeader>
 
           {!accessGranted ? (
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-7 px-5 py-6 sm:space-y-8 sm:px-6 sm:py-8">
               {ndaStep === "identity" ? (
                 <>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Step 1 of 3 — Your details</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Step 1 of 3
+                    </p>
+                    <p className="text-base font-medium text-foreground">Your details</p>
+                    <p className="text-sm leading-snug text-[color:var(--tkn-text-support)]">
                       Enter how you&apos;ll appear on the confidentiality agreement and access record.
                     </p>
                   </div>
                   <FieldGroup>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field>
-                        <FieldLabel htmlFor="signer-name">Full name</FieldLabel>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <Field className="gap-2">
+                        <FieldLabel
+                          htmlFor="signer-name"
+                          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70"
+                        >
+                          Full name
+                        </FieldLabel>
                         <Input
                           id="signer-name"
                           autoComplete="name"
+                          className={ndaFormInputClassName}
                           value={ndaDraft.signerName}
                           onChange={(e) =>
                             setNdaDraft((d) => ({ ...d, signerName: e.target.value }))
@@ -859,12 +917,18 @@ export function ShareExperience({
                           placeholder="Jane Doe"
                         />
                       </Field>
-                      <Field>
-                        <FieldLabel htmlFor="signer-email">Work email</FieldLabel>
+                      <Field className="gap-2">
+                        <FieldLabel
+                          htmlFor="signer-email"
+                          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70"
+                        >
+                          Work email
+                        </FieldLabel>
                         <Input
                           id="signer-email"
                           type="email"
                           autoComplete="email"
+                          className={ndaFormInputClassName}
                           value={ndaDraft.signerEmail}
                           onChange={(e) =>
                             setNdaDraft((d) => ({ ...d, signerEmail: e.target.value }))
@@ -875,24 +939,25 @@ export function ShareExperience({
                     </div>
                   </FieldGroup>
                   {/* Remember me — GDPR-consensual opt-in */}
-                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/20 p-3 text-sm">
+                  <label className="flex cursor-pointer items-start gap-3.5 rounded-xl bg-[color:var(--color-background-muted)]/55 px-4 py-4 text-sm shadow-[inset_0_0_0_1px_rgba(35,31,26,0.06)] sm:px-5 sm:py-4">
                     <input
                       type="checkbox"
-                      className="mt-0.5 size-4 shrink-0 rounded border-input"
+                      className="mt-1 size-4 shrink-0 rounded-md border-2 border-foreground/12 text-[color:var(--color-accent)] accent-[color:var(--color-accent)]"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
                     />
-                    <span>
-                      <span className="font-medium text-foreground">Save my email for faster access.</span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                    <span className="min-w-0">
+                      <span className="font-medium text-foreground">Save my email for faster access</span>
+                      <span className="mt-1 block text-xs leading-relaxed text-[color:var(--tkn-text-support)]">
                         We&apos;ll send you a one-time code so you can return without re-signing. Your email is
                         stored securely and only used for room access.
                       </span>
                     </span>
                   </label>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-3 pt-1">
                     <Button
                       type="button"
+                      className="rounded-xl px-6 shadow-[0_2px_12px_rgba(243,91,45,0.22)]"
                       disabled={
                         ndaDraft.signerName.trim().length < 2 ||
                         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ndaDraft.signerEmail.trim())
@@ -907,14 +972,17 @@ export function ShareExperience({
 
               {ndaStep === "review" ? (
                 <>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Step 2 of 3 — Review</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Step 2 of 3
+                    </p>
+                    <p className="text-base font-medium text-foreground">Review</p>
+                    <p className="text-sm leading-snug text-[color:var(--tkn-text-support)]">
                       Read the full agreement, then confirm to proceed to signing.
                     </p>
                   </div>
                   <div
-                    className="tkn-prose max-h-[min(22rem,58vh)] min-h-[12rem] overflow-y-auto overscroll-contain rounded-lg border bg-muted/20 p-4 text-sm leading-relaxed text-foreground sm:max-h-96 [-webkit-overflow-scrolling:touch]"
+                    className="tkn-prose max-h-[min(22rem,58vh)] min-h-[12rem] overflow-y-auto overscroll-contain rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/30 p-4 text-sm leading-relaxed text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] sm:max-h-96 sm:p-5 [-webkit-overflow-scrolling:touch]"
                     tabIndex={0}
                     role="region"
                     aria-label="NDA full text"
@@ -925,22 +993,31 @@ export function ShareExperience({
                       <div className="whitespace-pre-wrap">{ndaDocumentText}</div>
                     )}
                   </div>
-                  <label htmlFor="nda-agree" className="flex cursor-pointer items-start gap-3 text-sm text-foreground">
+                  <label
+                    htmlFor="nda-agree"
+                    className="flex cursor-pointer items-start gap-3.5 rounded-xl bg-[color:var(--color-background-muted)]/40 px-4 py-3 text-sm text-foreground shadow-[inset_0_0_0_1px_rgba(35,31,26,0.05)]"
+                  >
                     <input
                       id="nda-agree"
                       type="checkbox"
-                      className="mt-1 size-4 shrink-0 rounded border-input"
+                      className="mt-1 size-4 shrink-0 rounded-md border-2 border-foreground/12 text-[color:var(--color-accent)] accent-[color:var(--color-accent)]"
                       checked={ndaReadConfirmed}
                       onChange={(e) => setNdaReadConfirmed(e.target.checked)}
                     />
-                    <span>I have read this agreement and agree to continue to sign.</span>
+                    <span className="leading-snug">I have read this agreement and agree to continue to sign.</span>
                   </label>
                   <div className="flex flex-wrap gap-3">
-                    <Button type="button" variant="outline" onClick={() => setNdaStep("identity")}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-xl border-[color:var(--tkn-panel-border)] bg-card"
+                      onClick={() => setNdaStep("identity")}
+                    >
                       Back
                     </Button>
                     <Button
                       type="button"
+                      className="rounded-xl px-6 shadow-[0_2px_12px_rgba(243,91,45,0.22)]"
                       disabled={!ndaReadConfirmed}
                       onClick={() => setNdaStep("sign")}
                     >
@@ -952,24 +1029,33 @@ export function ShareExperience({
 
               {ndaStep === "sign" ? (
                 <>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Step 3 of 3 — Sign</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Step 3 of 3
+                    </p>
+                    <p className="text-base font-medium text-foreground">Sign</p>
+                    <p className="text-sm leading-snug text-[color:var(--tkn-text-support)]">
                       Complete your address and signature to accept the NDA and unlock the document
                       (after password).
                     </p>
                   </div>
-                  <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                  <div className="rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/45 px-4 py-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] sm:px-5 sm:py-3.5">
                     <span className="font-medium text-foreground">{ndaDraft.signerName}</span>
-                    <span className="mx-2">·</span>
-                    {ndaDraft.signerEmail}
+                    <span className="mx-2 text-[color:var(--tkn-text-support)]">·</span>
+                    <span className="text-[color:var(--tkn-text-support)]">{ndaDraft.signerEmail}</span>
                   </div>
                   <FieldGroup>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field>
-                        <FieldLabel htmlFor="signer-company">Company</FieldLabel>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <Field className="gap-2">
+                        <FieldLabel
+                          htmlFor="signer-company"
+                          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70"
+                        >
+                          Company
+                        </FieldLabel>
                         <Input
                           id="signer-company"
+                          className={ndaFormInputClassName}
                           value={ndaDraft.signerCompany}
                           onChange={(e) =>
                             setNdaDraft((d) => ({ ...d, signerCompany: e.target.value }))
@@ -977,11 +1063,18 @@ export function ShareExperience({
                           placeholder="Northlight Labs"
                         />
                       </Field>
-                      <Field className="sm:col-span-2">
-                        <FieldLabel htmlFor="signer-address">Address</FieldLabel>
+                      <Field className="gap-2 sm:col-span-2">
+                        <FieldLabel
+                          htmlFor="signer-address"
+                          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70"
+                        >
+                          Address
+                        </FieldLabel>
                         <Textarea
                           id="signer-address"
-                          className="min-h-20"
+                          className={cn(
+                            "min-h-[5.5rem] rounded-xl border-2 border-foreground/10 bg-card px-3.5 py-3 text-sm shadow-[0_2px_8px_rgba(35,31,26,0.06)] transition-[box-shadow,border-color] placeholder:text-foreground/40 focus-visible:border-[color:var(--color-accent)] focus-visible:shadow-[0_0_0_3px_rgba(243,91,45,0.18),0_2px_10px_rgba(35,31,26,0.07)] focus-visible:ring-0",
+                          )}
                           value={ndaDraft.signerAddress}
                           onChange={(e) =>
                             setNdaDraft((d) => ({ ...d, signerAddress: e.target.value }))
@@ -991,10 +1084,12 @@ export function ShareExperience({
                       </Field>
                     </div>
                   </FieldGroup>
-                  <Separator />
+                  <Separator className="bg-[color:var(--tkn-panel-border)]" />
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div className="flex-1">
-                      <FieldLabel className="mb-2 block">Your signature</FieldLabel>
+                      <FieldLabel className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
+                        Your signature
+                      </FieldLabel>
                       <SignatureCanvas
                         value={ndaDraft.signatureName}
                         imageValue={signatureImage}
@@ -1009,7 +1104,7 @@ export function ShareExperience({
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full sm:w-auto"
+                        className="w-full rounded-xl border-[color:var(--tkn-panel-border)] bg-card sm:w-auto"
                         onClick={() => {
                           setNdaStep("review");
                         }}
@@ -1018,14 +1113,14 @@ export function ShareExperience({
                       </Button>
                       <Button
                         type="button"
+                        className="w-full rounded-xl px-6 shadow-[0_2px_12px_rgba(243,91,45,0.22)] sm:w-auto"
                         disabled={
                           isPending ||
-                          !ndaDraft.signatureName ||
+                          !(signatureImage || ndaDraft.signatureName.trim().length >= 2) ||
                           !ndaDraft.signerAddress ||
                           ndaDraft.signerAddress.trim().length < 10
                         }
                         onClick={handleSign}
-                        className="w-full sm:w-auto"
                       >
                         <ShieldCheck className="size-4" />
                         Sign and continue
@@ -1036,20 +1131,23 @@ export function ShareExperience({
               ) : null}
             </CardContent>
           ) : acceptance ? (
-            <CardContent className="pt-0">
-              <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                <p className="min-w-0 text-sm leading-snug text-muted-foreground">
+            <CardContent className="border-t border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/25 px-5 py-5 sm:px-6">
+              <div className="flex flex-col gap-4 rounded-xl border border-[color:var(--tkn-panel-border)] bg-card px-4 py-3 shadow-[0_2px_12px_rgba(35,31,26,0.05)] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4">
+                <p className="min-w-0 text-sm leading-snug text-[color:var(--tkn-text-support)]">
                   <span className="font-medium text-foreground">{acceptance.signerName}</span>
-                  <span className="text-muted-foreground"> · {acceptance.signerEmail}</span>
-                  {acceptance.signerCompany ? (
-                    <span className="text-muted-foreground"> · {acceptance.signerCompany}</span>
-                  ) : null}
+                  <span> · {acceptance.signerEmail}</span>
+                  {acceptance.signerCompany ? <span> · {acceptance.signerCompany}</span> : null}
                   <span className="mt-1 block text-xs text-muted-foreground">
                     {formatDateTime(acceptance.acceptedAt)}
                   </span>
                 </p>
                 {signedNdaUrl ? (
-                  <Button asChild variant="outline" size="sm" className="w-full shrink-0 sm:w-auto">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="w-full shrink-0 rounded-xl border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/50 sm:w-auto"
+                  >
                     <a href={signedNdaUrl}>
                       <Download className="size-4" />
                       Download copy
@@ -1073,7 +1171,7 @@ export function ShareExperience({
             <div className="min-w-0 flex-1">
               <CardTitle className="text-base">Decrypt files</CardTitle>
               <CardDescription>
-                {hasDocument
+                {hasRecipientVaultFiles
                   ? "The sender shared a room password with you. Enter it below to decrypt the files in your browser — nothing is sent to the server."
                   : "The sender still needs to upload files. You'll be able to decrypt once they're added."}
               </CardDescription>
@@ -1090,7 +1188,7 @@ export function ShareExperience({
                 This room is no longer active. Contact the sender if you still need access.
               </AlertDescription>
             </Alert>
-          ) : !hasDocument ? (
+          ) : !hasRecipientVaultFiles ? (
             <Alert>
               <Clock />
               <AlertTitle>Document not ready</AlertTitle>
@@ -1149,14 +1247,21 @@ export function ShareExperience({
 
       {/* Decrypted file grid — shown directly after NDA sign, no unlock card */}
       {Object.keys(decryptedFiles).length > 0 ? (
-        <div>
+        <div className="overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_28px_rgba(35,31,26,0.06)]">
           {/* Preview area — shown when a file is selected */}
           {objectUrl ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="truncate text-sm font-medium text-foreground">{downloadName}</p>
-                <div className="flex items-center gap-2">
-                  <Button asChild variant="ghost" size="sm" className="gap-1.5">
+            <div>
+              <div className="flex flex-col gap-3 border-b border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/45 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Preview
+                  </p>
+                  <p className="mt-1 truncate text-sm font-medium text-foreground sm:text-[0.9375rem]">
+                    {downloadName}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Button asChild variant="outline" size="sm" className="gap-1.5 border-[color:var(--tkn-panel-border)] bg-white">
                     <a href={objectUrl} download={downloadName}>
                       <Download className="size-4" />
                       Download
@@ -1166,6 +1271,7 @@ export function ShareExperience({
                     type="button"
                     variant="ghost"
                     size="sm"
+                    className="gap-1.5 text-muted-foreground hover:text-foreground"
                     onClick={() => setObjectUrl(null)}
                   >
                     <ChevronLeft className="size-4" />
@@ -1173,7 +1279,7 @@ export function ShareExperience({
                   </Button>
                 </div>
               </div>
-              <div className="relative overflow-hidden rounded-xl border bg-muted/20">
+              <div className="relative overflow-hidden bg-[color:var(--color-background-muted)]/25">
                 <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
                 {(() => {
                   const activeFile = Object.entries(decryptedFiles).find(([, v]) => v.objectUrl === objectUrl);
@@ -1218,11 +1324,23 @@ export function ShareExperience({
             </div>
           ) : (
             /* File grid — grouped by category when categories exist */
-            <div className="space-y-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                {Object.keys(decryptedFiles).length} file{Object.keys(decryptedFiles).length !== 1 ? "s" : ""}{" "}
-                decrypted — click to preview or download
-              </p>
+            <div className="space-y-6 px-4 py-5 sm:space-y-7 sm:px-6 sm:py-6">
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Documents
+                </p>
+                <p className="text-sm leading-snug text-[color:var(--tkn-text-support)]">
+                  <span className="font-medium text-foreground">
+                    {Object.keys(decryptedFiles).length} file
+                    {Object.keys(decryptedFiles).length !== 1 ? "s" : ""}
+                  </span>{" "}
+                  unlocked in this room. Open to preview (watermarked) or download the original.
+                  {" "}
+                  <span className="text-[color:var(--tkn-text-fine)]">
+                    &apos;Added&apos; is when the sender published each file; new uploads get a new timestamp.
+                  </span>
+                </p>
+              </div>
               {(() => {
                 const decryptedEntries = Object.entries(decryptedFiles);
                 const hasCategories = filesList.some((f) => f.category);
@@ -1253,34 +1371,40 @@ export function ShareExperience({
                           a.click();
                         }
                       }}
-                      className="flex flex-col items-start gap-2 rounded-xl border border-border bg-white p-3 text-left transition-all hover:border-[var(--color-accent)] hover:shadow-sm active:scale-[0.98]"
+                      className="group flex flex-col items-start gap-3 rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition-[border-color,box-shadow,transform] hover:border-[color:var(--color-accent)]/55 hover:shadow-[0_6px_24px_rgba(35,31,26,0.08)] active:scale-[0.99] sm:p-3.5"
                     >
-                      <div className="flex h-16 w-full items-center justify-center rounded-lg bg-muted/50">
+                      <div className="flex h-[4.5rem] w-full items-center justify-center overflow-hidden rounded-lg border border-[color:var(--tkn-panel-border)]/70 bg-white">
                         {fileEntry.mimeType.startsWith("image/") ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={url}
                             alt={fname}
-                            className="h-full w-full rounded-lg object-cover"
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
                           />
                         ) : fileEntry.mimeType === "application/pdf" ? (
-                          <FileText className="size-8 text-red-400" strokeWidth={1.5} />
+                          <FileText className="size-8 text-[var(--color-accent)]" strokeWidth={1.5} />
                         ) : (
                           <FileText className="size-8 text-muted-foreground" strokeWidth={1.5} />
                         )}
                       </div>
                       <div className="w-full min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">{fname}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {formatBytes(fileEntry.sizeBytes)}
+                        <p className="truncate text-sm font-medium leading-snug text-foreground">{fname}</p>
+                        <p className="mt-1 text-xs text-[color:var(--tkn-text-support)]">
+                          {formatMimeLabel(fileEntry.mimeType)} · {formatBytes(fileEntry.sizeBytes)}
+                          {"addedAt" in fileEntry && fileEntry.addedAt ? (
+                            <> · Added {formatDateTime(fileEntry.addedAt)}</>
+                          ) : null}
                         </p>
                       </div>
-                      <div className="mt-auto w-full">
+                      <div className="mt-auto flex w-full items-center justify-between gap-2 border-t border-[color:var(--tkn-panel-border)]/60 pt-2.5">
                         {previewable ? (
-                          <span className="text-xs font-medium text-[var(--color-accent)]">Preview →</span>
+                          <span className="text-[11px] font-semibold text-[var(--color-accent)]">Preview</span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Click to download</span>
+                          <span className="text-[11px] font-medium text-muted-foreground">Download</span>
                         )}
+                        <span className="text-muted-foreground transition-transform group-hover:translate-x-0.5">
+                          →
+                        </span>
                       </div>
                     </button>
                   );
@@ -1288,7 +1412,7 @@ export function ShareExperience({
 
                 if (!hasCategories) {
                   return (
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
                       {decryptedEntries.map(renderFileCard)}
                     </div>
                   );
@@ -1309,13 +1433,13 @@ export function ShareExperience({
                 }
 
                 return (
-                  <div className="space-y-4">
+                  <div className="space-y-6 sm:space-y-7">
                     {Array.from(categoryMap.entries()).map(([cat, entries]) => (
                       <div key={cat}>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                           {cat}
                         </p>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
                           {entries.map(renderFileCard)}
                         </div>
                       </div>
@@ -1323,11 +1447,11 @@ export function ShareExperience({
                     {uncategorized.length > 0 && (
                       <div>
                         {categoryMap.size > 0 && (
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                             Other files
                           </p>
                         )}
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
                           {uncategorized.map(renderFileCard)}
                         </div>
                       </div>
@@ -1335,15 +1459,29 @@ export function ShareExperience({
                   </div>
                 );
               })()}
-              <p className="text-center text-xs text-muted-foreground">
-                Previews are watermarked. Downloads are the original decrypted document.
+              <p className="rounded-xl border border-dashed border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/35 px-4 py-3 text-center text-[11px] leading-relaxed text-[color:var(--tkn-text-support)] sm:px-5">
+                Previews are watermarked. Downloads are the original decrypted file.
               </p>
+              {(() => {
+                const unlockedIds = new Set(Object.keys(decryptedFiles));
+                const summaryFiles = filesList.filter((f) => unlockedIds.has(f.id));
+                if (summaryFiles.length === 0) return null;
+                return (
+                  <RecipientRecordPanel
+                    metadata={metadata}
+                    recipientShareUrl={recipientShareUrl}
+                    shareExpiresLabel={shareExpiresLabel}
+                    files={summaryFiles}
+                    acceptance={acceptance}
+                  />
+                );
+              })()}
             </div>
           )}
         </div>
       ) : null}
 
-      <p className="mx-auto max-w-xl text-center text-[11px] leading-relaxed text-muted-foreground">
+      <p className="mx-auto max-w-lg text-center text-[10px] leading-relaxed tracking-wide text-[color:var(--tkn-text-fine)] sm:text-[11px]">
         {SHARE_RECIPIENT_DISCLAIMER}
       </p>
     </div>

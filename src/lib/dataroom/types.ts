@@ -5,6 +5,15 @@ export const FILE_SIZE_LIMIT_BYTES = 25 * 1024 * 1024;
 export const ENCRYPTED_VAULT_PAYLOAD_MAX_BYTES = 32 * 1024 * 1024;
 export const DEFAULT_EXPIRATION_DAYS = 14;
 
+/** Unencrypted share-page banner (image). Bytes stored separately; served via GET …/share-banner. */
+export const SHARE_BANNER_MAX_BYTES = 3 * 1024 * 1024;
+
+export type ShareBannerMeta = {
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
 export const SUPPORTED_FILE_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -136,6 +145,8 @@ export type VaultFileEntry = {
   name: string;
   mimeType: string;
   sizeBytes: number;
+  /** ISO timestamp when this ciphertext was attached (recipient/owner visibility for diligence). */
+  addedAt?: string;
   /** Owner-defined category/section name (e.g. "Agreements", "Pitch deck", "NDAs") */
   category?: string;
   /** Base64-encoded random salt for this file's key derivation */
@@ -182,6 +193,13 @@ export type VaultRecord = {
   salt: string;
   iv: string;
   pbkdf2Iterations: number;
+  /**
+   * Public hero image on `/s/[slug]` — not encrypted; visible before NDA/password.
+   * Binary at `share-banner.bin` in vault storage.
+   */
+  shareBanner?: ShareBannerMeta;
+  /** Encrypted vault file IDs omitted from recipient manifest and bundle downloads. */
+  recipientHiddenVaultFileIds?: string[];
 };
 
 /** True if the vault has at least one encrypted file for recipients. */
@@ -206,12 +224,23 @@ export const vaultFilesList = (metadata: VaultRecord): VaultFileEntry[] => {
       name: metadata.fileName,
       mimeType: metadata.mimeType,
       sizeBytes: metadata.fileSize,
+      addedAt: metadata.createdAt,
       salt: metadata.salt,
       iv: metadata.iv,
       pbkdf2Iterations: metadata.pbkdf2Iterations,
     },
   ];
 };
+
+/** Files shown to recipients on the share link (excludes owner-hidden entries). */
+export const recipientVisibleVaultFiles = (metadata: VaultRecord): VaultFileEntry[] => {
+  const all = vaultFilesList(metadata);
+  const hidden = new Set(metadata.recipientHiddenVaultFileIds ?? []);
+  return all.filter((f) => !hidden.has(f.id));
+};
+
+export const vaultHasRecipientVisibleDocument = (metadata: VaultRecord): boolean =>
+  recipientVisibleVaultFiles(metadata).length > 0;
 
 export const createEvent = (
   type: VaultEventType,
