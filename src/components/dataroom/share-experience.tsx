@@ -1,13 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   Clock,
   Download,
   FileText,
@@ -49,6 +50,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -155,6 +164,16 @@ export function ShareExperience({
     ? `/api/vaults/${metadata.slug}/share-banner`
     : null;
   const headRecipientFile = recipientVisibleVaultFiles(metadata)[0];
+
+  const orderedImagePreviewEntries = useMemo(() => {
+    const out: { id: string; objectUrl: string; downloadName: string }[] = [];
+    for (const f of recipientVisibleVaultFiles(metadata)) {
+      if (!f.mimeType.startsWith("image/")) continue;
+      const ent = decryptedFiles[f.id];
+      if (ent) out.push({ id: f.id, ...ent });
+    }
+    return out;
+  }, [metadata, decryptedFiles]);
 
   const viewerWatermarkLabel =
     acceptance?.signerEmail && objectUrl && hasRecipientVaultFiles
@@ -298,34 +317,70 @@ export function ShareExperience({
       startTransition(async () => {
         setError("");
         try {
+          const pw = password.trim();
+          const urlsToRevoke = new Set<string>();
+          for (const { objectUrl: u } of Object.values(decryptedFiles)) {
+            urlsToRevoke.add(u);
+          }
+          if (objectUrl) urlsToRevoke.add(objectUrl);
+          for (const u of urlsToRevoke) URL.revokeObjectURL(u);
+          setDecryptedFiles({});
+
           const manifest = recipientVisibleVaultFiles(metadata);
-          const primary = manifest[0];
-          if (!primary) {
+          if (!manifest.length) {
             throw new Error("No encrypted file in this room yet.");
           }
-          const pw = password.trim();
-          const params = new URLSearchParams({ fileId: primary.id });
-          const res = await fetch(`/api/vaults/${metadata.slug}/bundle?${params}`, {
-            method: "GET",
-          });
-          if (!res.ok) {
-            const data = (await res.json().catch(() => ({}))) as { error?: string };
-            throw new Error(data.error || "Unable to fetch document.");
+
+          const results = await Promise.allSettled(
+            manifest.map(async (file) => {
+              const params = new URLSearchParams({ fileId: file.id });
+              const res = await fetch(`/api/vaults/${metadata.slug}/bundle?${params}`, {
+                method: "GET",
+              });
+              if (!res.ok) throw new Error(`Unable to fetch ${file.name}.`);
+              const encryptedBytes = await res.arrayBuffer();
+              const decrypted = await decryptFile({
+                encryptedBytes,
+                password: pw,
+                salt: file.salt,
+                iv: file.iv,
+                pbkdf2Iterations: file.pbkdf2Iterations,
+              });
+              const blob = new Blob([decrypted], { type: file.mimeType });
+              const url = URL.createObjectURL(blob);
+              return { id: file.id, objectUrl: url, downloadName: file.name, mimeType: file.mimeType };
+            }),
+          );
+
+          const newDecrypted: Record<string, { objectUrl: string; downloadName: string }> = {};
+          for (const result of results) {
+            if (result.status === "fulfilled") {
+              newDecrypted[result.value.id] = {
+                objectUrl: result.value.objectUrl,
+                downloadName: result.value.downloadName,
+              };
+            }
           }
-          const encryptedBytes = await res.arrayBuffer();
-          const decrypted = await decryptFile({
-            encryptedBytes,
-            password: pw,
-            salt: primary.salt,
-            iv: primary.iv,
-            pbkdf2Iterations: primary.pbkdf2Iterations,
-          });
-          if (objectUrl) URL.revokeObjectURL(objectUrl);
-          const blob = new Blob([decrypted], { type: primary.mimeType });
-          const url = URL.createObjectURL(blob);
-          setObjectUrl(url);
-          setDownloadName(primary.name);
-          setSuccess("Document decrypted locally. Review it below or download it.");
+          if (!Object.keys(newDecrypted).length) {
+            throw new Error("Unable to decrypt any files. Check your password.");
+          }
+
+          setDecryptedFiles(newDecrypted);
+          const firstPreview =
+            manifest.find((f) => {
+              const t = f.mimeType;
+              return (
+                t.startsWith("image/") ||
+                t === "application/pdf" ||
+                t.startsWith("text/")
+              );
+            }) ?? manifest[0];
+          const first = newDecrypted[firstPreview.id];
+          if (first) {
+            setObjectUrl(first.objectUrl);
+            setDownloadName(first.downloadName);
+          }
+          setSuccess("Files decrypted locally. Swipe images or use arrows to browse.");
 
           try {
             sessionStorage.setItem(`tkn_share_pw_${metadata.slug}`, pw);
@@ -336,7 +391,7 @@ export function ShareExperience({
           void fetch(`/api/vaults/${metadata.slug}/view`, {
             method: "PUT",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ fileCount: 1 }),
+            body: JSON.stringify({ fileCount: Object.keys(newDecrypted).length }),
           }).catch(() => {});
         } catch (e) {
           setError(e instanceof Error ? e.message : "Unable to unlock document.");
@@ -419,6 +474,12 @@ export function ShareExperience({
         onReturnVerify={handleReturnVerify}
         onDismissError={() => setError("")}
         objectUrl={objectUrl}
+        decryptedFiles={decryptedFiles}
+        activeFileName={downloadName}
+        onDecryptedPreviewChange={(url, name) => {
+          setObjectUrl(url);
+          setDownloadName(name);
+        }}
         signingInProgress={isPending}
       />
       </>
@@ -1292,15 +1353,66 @@ export function ShareExperience({
                       }
                     : { id: "", name: downloadName, mimeType: metadata.mimeType, sizeBytes: metadata.fileSize };
                   if (fileEntry.mimeType.startsWith("image/")) {
+                    const imgIdx = orderedImagePreviewEntries.findIndex(
+                      (e) => e.objectUrl === objectUrl,
+                    );
+                    const hasImgNav = orderedImagePreviewEntries.length > 1;
+                    const goPrevImg = () => {
+                      if (imgIdx <= 0) return;
+                      const e = orderedImagePreviewEntries[imgIdx - 1];
+                      setObjectUrl(e.objectUrl);
+                      setDownloadName(e.downloadName);
+                    };
+                    const goNextImg = () => {
+                      if (
+                        imgIdx < 0 ||
+                        imgIdx >= orderedImagePreviewEntries.length - 1
+                      )
+                        return;
+                      const e = orderedImagePreviewEntries[imgIdx + 1];
+                      setObjectUrl(e.objectUrl);
+                      setDownloadName(e.downloadName);
+                    };
                     return (
-                      <Image
-                        src={objectUrl}
-                        alt={downloadName}
-                        width={1600}
-                        height={1200}
-                        unoptimized
-                        className="relative z-0 h-auto w-full"
-                      />
+                      <div className="relative flex min-h-[min(92vh,1200px)] items-center justify-center py-2 sm:min-h-[75vh] sm:py-4">
+                        {hasImgNav ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="icon"
+                              className="absolute left-2 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:left-4 sm:h-12 sm:w-12"
+                              disabled={imgIdx <= 0}
+                              onClick={goPrevImg}
+                              aria-label="Previous image"
+                            >
+                              <ChevronLeft className="size-5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="icon"
+                              className="absolute right-2 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:right-4 sm:h-12 sm:w-12"
+                              disabled={
+                                imgIdx < 0 ||
+                                imgIdx >= orderedImagePreviewEntries.length - 1
+                              }
+                              onClick={goNextImg}
+                              aria-label="Next image"
+                            >
+                              <ChevronRight className="size-5" />
+                            </Button>
+                          </>
+                        ) : null}
+                        <Image
+                          src={objectUrl}
+                          alt={downloadName}
+                          width={1600}
+                          height={1200}
+                          unoptimized
+                          className="relative z-0 max-h-[min(92vh,1200px)] w-full object-contain"
+                        />
+                      </div>
                     );
                   }
                   if (fileEntry.mimeType === "application/pdf") {
@@ -1308,7 +1420,7 @@ export function ShareExperience({
                       <iframe
                         title={downloadName}
                         src={objectUrl}
-                        className="relative z-0 h-[65vh] min-h-[24rem] w-full"
+                        className="relative z-0 h-[min(92vh,1200px)] min-h-[75vh] w-full sm:min-h-[80vh]"
                       />
                     );
                   }
@@ -1316,14 +1428,14 @@ export function ShareExperience({
                     <iframe
                       title={downloadName}
                       src={objectUrl}
-                      className="relative z-0 h-[65vh] min-h-[24rem] w-full"
+                      className="relative z-0 h-[min(92vh,1200px)] min-h-[75vh] w-full sm:min-h-[80vh]"
                     />
                   );
                 })()}
               </div>
             </div>
-          ) : (
-            /* File grid — grouped by category when categories exist */
+                   ) : (
+            /* File list — table view, grouped by category when set */
             <div className="space-y-6 px-4 py-5 sm:space-y-7 sm:px-6 sm:py-6">
               <div className="space-y-1.5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -1342,120 +1454,156 @@ export function ShareExperience({
                 </p>
               </div>
               {(() => {
-                const decryptedEntries = Object.entries(decryptedFiles);
-                const hasCategories = filesList.some((f) => f.category);
+                const unlockedOrdered = recipientVisibleVaultFiles(metadata).filter(
+                  (f) => decryptedFiles[f.id],
+                );
+                const hasCategories = unlockedOrdered.some((f) => Boolean(f.category));
 
-                const renderFileCard = ([fileId, { objectUrl: url, downloadName: fname }]: [string, { objectUrl: string; downloadName: string }]) => {
-                  const fileEntry = filesList.find((f) => f.id === fileId) ?? {
-                    id: fileId,
-                    name: fname,
-                    mimeType: metadata.mimeType,
-                    sizeBytes: metadata.fileSize,
-                  };
+                const openFile = (fileId: string) => {
+                  const blob = decryptedFiles[fileId];
+                  if (!blob) return;
+                  const { objectUrl: url, downloadName: fname } = blob;
+                  const fileEntry =
+                    filesList.find((f) => f.id === fileId) ??
+                    unlockedOrdered.find((f) => f.id === fileId);
+                  const mime = fileEntry?.mimeType ?? metadata.mimeType;
                   const previewable =
-                    fileEntry.mimeType.startsWith("image/") ||
-                    fileEntry.mimeType === "application/pdf" ||
-                    fileEntry.mimeType.startsWith("text/");
-                  return (
-                    <button
-                      key={fileId}
-                      type="button"
-                      onClick={() => {
-                        if (previewable) {
-                          setObjectUrl(url);
-                          setDownloadName(fname);
-                        } else {
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = fname;
-                          a.click();
-                        }
-                      }}
-                      className="group flex flex-col items-start gap-3 rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition-[border-color,box-shadow,transform] hover:border-[color:var(--color-accent)]/55 hover:shadow-[0_6px_24px_rgba(35,31,26,0.08)] active:scale-[0.99] sm:p-3.5"
-                    >
-                      <div className="flex h-[4.5rem] w-full items-center justify-center overflow-hidden rounded-lg border border-[color:var(--tkn-panel-border)]/70 bg-white">
-                        {fileEntry.mimeType.startsWith("image/") ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={url}
-                            alt={fname}
-                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-                          />
-                        ) : fileEntry.mimeType === "application/pdf" ? (
-                          <FileText className="size-8 text-[var(--color-accent)]" strokeWidth={1.5} />
-                        ) : (
-                          <FileText className="size-8 text-muted-foreground" strokeWidth={1.5} />
-                        )}
-                      </div>
-                      <div className="w-full min-w-0">
-                        <p className="truncate text-sm font-medium leading-snug text-foreground">{fname}</p>
-                        <p className="mt-1 text-xs text-[color:var(--tkn-text-support)]">
-                          {formatMimeLabel(fileEntry.mimeType)} · {formatBytes(fileEntry.sizeBytes)}
-                          {"addedAt" in fileEntry && fileEntry.addedAt ? (
-                            <> · Added {formatDateTime(fileEntry.addedAt)}</>
-                          ) : null}
-                        </p>
-                      </div>
-                      <div className="mt-auto flex w-full items-center justify-between gap-2 border-t border-[color:var(--tkn-panel-border)]/60 pt-2.5">
-                        {previewable ? (
-                          <span className="text-[11px] font-semibold text-[var(--color-accent)]">Preview</span>
-                        ) : (
-                          <span className="text-[11px] font-medium text-muted-foreground">Download</span>
-                        )}
-                        <span className="text-muted-foreground transition-transform group-hover:translate-x-0.5">
-                          →
-                        </span>
-                      </div>
-                    </button>
-                  );
+                    mime.startsWith("image/") ||
+                    mime === "application/pdf" ||
+                    mime.startsWith("text/");
+                  if (previewable) {
+                    setObjectUrl(url);
+                    setDownloadName(fname);
+                  } else {
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = fname;
+                    a.click();
+                  }
                 };
 
+                const renderFileTable = (files: typeof unlockedOrdered, sectionKey: string) => (
+                  <div
+                    key={sectionKey}
+                    className="overflow-hidden rounded-xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
+                  >
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-[color:var(--tkn-panel-border)] hover:bg-transparent">
+                          <TableHead className="h-11 pl-4 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Name
+                          </TableHead>
+                          <TableHead className="hidden h-11 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:table-cell">
+                            Type
+                          </TableHead>
+                          <TableHead className="h-11 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Size
+                          </TableHead>
+                          <TableHead className="hidden h-11 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground md:table-cell">
+                            Added
+                          </TableHead>
+                          <TableHead className="h-11 w-[1%] pr-4 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            <span className="sr-only">Open</span>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {files.map((fileEntry) => {
+                          const blob = decryptedFiles[fileEntry.id];
+                          if (!blob) return null;
+                          const { downloadName: fname } = blob;
+                          const previewable =
+                            fileEntry.mimeType.startsWith("image/") ||
+                            fileEntry.mimeType === "application/pdf" ||
+                            fileEntry.mimeType.startsWith("text/");
+                          return (
+                            <TableRow
+                              key={fileEntry.id}
+                              className="cursor-pointer border-[color:var(--tkn-panel-border)]"
+                              onClick={() => openFile(fileEntry.id)}
+                            >
+                              <TableCell className="max-w-[10rem] py-3 pl-4 whitespace-normal sm:max-w-[20rem] md:max-w-[28rem]">
+                                <span className="line-clamp-2 text-sm font-medium text-foreground">
+                                  {fname}
+                                </span>
+                                <span className="mt-0.5 block text-xs text-[color:var(--tkn-text-support)] sm:hidden">
+                                  {formatMimeLabel(fileEntry.mimeType)}
+                                </span>
+                              </TableCell>
+                              <TableCell className="hidden py-3 text-[color:var(--tkn-text-support)] sm:table-cell">
+                                {formatMimeLabel(fileEntry.mimeType)}
+                              </TableCell>
+                              <TableCell className="py-3 text-right text-sm tabular-nums text-[color:var(--tkn-text-support)]">
+                                {formatBytes(fileEntry.sizeBytes)}
+                              </TableCell>
+                              <TableCell className="hidden py-3 text-sm text-[color:var(--tkn-text-support)] md:table-cell">
+                                {fileEntry.addedAt ? formatDateTime(fileEntry.addedAt) : "—"}
+                              </TableCell>
+                              <TableCell className="py-3 pr-4 text-right">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className={cn(
+                                    "h-auto gap-0.5 px-2 py-1 text-xs font-semibold hover:bg-transparent",
+                                    previewable
+                                      ? "text-[var(--color-accent)] hover:text-[var(--color-accent)]"
+                                      : "text-muted-foreground",
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openFile(fileEntry.id);
+                                  }}
+                                >
+                                  {previewable ? "Preview" : "Download"}
+                                  <ChevronRight className="size-4 opacity-70" aria-hidden />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                );
+
                 if (!hasCategories) {
-                  return (
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-                      {decryptedEntries.map(renderFileCard)}
-                    </div>
-                  );
+                  return renderFileTable(unlockedOrdered, "all");
                 }
 
-                const categoryMap = new Map<string, [string, { objectUrl: string; downloadName: string }][]>();
-                const uncategorized: [string, { objectUrl: string; downloadName: string }][] = [];
-                for (const entry of decryptedEntries) {
-                  const fileEntry = filesList.find((f) => f.id === entry[0]);
-                  const cat = fileEntry?.category;
+                const categoryMap = new Map<string, typeof unlockedOrdered>();
+                const uncategorized: typeof unlockedOrdered = [];
+                for (const f of unlockedOrdered) {
+                  const cat = f.category;
                   if (cat) {
                     const list = categoryMap.get(cat) ?? [];
-                    list.push(entry);
+                    list.push(f);
                     categoryMap.set(cat, list);
                   } else {
-                    uncategorized.push(entry);
+                    uncategorized.push(f);
                   }
                 }
 
                 return (
                   <div className="space-y-6 sm:space-y-7">
-                    {Array.from(categoryMap.entries()).map(([cat, entries]) => (
+                    {Array.from(categoryMap.entries()).map(([cat, files]) => (
                       <div key={cat}>
                         <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                           {cat}
                         </p>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-                          {entries.map(renderFileCard)}
-                        </div>
+                        {renderFileTable(files, `cat-${cat}`)}
                       </div>
                     ))}
-                    {uncategorized.length > 0 && (
+                    {uncategorized.length > 0 ? (
                       <div>
-                        {categoryMap.size > 0 && (
+                        {categoryMap.size > 0 ? (
                           <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                             Other files
                           </p>
-                        )}
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-                          {uncategorized.map(renderFileCard)}
-                        </div>
+                        ) : null}
+                        {renderFileTable(uncategorized, "uncat")}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 );
               })()}

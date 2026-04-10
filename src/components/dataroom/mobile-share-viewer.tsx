@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
@@ -71,6 +71,9 @@ type Props = {
   onReturnVerify: (code: string, email: string) => void;
   onDismissError: () => void;
   objectUrl: string | null;
+  decryptedFiles?: Record<string, { objectUrl: string; downloadName: string }>;
+  activeFileName?: string;
+  onDecryptedPreviewChange?: (objectUrl: string, downloadName: string) => void;
 };
 
 export function MobileShareViewer({
@@ -94,6 +97,9 @@ export function MobileShareViewer({
   onReturnVerify,
   onDismissError,
   objectUrl,
+  decryptedFiles = {},
+  activeFileName,
+  onDecryptedPreviewChange,
   signingInProgress = false,
 }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -118,14 +124,33 @@ export function MobileShareViewer({
   const [returnCode, setReturnCode] = useState("");
 
   const isNdaDone = !metadata.requiresNda || initialAccessGranted;
-  const headFile = recipientVisibleVaultFiles(metadata)[0];
+  const manifest = recipientVisibleVaultFiles(metadata);
+  const headFile = manifest[0];
+  const activeFileMeta = useMemo(() => {
+    if (!objectUrl || !Object.keys(decryptedFiles).length) return headFile;
+    return manifest.find((f) => decryptedFiles[f.id]?.objectUrl === objectUrl) ?? headFile;
+  }, [objectUrl, decryptedFiles, manifest, headFile]);
+
+  const imageSlides = useMemo(() => {
+    return manifest
+      .filter((f) => f.mimeType.startsWith("image/") && decryptedFiles[f.id])
+      .map((f) => ({
+        src: decryptedFiles[f.id].objectUrl,
+        fileName: decryptedFiles[f.id].downloadName,
+      }));
+  }, [manifest, decryptedFiles]);
+
   const previewable =
     hasDocument &&
     Boolean(
-      headFile &&
-        (headFile.mimeType.startsWith("image/") ||
-          headFile.mimeType === "application/pdf" ||
-          headFile.mimeType.startsWith("text/")),
+      (decrypted && activeFileMeta
+        ? activeFileMeta.mimeType.startsWith("image/") ||
+          activeFileMeta.mimeType === "application/pdf" ||
+          activeFileMeta.mimeType.startsWith("text/")
+        : headFile &&
+          (headFile.mimeType.startsWith("image/") ||
+            headFile.mimeType === "application/pdf" ||
+            headFile.mimeType.startsWith("text/"))),
     );
 
   const handleUnlock = useCallback(async () => {
@@ -186,10 +211,18 @@ export function MobileShareViewer({
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">
-              {isNdaDone && hasDocument && headFile ? headFile.name : "Locked"}
+              {decrypted && activeFileName
+                ? activeFileName
+                : isNdaDone && hasDocument && headFile
+                  ? headFile.name
+                  : "Locked"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {isNdaDone && hasDocument && headFile ? formatBytes(headFile.sizeBytes) : "Encrypted"}
+              {decrypted && activeFileMeta
+                ? formatBytes(activeFileMeta.sizeBytes)
+                : isNdaDone && hasDocument && headFile
+                  ? formatBytes(headFile.sizeBytes)
+                  : "Encrypted"}
             </p>
           </div>
         </div>
@@ -214,10 +247,21 @@ export function MobileShareViewer({
         {decrypted && hasDocument ? (
           <MobileDocumentView
             src={objectUrl}
-            mimeType={headFile?.mimeType ?? metadata.mimeType}
-            fileName={headFile?.name ?? metadata.fileName}
+            mimeType={activeFileMeta?.mimeType ?? metadata.mimeType}
+            fileName={activeFileMeta?.name ?? metadata.fileName}
             previewable={previewable}
             watermarkLabel={viewerWatermarkLabel}
+            imageGallery={
+              imageSlides.length > 1 && onDecryptedPreviewChange
+                ? {
+                    slides: imageSlides,
+                    onNavigate: (i: number) => {
+                      const s = imageSlides[i];
+                      if (s) onDecryptedPreviewChange(s.src, s.fileName);
+                    },
+                  }
+                : undefined
+            }
           />
         ) : decrypted ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
@@ -658,7 +702,7 @@ function PdfDeckView({
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(1.35);
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -711,6 +755,28 @@ function PdfDeckView({
       <div className="relative flex-1 overflow-hidden">
         {watermarkLabel ? (
           <ViewerWatermarkOverlay label={watermarkLabel} variant="light" />
+        ) : null}
+        {showControls ? (
+          <>
+            <button
+              type="button"
+              onClick={goPrev}
+              disabled={currentPage <= 1}
+              aria-label="Previous page"
+              className="absolute left-2 top-1/2 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-sm disabled:opacity-25"
+            >
+              <ChevronLeft className="size-7" strokeWidth={2.25} />
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={currentPage >= totalPages}
+              aria-label="Next page"
+              className="absolute right-2 top-1/2 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-sm disabled:opacity-25"
+            >
+              <ChevronRight className="size-7" strokeWidth={2.25} />
+            </button>
+          </>
         ) : null}
         <iframe
           key={`pdf-${currentPage}-${scale}`}
@@ -825,24 +891,23 @@ function PdfDeckView({
 }
 
 function ImageDeckView({
-  src,
-  fileName,
+  slides,
+  activeIndex,
+  onActiveIndexChange,
   watermarkLabel,
 }: {
-  src: string;
-  fileName: string;
+  slides: { src: string; fileName: string }[];
+  activeIndex: number;
+  onActiveIndexChange: (index: number) => void;
   watermarkLabel?: string;
 }) {
-  const [currentImage, setCurrentImage] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [images, setImages] = useState<string[]>([]);
-
-  // For images, treat each image as a page in a "deck"
-  useEffect(() => {
-    setImages([src]);
-    setCurrentImage(0);
-  }, [src]);
+  const safeIndex = Math.min(Math.max(0, activeIndex), Math.max(0, slides.length - 1));
+  const current = slides[safeIndex];
+  const canPrev = safeIndex > 0;
+  const canNext = safeIndex < slides.length - 1;
+  const multi = slides.length > 1;
 
   return (
     <div
@@ -854,10 +919,36 @@ function ImageDeckView({
         {watermarkLabel ? (
           <ViewerWatermarkOverlay label={watermarkLabel} variant="light" />
         ) : null}
+        {multi && showControls ? (
+          <>
+            <button
+              type="button"
+              onClick={() => onActiveIndexChange(safeIndex - 1)}
+              disabled={!canPrev}
+              aria-label="Previous image"
+              className="absolute left-2 top-1/2 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-sm disabled:opacity-25"
+            >
+              <ChevronLeft className="size-7" strokeWidth={2.25} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onActiveIndexChange(safeIndex + 1)}
+              disabled={!canNext}
+              aria-label="Next image"
+              className="absolute right-2 top-1/2 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-sm disabled:opacity-25"
+            >
+              <ChevronRight className="size-7" strokeWidth={2.25} />
+            </button>
+          </>
+        ) : null}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={images[currentImage] ?? src}
-          alt={`${fileName} — image ${currentImage + 1}`}
+          src={current?.src}
+          alt={
+            multi
+              ? `${current?.fileName ?? "Image"} — ${safeIndex + 1} / ${slides.length}`
+              : (current?.fileName ?? "Image")
+          }
           className="relative z-0 min-h-full w-full object-contain"
         />
       </div>
@@ -873,32 +964,37 @@ function ImageDeckView({
           >
             <div className="flex items-center justify-center gap-3">
               <button
-                onClick={() => setCurrentImage((i) => Math.max(0, i - 1))}
-                disabled={currentImage <= 0}
-                className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 disabled:opacity-30"
+                type="button"
+                onClick={() => onActiveIndexChange(Math.max(0, safeIndex - 1))}
+                disabled={!canPrev}
+                className="flex size-11 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 disabled:opacity-30"
               >
-                <ChevronLeft className="size-5" />
+                <ChevronLeft className="size-6" />
               </button>
 
-              <span className="text-sm font-medium text-white/70">
-                {images.length > 1 ? `${currentImage + 1} / ${images.length}` : fileName}
+              <span className="max-w-[55vw] truncate text-sm font-medium text-white/70">
+                {multi ? `${safeIndex + 1} / ${slides.length}` : (current?.fileName ?? "")}
               </span>
 
               <button
-                onClick={() => setCurrentImage((i) => Math.min(images.length - 1, i + 1))}
-                disabled={currentImage >= images.length - 1}
-                className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 disabled:opacity-30"
+                type="button"
+                onClick={() =>
+                  onActiveIndexChange(Math.min(slides.length - 1, safeIndex + 1))
+                }
+                disabled={!canNext}
+                className="flex size-11 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 disabled:opacity-30"
               >
-                <ChevronRight className="size-5" />
+                <ChevronRight className="size-6" />
               </button>
             </div>
 
             <div className="flex items-center justify-center">
               <button
+                type="button"
                 onClick={() => {
                   const a = document.createElement("a");
-                  a.href = images[currentImage] ?? src;
-                  a.download = fileName;
+                  a.href = current?.src ?? "";
+                  a.download = current?.fileName ?? "image";
                   a.click();
                 }}
                 className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/20 hover:text-white"
@@ -920,12 +1016,17 @@ function MobileDocumentView({
   fileName,
   previewable,
   watermarkLabel = "",
+  imageGallery,
 }: {
   src: string | null;
   mimeType: string;
   fileName: string;
   previewable: boolean;
   watermarkLabel?: string;
+  imageGallery?: {
+    slides: { src: string; fileName: string }[];
+    onNavigate: (index: number) => void;
+  };
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollPct, setScrollPct] = useState(0);
@@ -969,10 +1070,20 @@ function MobileDocumentView({
   }
 
   if (mimeType.startsWith("image/")) {
+    const slides =
+      imageGallery?.slides ??
+      (src ? [{ src, fileName }] : []);
+    const activeIndex = Math.max(
+      0,
+      slides.findIndex((s) => s.src === src),
+    );
     return (
       <ImageDeckView
-        src={src}
-        fileName={fileName}
+        slides={slides}
+        activeIndex={activeIndex}
+        onActiveIndexChange={(i) => {
+          imageGallery?.onNavigate(i);
+        }}
         watermarkLabel={watermarkLabel || undefined}
       />
     );
