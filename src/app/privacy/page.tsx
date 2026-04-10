@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Privacy",
   description:
     "How Token handles your data: encryption, retention, and your control over dataroom content.",
+  alternates: { canonical: "/privacy" },
 };
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";

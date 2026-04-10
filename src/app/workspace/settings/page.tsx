@@ -18,6 +18,7 @@ import { describePlanForWorkspace } from "@/lib/dataroom/plan-descriptions";
 export const metadata: Metadata = {
   title: "Settings",
   description: "Workspace branding, NDA template, and account options for Token.",
+  robots: { index: false, follow: true },
 };
 
 const NdaTemplateEditor = dynamic(

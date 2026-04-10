@@ -4,6 +4,11 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { NavigationProgressDeferred } from "@/components/dataroom/navigation-progress-deferred";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+  getPublicSiteUrl,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+} from "@/lib/dataroom/public-site";
 
 const sansFont = Inter({
   variable: "--font-tkn-sans",
@@ -13,36 +18,23 @@ const sansFont = Inter({
   adjustFontFallback: true,
 });
 
-/** Public site name — the dataroom product is "Token". */
-export const siteName = "Token";
+/** @deprecated Use SITE_NAME from @/lib/dataroom/public-site */
+export const siteName = SITE_NAME;
 
-const siteDescription =
-  "Share sensitive files with outsiders—not your whole drive. Password-protected rooms, optional NDA, encryption in the browser before upload, and a clear activity trail.";
-
-function metadataBaseUrl(): URL {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (raw) {
-    try {
-      return new URL(raw.endsWith("/") ? raw.slice(0, -1) : raw);
-    } catch {
-      /* use default */
-    }
-  }
-  return new URL("https://token.fyi");
-}
+const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
 
 export const metadata: Metadata = {
-  metadataBase: metadataBaseUrl(),
+  metadataBase: getPublicSiteUrl(),
   title: {
-    default: `${siteName} — Deal rooms for outsiders`,
-    template: `%s · ${siteName}`,
+    default: `${SITE_NAME} — Deal rooms for outsiders`,
+    template: `%s · ${SITE_NAME}`,
   },
-  description: siteDescription,
-  applicationName: siteName,
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   openGraph: {
-    title: `${siteName} — Deal rooms for outsiders`,
-    description: siteDescription,
-    siteName,
+    title: `${SITE_NAME} — Deal rooms for outsiders`,
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
     type: "website",
     locale: "en_US",
     images: [
@@ -50,17 +42,18 @@ export const metadata: Metadata = {
         url: "/banner.jpg",
         width: 1280,
         height: 720,
-        alt: `${siteName} — encrypted rooms, one link`,
+        alt: `${SITE_NAME} — encrypted rooms, one link`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteName} — Deal rooms for outsiders`,
-    description: siteDescription,
+    title: `${SITE_NAME} — Deal rooms for outsiders`,
+    description: SITE_DESCRIPTION,
     images: ["/banner.jpg"],
   },
   robots: { index: true, follow: true },
+  ...(googleVerification ? { verification: { google: googleVerification } } : {}),
 };
 
 export const viewport: Viewport = {

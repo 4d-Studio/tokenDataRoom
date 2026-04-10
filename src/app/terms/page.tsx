@@ -5,6 +5,7 @@ import { BrandMark } from "@/components/dataroom/brand-mark";
 export const metadata: Metadata = {
   title: "Terms",
   description: "Terms of Service for using Token secure datarooms.",
+  alternates: { canonical: "/terms" },
 };
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";

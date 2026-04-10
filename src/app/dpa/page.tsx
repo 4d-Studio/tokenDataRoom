@@ -5,6 +5,7 @@ import { BrandMark } from "@/components/dataroom/brand-mark";
 export const metadata: Metadata = {
   title: "DPA",
   description: "Data Processing Agreement for Token customers and subprocessors.",
+  alternates: { canonical: "/dpa" },
 };
 import { Button } from "@/components/ui/button";
 

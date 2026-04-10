@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   description:
     "Token data room plans. New accounts include Plus during launch; paid upgrades coming soon.",
+  alternates: { canonical: "/pricing" },
 };
 
 const annualNote = "Paid checkout coming soon — new accounts get Plus limits today";

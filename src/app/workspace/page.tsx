@@ -22,6 +22,7 @@ import { roomManageHref, roomNavItemsFromRooms } from "@/lib/dataroom/workspace-
 export const metadata: Metadata = {
   title: "Workspace",
   description: "Your Token workspace: datarooms, activity, and quick actions.",
+  robots: { index: false, follow: true },
 };
 
 const RoomsList = dynamic(

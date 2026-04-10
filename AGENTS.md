@@ -81,7 +81,8 @@ Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain include
 | Variable | Required | Description |
 |---|---|---|
 | `TKN_APP_SECRET` | Yes (prod) | HMAC signing secret for session and access cookies |
-| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL for `metadataBase`, Open Graph, and **`POST /api/vaults` links in production** (`NODE_ENV=production`). In **`next dev`**, API links use your local host instead — this var is ignored for those URLs so `.env.local` can still point at prod for other uses. |
+| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL for `metadataBase`, Open Graph, **sitemap / robots**, and **`POST /api/vaults` links in production** (`NODE_ENV=production`). In **`next dev`**, API links use your local host instead — this var is ignored for those URLs so `.env.local` can still point at prod for other uses. |
+| `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | No | Google Search Console HTML tag verification content string (not the full tag). When set, emitted as `<meta name="google-site-verification" …>` in the root layout. |
 | `RAILWAY_PUBLIC_DOMAIN` | Auto | Railway hostname. Used in **production** as fallback when `request.url` is internal (e.g. `0.0.0.0:8080`). Ignored in `next dev` for vault links. |
 | `SITE_URL` | No | Server-only alternate to `NEXT_PUBLIC_SITE_URL` for production vault-link resolution only. |
 | `DATABASE_URL` | No | PostgreSQL URL. Also accepts `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `RAILWAY_DATABASE_URL`. When set, auth/workspace index uses table `public.tkn_auth_state` (create with `pnpm db:migrate`; Railway `releaseCommand` runs this). |

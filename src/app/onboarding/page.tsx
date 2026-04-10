@@ -11,6 +11,7 @@ import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
 export const metadata: Metadata = {
   title: "Create workspace",
   description: "Set up your Token workspace to create secure datarooms.",
+  robots: { index: false, follow: true },
 };
 
 const WorkspaceOnboarding = nextDynamic(

@@ -12,6 +12,7 @@ import { roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 export const metadata: Metadata = {
   title: "New room",
   description: "Set up a Token room with NDA and password, then add documents from owner controls.",
+  robots: { index: false, follow: true },
 };
 
 const CreateVaultForm = dynamic(

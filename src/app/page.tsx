@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -17,6 +18,11 @@ import { Separator } from "@/components/ui/separator";
 import { BrandMark } from "@/components/dataroom/brand-mark";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
+import {
+  getPublicSiteOrigin,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+} from "@/lib/dataroom/public-site";
 
 /** Public source repository (README / open distribution). */
 const PUBLIC_GITHUB_URL = "https://github.com/4d-Studio/tokenDataRoom";
@@ -129,6 +135,74 @@ const faqItems = [
   },
 ] as const;
 
+const homePageTitle = `${SITE_NAME} — Virtual data room & encrypted deal rooms for outsiders`;
+
+const homeOgTitle = `${SITE_NAME} — Virtual data rooms for secure external sharing`;
+
+export const metadata: Metadata = {
+  title: { absolute: homePageTitle },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+  keywords: [
+    "virtual data room",
+    "VDR",
+    "deal room",
+    "secure file sharing",
+    "encrypted file sharing",
+    "NDA",
+    "M&A data room",
+    "due diligence",
+    "client-side encryption",
+    "external collaboration",
+  ],
+  openGraph: {
+    title: homeOgTitle,
+    description: SITE_DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    title: homeOgTitle,
+    description: SITE_DESCRIPTION,
+  },
+};
+
+function buildHomeJsonLd(origin: string) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${origin}/#website`,
+        url: origin,
+        name: SITE_NAME,
+        description: SITE_DESCRIPTION,
+        inLanguage: "en-US",
+        publisher: { "@id": `${origin}/#organization` },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${origin}/#organization`,
+        name: SITE_NAME,
+        url: origin,
+        logo: `${origin}/banner.jpg`,
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: SITE_NAME,
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web browser",
+        description: SITE_DESCRIPTION,
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+          description: "Free plan available",
+        },
+      },
+    ],
+  };
+}
+
 /* ── Fake room mockup for hero right ──────────────────────── */
 
 function HeroMockup() {
@@ -233,7 +307,14 @@ export default async function Home() {
       : "Create a room";
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(buildHomeJsonLd(getPublicSiteOrigin())),
+        }}
+      />
+      <main id="main-content" className="min-h-screen bg-background">
       {/* ── Nav — sits on main bg ─────────────────────── */}
       <header className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 border-b border-[color:var(--tkn-panel-border)]/70 px-5 py-4 sm:px-8">
         <BrandMark />
@@ -583,6 +664,7 @@ export default async function Home() {
           </div>
         </div>
       </footer>
-    </div>
+    </main>
+    </>
   );
 }

@@ -13,6 +13,7 @@ import { getCurrentUser, getCurrentWorkspace } from "@/lib/dataroom/auth";
 export const metadata: Metadata = {
   title: "Sign in",
   description: "Sign in to Token with a one-time email code. No password to remember.",
+  robots: { index: false, follow: true },
 };
 
 const LoginFlow = nextDynamic(
