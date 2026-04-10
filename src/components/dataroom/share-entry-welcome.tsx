@@ -1,4 +1,7 @@
 import type { ReactNode } from "react";
+import { Clock } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 export type ShareEntryBranding = {
   /** Host the visitor used (e.g. app.example.com). */
@@ -6,6 +9,18 @@ export type ShareEntryBranding = {
   workspaceLogoUrl?: string | null;
   workspaceCompanyName?: string | null;
   roomTitle: string;
+  /** Public room banner (unencrypted); same-origin URL to `/api/vaults/.../share-banner`. */
+  shareBannerSrc?: string | null;
+  /** Room-level sender (shown before access). */
+  senderAttribution?: string | null;
+  /** Expiry line preformatted on the server (stable across SSR + hydration). */
+  expiresLabel?: string | null;
+  /** Optional short note from the owner. */
+  roomNote?: string | null;
+  /** Strip outer card chrome so this sits inside a parent shell (e.g. below secure link). */
+  embedInParent?: boolean;
+  /** Hide host label when the full URL is shown nearby (secure link row). */
+  suppressHostBadge?: boolean;
 };
 
 export const SHARE_RECIPIENT_DISCLAIMER =
@@ -23,38 +38,157 @@ export function ShareRecipientCompactHeader({
   workspaceLogoUrl,
   workspaceCompanyName,
   roomTitle,
+  shareBannerSrc,
+  senderAttribution,
+  expiresLabel,
+  roomNote,
+  embedInParent = false,
+  suppressHostBadge = false,
 }: ShareEntryBranding) {
   const host = shareHostLabel.trim() || "Shared link";
   const org = workspaceCompanyName?.trim();
+  const banner = shareBannerSrc?.trim();
+  const sender = senderAttribution?.trim();
+  const note = roomNote?.trim();
+  const expiry = expiresLabel?.trim();
+  const hasContext = Boolean(sender || expiry || note);
+  const showHostBadge = !suppressHostBadge;
+  /** Logo mark: larger circle overlap on banner for a clearer “workspace” anchor. */
+  const logoOverlap =
+    "relative z-[1] flex size-12 shrink-0 items-center justify-center sm:size-[3.75rem]";
+  const logoOverlapBanner = `${logoOverlap} -mt-8 rounded-full border-[3px] border-card bg-white p-0.5 shadow-[0_8px_30px_rgba(35,31,26,0.14)] ring-1 ring-[color:var(--tkn-panel-border)]/80 sm:-mt-10 sm:size-16 sm:border-4 sm:p-1`;
 
   return (
-    <header className="border-b border-border pb-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-        {workspaceLogoUrl ? (
-          <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-1.5 shadow-sm sm:size-14">
+    <header>
+      <div
+        className={cn(
+          "overflow-hidden bg-card",
+          embedInParent
+            ? "rounded-none border-0 shadow-none ring-0"
+            : "rounded-2xl border border-[color:var(--tkn-panel-border)] shadow-[0_2px_28px_rgba(35,31,26,0.06)]",
+        )}
+      >
+        {banner ? (
+          <div
+            className={cn(
+              "relative isolate overflow-hidden",
+              embedInParent
+                ? "h-[7.25rem] rounded-t-[1.35rem] sm:h-[8.75rem]"
+                : "h-[6.5rem] rounded-t-[1.35rem] sm:h-[7.75rem]",
+            )}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={workspaceLogoUrl}
-              alt={workspaceCompanyName ? `${workspaceCompanyName} logo` : "Workspace logo"}
-              className="max-h-full max-w-full object-contain"
+              src={banner}
+              alt=""
+              className="absolute inset-0 size-full object-cover scale-[1.01]"
             />
+            <div
+              className="absolute inset-0 bg-gradient-to-b from-black/[0.15] via-transparent to-black/[0.35]"
+              aria-hidden
+            />
+            <div
+              className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-card from-15% via-card/70 to-transparent"
+              aria-hidden
+            />
+            {showHostBadge ? (
+              <p className="absolute bottom-2.5 left-4 right-4 z-[1] font-mono text-[9px] font-medium uppercase tracking-[0.16em] text-white/95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)] sm:bottom-3 sm:left-5 sm:text-[10px]">
+                {host}
+              </p>
+            ) : null}
           </div>
         ) : (
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 sm:size-14">
-            <div className="size-6 rounded-md bg-[var(--color-accent)] sm:size-7" />
-          </div>
+          <div
+            className="h-0.5 w-full bg-gradient-to-r from-[var(--color-accent)]/45 via-[var(--color-accent)]/15 to-transparent"
+            aria-hidden
+          />
         )}
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            {host}
-          </p>
-          <h1 className="mt-1 text-balance text-2xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]">
-            {roomTitle}
-          </h1>
-          {org ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              From <span className="font-medium text-foreground">{org}</span>
-            </p>
+
+        <div
+          className={
+            banner
+              ? "relative bg-card px-4 pb-5 pt-0 sm:px-7 sm:pb-7"
+              : "relative bg-card px-4 pb-5 pt-5 sm:px-7 sm:pb-6 sm:pt-6"
+          }
+        >
+          <div className="flex items-start gap-4 sm:gap-5">
+            {workspaceLogoUrl ? (
+              <div
+                className={
+                  banner
+                    ? `${logoOverlapBanner} overflow-hidden`
+                    : `${logoOverlap} overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-white p-1.5 shadow-[0_2px_12px_rgba(35,31,26,0.08)]`
+                }
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={workspaceLogoUrl}
+                  alt={workspaceCompanyName ? `${workspaceCompanyName} logo` : "Workspace logo"}
+                  className={
+                    banner
+                      ? "size-full rounded-full object-cover"
+                      : "max-h-full max-w-full object-contain"
+                  }
+                />
+              </div>
+            ) : banner ? (
+              <div
+                className={`${logoOverlap} -mt-8 rounded-full border-[3px] border-card bg-gradient-to-br from-muted to-muted/60 shadow-[0_8px_24px_rgba(35,31,26,0.12)] ring-1 ring-[color:var(--tkn-panel-border)] sm:-mt-10`}
+              >
+                <div className="size-6 rounded-full bg-[var(--color-accent)] sm:size-7" aria-hidden />
+              </div>
+            ) : (
+              <div
+                className={`${logoOverlap} rounded-2xl border border-[color:var(--tkn-panel-border)] bg-muted/80 shadow-sm`}
+              >
+                <div className="size-6 rounded-lg bg-[var(--color-accent)] sm:size-7" aria-hidden />
+              </div>
+            )}
+            <div className="min-w-0 flex-1 pt-1 sm:pt-1.5">
+              {!banner && showHostBadge ? (
+                <p className="mb-2 font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground sm:text-[10px]">
+                  {host}
+                </p>
+              ) : null}
+              <h1 className="text-balance text-[1.375rem] font-semibold tracking-[-0.03em] text-foreground leading-[1.15] sm:text-3xl sm:leading-tight">
+                {roomTitle}
+              </h1>
+              {org ? (
+                <p className="mt-2 text-sm leading-snug text-[color:var(--tkn-text-support)] sm:text-[0.9375rem]">
+                  From <span className="font-medium text-foreground">{org}</span>
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          {hasContext ? (
+            <div className="mt-6 space-y-3 sm:mt-7">
+              <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+                {sender ? (
+                  <div className="rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Shared by
+                    </p>
+                    <p className="mt-1.5 text-sm font-medium leading-snug text-foreground">{sender}</p>
+                  </div>
+                ) : null}
+                {expiry ? (
+                  <div className="rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                    <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      <Clock className="size-3 opacity-80" aria-hidden />
+                      Expires
+                    </p>
+                    <p className="mt-1.5 text-sm font-medium leading-snug text-foreground">{expiry}</p>
+                  </div>
+                ) : null}
+              </div>
+              {note ? (
+                <p className="text-pretty rounded-xl border border-dashed border-[color:var(--tkn-panel-border)] bg-muted/20 px-4 py-3 text-xs leading-relaxed text-[color:var(--tkn-text-support)] sm:text-[13px]">
+                  <span className="font-semibold text-foreground/80">Note · </span>
+                  {note}
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>

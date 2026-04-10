@@ -36,6 +36,7 @@ const acceptancesPath = (slug: string) => path.join(vaultRoot(slug), "acceptance
 const filePath = (slug: string, fileId: string) =>
   path.join(vaultRoot(slug), "files", `${fileId}.bin`);
 const filesDir = (slug: string) => path.join(vaultRoot(slug), "files");
+const shareBannerPath = (slug: string) => path.join(vaultRoot(slug), "share-banner.bin");
 
 const readJson = async <T>(filePath: string): Promise<T | null> => {
   try {
@@ -77,6 +78,23 @@ export class LocalVaultStorage {
 
   async deleteVaultFile(slug: string, fileId: string): Promise<void> {
     await rm(filePath(slug, fileId), { force: true });
+  }
+
+  async putShareBanner(slug: string, bytes: Buffer) {
+    await mkdir(vaultRoot(slug), { recursive: true });
+    await writeFile(shareBannerPath(slug), bytes);
+  }
+
+  async getShareBanner(slug: string): Promise<Buffer | null> {
+    try {
+      return await readFile(shareBannerPath(slug));
+    } catch {
+      return null;
+    }
+  }
+
+  async deleteShareBanner(slug: string): Promise<void> {
+    await rm(shareBannerPath(slug), { force: true });
   }
 
   async putEncryptedPayload(slug: string, encryptedFile: Buffer) {

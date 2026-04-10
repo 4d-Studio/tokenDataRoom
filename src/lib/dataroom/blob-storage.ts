@@ -12,6 +12,7 @@ const payloadPath = (slug: string) => `vaults/${slug}/payload.bin`;
 const eventsPath = (slug: string) => `vaults/${slug}/events.json`;
 const acceptancesPath = (slug: string) => `vaults/${slug}/acceptances.json`;
 const filePath = (slug: string, fileId: string) => `vaults/${slug}/files/${fileId}.bin`;
+const shareBannerPath = (slug: string) => `vaults/${slug}/share-banner.bin`;
 
 const readStreamToBuffer = async (stream: ReadableStream<Uint8Array>) => {
   const arrayBuffer = await new Response(stream).arrayBuffer();
@@ -95,6 +96,25 @@ export class BlobVaultStorage {
 
   async deleteVaultFile(slug: string, fileId: string): Promise<void> {
     await del([filePath(slug, fileId)]);
+  }
+
+  async putShareBanner(slug: string, bytes: Buffer) {
+    await put(shareBannerPath(slug), bytes, {
+      access: "private",
+      allowOverwrite: true,
+      addRandomSuffix: false,
+      contentType: "application/octet-stream",
+    });
+  }
+
+  async getShareBanner(slug: string): Promise<Buffer | null> {
+    const blob = await get(shareBannerPath(slug), { access: "private", useCache: false });
+    if (!blob || blob.statusCode !== 200) return null;
+    return readStreamToBuffer(blob.stream);
+  }
+
+  async deleteShareBanner(slug: string): Promise<void> {
+    await del([shareBannerPath(slug)]);
   }
 
   async getVaultMetadata(slug: string) {

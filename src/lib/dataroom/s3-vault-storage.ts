@@ -19,6 +19,7 @@ const payloadPath = (slug: string) => `vaults/${slug}/payload.bin`;
 const eventsPath = (slug: string) => `vaults/${slug}/events.json`;
 const acceptancesPath = (slug: string) => `vaults/${slug}/acceptances.json`;
 const filePath = (slug: string, fileId: string) => `vaults/${slug}/files/${fileId}.bin`;
+const shareBannerPath = (slug: string) => `vaults/${slug}/share-banner.bin`;
 
 /** Env bag for tests and non-global resolution (Railway Bucket / S3-compatible). */
 export type S3EnvSource = Record<string, string | undefined>;
@@ -186,6 +187,30 @@ export class S3VaultStorage {
       new DeleteObjectCommand({
         Bucket: bucketName(),
         Key: filePath(slug, fileId),
+      }),
+    );
+  }
+
+  async putShareBanner(slug: string, bytes: Buffer) {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: bucketName(),
+        Key: shareBannerPath(slug),
+        Body: bytes,
+        ContentType: "application/octet-stream",
+      }),
+    );
+  }
+
+  async getShareBanner(slug: string): Promise<Buffer | null> {
+    return readObjectBytes(this.client, shareBannerPath(slug));
+  }
+
+  async deleteShareBanner(slug: string): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: bucketName(),
+        Key: shareBannerPath(slug),
       }),
     );
   }

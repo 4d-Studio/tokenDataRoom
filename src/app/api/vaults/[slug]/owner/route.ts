@@ -12,7 +12,12 @@ import {
 } from "@/lib/dataroom/vanity-slugs";
 import { getRequestContext } from "@/lib/dataroom/request-context";
 import { sendRoomInviteEmail } from "@/lib/dataroom/recipient-email";
-import { createEvent } from "@/lib/dataroom/types";
+import {
+  createEvent,
+  SHARE_BANNER_MAX_BYTES,
+  type VaultRecord,
+  vaultFilesList,
+} from "@/lib/dataroom/types";
 import {
   clampRecipientEmailList,
   MAX_RECIPIENT_INVITES_PER_SEND,
@@ -80,6 +85,20 @@ const ownerPostSchema = z.discriminatedUnion("action", [
     roomPassword: z.string().min(1).max(500),
     shareUrl: z.string().url().max(2048),
   }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("set_share_banner"),
+    imageDataUrl: z.string().min(32).max(5_500_000),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("clear_share_banner"),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("set_recipient_hidden_file_ids"),
+    fileIds: z.array(z.string().min(1)).max(100),
+  }),
 ]);
 
 export async function POST(
@@ -97,9 +116,20 @@ export async function POST(
     return NextResponse.json({ error: "Room not found." }, { status: 404 });
   }
 
-  const parsed = ownerPostSchema.safeParse(await request.json());
-
-  if (!parsed.success || !verifyOwnerKey(parsed.data.ownerKey, metadata.ownerKey)) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Request body was too large or invalid. Try again with a smaller payload." },
+      { status: 400 },
+    );
+  }
+  const parsed = ownerPostSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request.", details: parsed.error.flatten() }, { status: 400 });
+  }
+  if (!verifyOwnerKey(parsed.data.ownerKey, metadata.ownerKey)) {
     return NextResponse.json({ error: "Owner access denied." }, { status: 403 });
   }
 
@@ -249,6 +279,70 @@ export async function POST(
     return NextResponse.json({ metadata: latestMetadata, events });
   }
 
+  if (parsed.data.action === "set_share_banner") {
+    const parsedBanner = parseShareBannerDataUrl(parsed.data.imageDataUrl);
+    if (!parsedBanner) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid banner image. Use a JPEG, PNG, or WebP file under 3 MB (paste as data URL or re-upload from the manage page).",
+        },
+        { status: 400 },
+      );
+    }
+    await storage.putShareBanner(slug, parsedBanner.bytes);
+    const ext =
+      parsedBanner.mimeType === "image/jpeg"
+        ? "jpg"
+        : parsedBanner.mimeType === "image/png"
+          ? "png"
+          : "webp";
+    const nextMetadata = {
+      ...metadata,
+      shareBanner: {
+        fileName: `room-banner.${ext}`,
+        mimeType: parsedBanner.mimeType,
+        sizeBytes: parsedBanner.bytes.length,
+      },
+    };
+    await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "clear_share_banner") {
+    try {
+      await storage.deleteShareBanner(slug);
+    } catch {
+      /* best-effort */
+    }
+    const nextMetadata: VaultRecord = { ...metadata };
+    delete nextMetadata.shareBanner;
+    await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "set_recipient_hidden_file_ids") {
+    const allowed = new Set(vaultFilesList(metadata).map((f) => f.id));
+    for (const id of parsed.data.fileIds) {
+      if (!allowed.has(id)) {
+        return NextResponse.json({ error: `Unknown file id: ${id}` }, { status: 400 });
+      }
+    }
+    const nextMetadata = {
+      ...metadata,
+      recipientHiddenVaultFileIds:
+        parsed.data.fileIds.length > 0 ? parsed.data.fileIds : undefined,
+    };
+    await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
   const nextStatus = parsed.data.action === "revoke" ? "revoked" : "active";
 
   if (metadata.status !== nextStatus) {
@@ -315,4 +409,22 @@ export async function DELETE(
   }
 
   return NextResponse.json({ deleted: true });
+}
+
+function parseShareBannerDataUrl(
+  dataUrl: string,
+): { bytes: Buffer; mimeType: string } | null {
+  const trimmed = dataUrl.trim();
+  const match = trimmed.match(/^data:(image\/(?:jpeg|png|webp));base64,(\S+)$/i);
+  if (!match) return null;
+  const mimeType = match[1].toLowerCase();
+  const b64 = match[2];
+  let bytes: Buffer;
+  try {
+    bytes = Buffer.from(b64, "base64");
+  } catch {
+    return null;
+  }
+  if (bytes.length === 0 || bytes.length > SHARE_BANNER_MAX_BYTES) return null;
+  return { bytes, mimeType };
 }

@@ -33,10 +33,16 @@ import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-o
 import { isRichNdaContent } from "@/components/dataroom/rich-text-editor";
 import { formatBytes, formatDateTime } from "@/lib/dataroom/helpers";
 import { sanitizeHtml } from "@/lib/dataroom/sanitize";
-import type { VaultAcceptanceRecord, VaultRecord } from "@/lib/dataroom/types";
+import {
+  recipientVisibleVaultFiles,
+  type VaultAcceptanceRecord,
+  type VaultRecord,
+} from "@/lib/dataroom/types";
 
 type Props = {
   hasDocument: boolean;
+  /** Public room banner; shown before unlock. */
+  shareBannerSrc?: string;
   /** Shown over in-app preview only (not burned into downloads). */
   viewerWatermarkLabel?: string;
   metadata: VaultRecord;
@@ -69,6 +75,7 @@ type Props = {
 
 export function MobileShareViewer({
   hasDocument,
+  shareBannerSrc,
   viewerWatermarkLabel = "",
   metadata,
   initialAcceptance,
@@ -111,11 +118,15 @@ export function MobileShareViewer({
   const [returnCode, setReturnCode] = useState("");
 
   const isNdaDone = !metadata.requiresNda || initialAccessGranted;
+  const headFile = recipientVisibleVaultFiles(metadata)[0];
   const previewable =
     hasDocument &&
-    (metadata.mimeType.startsWith("image/") ||
-      metadata.mimeType === "application/pdf" ||
-      metadata.mimeType.startsWith("text/"));
+    Boolean(
+      headFile &&
+        (headFile.mimeType.startsWith("image/") ||
+          headFile.mimeType === "application/pdf" ||
+          headFile.mimeType.startsWith("text/")),
+    );
 
   const handleUnlock = useCallback(async () => {
     if (!password) return;
@@ -127,12 +138,34 @@ export function MobileShareViewer({
   }, [password, onUnlockDocument, onDismissError]);
 
   const handleSign = useCallback(() => {
-    if (!signatureName || !signerName || !signerEmail || !signerAddress) return;
+    const typed = signatureName.trim();
+    const hasSig = Boolean(signatureImage) || typed.length >= 2;
+    if (!hasSig || !signerName || !signerEmail || !signerAddress) return;
+    if (signerAddress.trim().length < 10) return;
     setLocalError("");
     onDismissError();
-    onSignNda({ signerName, signerEmail, signerCompany, signerAddress, signatureName, signatureImage, rememberMe });
+    const signatureNameForApi = signatureImage ? typed || signerName.trim() : typed;
+    onSignNda({
+      signerName,
+      signerEmail,
+      signerCompany,
+      signerAddress,
+      signatureName: signatureNameForApi,
+      signatureImage,
+      rememberMe,
+    });
     // Don't close the sheet here — parent signals completion via signingInProgress=false + initialAccessGranted=true
-  }, [signatureName, signatureImage, signerName, signerEmail, signerAddress, onSignNda, onDismissError, rememberMe]);
+  }, [
+    signatureName,
+    signatureImage,
+    signerName,
+    signerEmail,
+    signerAddress,
+    signerCompany,
+    onSignNda,
+    onDismissError,
+    rememberMe,
+  ]);
 
   // Close sheet once the parent confirms access granted (NDA signed successfully)
   useEffect(() => {
@@ -153,10 +186,10 @@ export function MobileShareViewer({
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">
-              {isNdaDone && hasDocument ? metadata.fileName : "Locked"}
+              {isNdaDone && hasDocument && headFile ? headFile.name : "Locked"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {isNdaDone && hasDocument ? formatBytes(metadata.fileSize) : "Encrypted"}
+              {isNdaDone && hasDocument && headFile ? formatBytes(headFile.sizeBytes) : "Encrypted"}
             </p>
           </div>
         </div>
@@ -181,8 +214,8 @@ export function MobileShareViewer({
         {decrypted && hasDocument ? (
           <MobileDocumentView
             src={objectUrl}
-            mimeType={metadata.mimeType}
-            fileName={metadata.fileName}
+            mimeType={headFile?.mimeType ?? metadata.mimeType}
+            fileName={headFile?.name ?? metadata.fileName}
             previewable={previewable}
             watermarkLabel={viewerWatermarkLabel}
           />
@@ -200,9 +233,19 @@ export function MobileShareViewer({
             <div className="flex size-12 items-center justify-center rounded-2xl border border-neutral-200 bg-white shadow-sm">
               <FileText className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
             </div>
+            {shareBannerSrc ? (
+              <div className="w-full max-w-sm overflow-hidden rounded-xl border border-border bg-muted/20 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={shareBannerSrc}
+                  alt=""
+                  className="max-h-40 w-full object-cover"
+                />
+              </div>
+            ) : null}
             <p className="text-base font-semibold text-foreground">{metadata.title}</p>
             <p className="text-sm text-muted-foreground">
-              {hasDocument ? metadata.fileName : "No file uploaded yet"}
+              {hasDocument && headFile ? headFile.name : "No file uploaded yet"}
             </p>
             <button
               type="button"
@@ -470,7 +513,7 @@ export function MobileShareViewer({
                           disabled={
                             signingInProgress ||
                             isPending ||
-                            !signatureName ||
+                            !(signatureImage || signatureName.trim().length >= 2) ||
                             !signerAddress ||
                             signerAddress.trim().length < 10
                           }

@@ -106,6 +106,9 @@ export async function POST(
     signerCompany: parsed.data.signerCompany || undefined,
     signerAddress: parsed.data.signerAddress,
     signatureName: parsed.data.signatureName,
+    ...(parsed.data.signatureImage
+      ? { signatureImage: parsed.data.signatureImage }
+      : {}),
     userAgent: ctx.userAgent,
     ipAddress: ctx.ipAddress,
   };

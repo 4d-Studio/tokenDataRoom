@@ -7,7 +7,7 @@ import { getRequestContext } from "@/lib/dataroom/request-context";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import {
   createEvent,
-  vaultFilesList,
+  recipientVisibleVaultFiles,
   vaultHasEncryptedDocument,
 } from "@/lib/dataroom/types";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
@@ -66,11 +66,15 @@ export async function GET(
 
   // No fileId → return the file manifest (JSON list of files)
   if (!fileId) {
-    return NextResponse.json({ files: vaultFilesList(metadata) });
+    return NextResponse.json({ files: recipientVisibleVaultFiles(metadata) });
   }
 
-  // Specific file download
-  const files = vaultFilesList(metadata);
+  // Specific file download (recipient-visible files only)
+  const hidden = new Set(metadata.recipientHiddenVaultFileIds ?? []);
+  if (hidden.has(fileId)) {
+    return NextResponse.json({ error: "File not found." }, { status: 404 });
+  }
+  const files = recipientVisibleVaultFiles(metadata);
   const fileEntry = files.find((f) => f.id === fileId);
   if (!fileEntry) {
     return NextResponse.json({ error: "File not found." }, { status: 404 });

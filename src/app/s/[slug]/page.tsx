@@ -3,7 +3,6 @@ import nextDynamic from "next/dynamic";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 
-import { BrandMark } from "@/components/dataroom/brand-mark";
 import { ShareExperienceSkeleton } from "@/components/dataroom/route-loading";
 
 const ShareExperience = nextDynamic(
@@ -13,10 +12,14 @@ const ShareExperience = nextDynamic(
 );
 import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
 import { getWorkspaceById } from "@/lib/dataroom/auth-store";
-import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
+import {
+  buildDefaultNdaText,
+  formatDateTime,
+  getBaseUrlFromHeaders,
+} from "@/lib/dataroom/helpers";
 import { getVaultStorage } from "@/lib/dataroom/storage";
 import { isValidPublicVaultSlug } from "@/lib/dataroom/vault-access";
-import { resolveVanitySlug } from "@/lib/dataroom/vanity-slugs";
+import { getVanitySlugForRoom, resolveVanitySlug } from "@/lib/dataroom/vanity-slugs";
 import {
   verifyWorkspaceNdaToken,
   workspaceNdaCookieName,
@@ -127,15 +130,16 @@ export default async function SharePage({
     headerList.get("host") ??
     "";
 
-  return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
-      {/* Recipient page: minimal chrome — title and context live inside ShareExperience */}
-      <header className="mb-8 flex items-center justify-between gap-3 border-b border-border/80 pb-5">
-        <BrandMark />
-        <span className="hidden text-xs text-muted-foreground sm:inline">Shared room</span>
-      </header>
+  /** Preformatted on the server so the client header does not re-run Intl (avoids TZ hydration mismatch). */
+  const shareExpiresLabel = formatDateTime(metadata.expiresAt);
 
-      <div className="pb-16">
+  const baseUrl = getBaseUrlFromHeaders(headerList);
+  const vanitySlug = await getVanitySlugForRoom(slug);
+  const recipientShareUrl = `${baseUrl}/s/${vanitySlug ?? slug}`;
+
+  return (
+    <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-8 sm:py-12">
+      <div className="pb-20">
         <ShareExperience
           metadata={metadata}
           initialAcceptance={acceptance}
@@ -149,6 +153,8 @@ export default async function SharePage({
           shareHostLabel={shareHostLabel}
           workspaceLogoUrl={workspace?.logoUrl}
           workspaceCompanyName={workspace?.companyName}
+          shareExpiresLabel={shareExpiresLabel}
+          recipientShareUrl={recipientShareUrl}
         />
       </div>
     </main>

@@ -257,14 +257,21 @@ function CategoryPicker({
   file,
   existingCategories,
   onPick,
+  onOpenChange,
 }: {
   file: VaultFileEntry;
   existingCategories: string[];
   onPick: (fileId: string, category: string) => void;
+  /** Lets parent lift stacking context so later file groups (e.g. image tiles) do not paint over the menu. */
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
 
   useEffect(() => {
     if (!open) return;
@@ -282,7 +289,7 @@ function CategoryPicker({
   };
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={cn("relative", open && "z-[200]")} ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -293,7 +300,7 @@ function CategoryPicker({
         {file.category || "Uncategorized"}
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-lg border border-border bg-white shadow-lg">
+        <div className="absolute right-0 top-full z-[210] mt-1 w-48 overflow-hidden rounded-lg border border-border bg-white shadow-xl">
           {existingCategories
             .filter((c) => c !== file.category)
             .map((c) => (
@@ -365,10 +372,16 @@ function CategoryGroup({
   onCategoryChange: (fileId: string, category: string) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const isImage = files.every((f) => f.mimeType.startsWith("image/"));
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-white">
+    <div
+      className={cn(
+        "rounded-xl border border-border bg-white",
+        categoryMenuOpen ? "relative z-[150] overflow-visible shadow-md" : "overflow-hidden",
+      )}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -430,6 +443,14 @@ function CategoryGroup({
                       {formatBytes(f.sizeBytes)}
                       {f.addedAt ? ` · ${formatDateTime(f.addedAt)}` : ""}
                     </p>
+                    <div className="mt-1.5 flex justify-end">
+                      <CategoryPicker
+                        file={f}
+                        existingCategories={existingCategories}
+                        onPick={onCategoryChange}
+                        onOpenChange={setCategoryMenuOpen}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -473,6 +494,7 @@ function CategoryGroup({
                     file={f}
                     existingCategories={existingCategories}
                     onPick={onCategoryChange}
+                    onOpenChange={setCategoryMenuOpen}
                   />
                   <button
                     type="button"
