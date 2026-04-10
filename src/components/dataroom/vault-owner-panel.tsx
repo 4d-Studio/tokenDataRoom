@@ -63,6 +63,7 @@ const EVENT_LABELS: Record<VaultEvent["type"], string> = {
   revoked: "Access revoked",
   reactivated: "Access restored",
   document_attached: "Document updated",
+  file_renamed: "File renamed",
 };
 
 const SECTIONS = [

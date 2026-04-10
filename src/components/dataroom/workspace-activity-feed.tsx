@@ -11,6 +11,7 @@ import {
   LayoutPanelTop,
   Lock,
   Mail,
+  PencilLine,
   RefreshCw,
   ShieldCheck,
   Upload,
@@ -83,6 +84,12 @@ const EVENT_CONFIG: Record<
     color: "text-[var(--color-accent)]",
     label: "File added",
     action: "uploaded a document to",
+  },
+  file_renamed: {
+    icon: PencilLine,
+    color: "text-muted-foreground",
+    label: "File renamed",
+    action: "renamed a file in",
   },
   access_requested: {
     icon: Mail,

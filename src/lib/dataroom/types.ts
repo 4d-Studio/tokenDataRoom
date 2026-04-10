@@ -97,6 +97,7 @@ export type VaultEventType =
   | "revoked"
   | "reactivated"
   | "document_attached"
+  | "file_renamed"
   | "access_requested"
   | "access_verified"
   | "files_decrypted"

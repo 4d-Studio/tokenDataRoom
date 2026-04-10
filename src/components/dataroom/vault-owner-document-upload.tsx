@@ -12,6 +12,7 @@ import {
   ImageIcon,
   Loader2,
   Lock,
+  PencilLine,
   ShieldCheck,
   Tag,
   Trash2,
@@ -354,6 +355,114 @@ function CategoryPicker({
   );
 }
 
+function FileRenameControl({
+  file,
+  onRename,
+  compact,
+}: {
+  file: VaultFileEntry;
+  onRename: (fileId: string, nextName: string) => Promise<void>;
+  /** Smaller type + stacked layout for image tiles */
+  compact?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(file.name);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!editing) setDraft(file.name);
+  }, [file.name, editing]);
+
+  const cancel = () => {
+    setDraft(file.name);
+    setEditing(false);
+  };
+
+  const submit = async () => {
+    const next = draft.trim();
+    if (!next) return;
+    if (next === file.name) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await onRename(file.id, next);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className={cn("flex flex-col gap-1.5", compact ? "w-full" : "min-w-0 flex-1")}>
+        <div className="flex flex-wrap gap-1">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            maxLength={200}
+            disabled={saving}
+            className="h-8 min-w-0 flex-1 rounded border border-border bg-muted/20 px-2 text-xs focus:border-[var(--color-accent)] focus:outline-none"
+            autoFocus
+            aria-label="New file name"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") cancel();
+              if (e.key === "Enter") void submit();
+            }}
+          />
+          <button
+            type="button"
+            disabled={saving || !draft.trim()}
+            onClick={() => void submit()}
+            className="rounded bg-foreground px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-40"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={cancel}
+            className="rounded border border-border px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/50"
+          >
+            Cancel
+          </button>
+        </div>
+        <p className="text-[0.65rem] leading-snug text-muted-foreground">
+          Shown to recipients and used for download names (encrypted payload unchanged).
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 items-center gap-1.5",
+        compact ? "w-full justify-between" : "",
+      )}
+    >
+      <p
+        className={cn(
+          "min-w-0 truncate font-medium text-foreground",
+          compact ? "max-w-[10rem] text-xs" : "text-sm",
+        )}
+        title={file.name}
+      >
+        {file.name}
+      </p>
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        aria-label={`Rename ${file.name}`}
+      >
+        <PencilLine className="size-3.5" strokeWidth={1.75} />
+      </button>
+    </div>
+  );
+}
+
 function CategoryGroup({
   label,
   icon: Icon,
@@ -362,6 +471,7 @@ function CategoryGroup({
   onRemove,
   onPreview,
   onCategoryChange,
+  onRenameFile,
 }: {
   label: string;
   icon: typeof FileText;
@@ -370,6 +480,7 @@ function CategoryGroup({
   onRemove: (fileId: string) => void;
   onPreview: (file: VaultFileEntry) => void;
   onCategoryChange: (fileId: string, category: string) => void;
+  onRenameFile: (fileId: string, name: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(true);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
@@ -436,10 +547,8 @@ function CategoryGroup({
                     </button>
                   </div>
                   <div className="border-t border-border bg-white px-2 py-1.5">
-                    <p className="truncate text-xs font-medium text-foreground">
-                      {f.name}
-                    </p>
-                    <p className="text-[0.65rem] text-muted-foreground">
+                    <FileRenameControl file={f} onRename={onRenameFile} compact />
+                    <p className="mt-1 text-[0.65rem] text-muted-foreground">
                       {formatBytes(f.sizeBytes)}
                       {f.addedAt ? ` · ${formatDateTime(f.addedAt)}` : ""}
                     </p>
@@ -476,10 +585,8 @@ function CategoryGroup({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {f.name}
-                    </p>
-                    <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                    <FileRenameControl file={f} onRename={onRenameFile} />
+                    <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
                       <span>
                         {formatBytes(f.sizeBytes)} · {formatMimeLabel(f.mimeType)}
                       </span>
@@ -810,6 +917,32 @@ export function VaultOwnerDocumentUpload({
     }
   };
 
+  const renameVaultFile = async (fileId: string, name: string) => {
+    try {
+      const res = await fetch(`/api/vaults/${slug}/owner`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ownerKey,
+          action: "rename_vault_file",
+          fileId,
+          name,
+        }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        metadata?: VaultRecord;
+        events?: VaultEvent[];
+      };
+      if (!res.ok || !data.metadata || !data.events) {
+        throw new Error(data.error || "Unable to rename file.");
+      }
+      onUploaded(data.metadata, data.events);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to rename file.");
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────
 
   return (
@@ -838,6 +971,7 @@ export function VaultOwnerDocumentUpload({
                 onRemove={removeUploaded}
                 onPreview={setLightboxFile}
                 onCategoryChange={updateFileCategory}
+                onRenameFile={renameVaultFile}
               />
             ))}
           </div>

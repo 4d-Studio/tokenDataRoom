@@ -56,6 +56,20 @@ const ownerPostSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     ownerKey: z.string().min(32).max(128),
+    action: z.literal("rename_vault_file"),
+    fileId: z.string().min(1),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Name is required.")
+      .max(200)
+      .refine(
+        (s) => !/[\\/]/.test(s) && !s.includes(".."),
+        "File name cannot include path characters.",
+      ),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
     action: z.literal("set_vanity_slug"),
     vanitySlug: z.string().trim().min(3).max(60),
   }),
@@ -167,6 +181,54 @@ export async function POST(
     files[idx] = { ...files[idx], category: category || undefined };
     const nextMetadata = { ...metadata, vaultFiles: files };
     await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "rename_vault_file") {
+    const { fileId, name: newName } = parsed.data;
+    const listed = vaultFilesList(metadata);
+    const entry = listed.find((f) => f.id === fileId);
+    if (!entry) {
+      return NextResponse.json({ error: "File not found." }, { status: 404 });
+    }
+    const prevName = entry.name;
+    if (prevName === newName) {
+      const latestMetadata = await storage.getVaultMetadata(slug);
+      const events = await storage.getEvents(slug);
+      return NextResponse.json({ metadata: latestMetadata, events });
+    }
+
+    let nextMetadata: VaultRecord;
+
+    if (!metadata.vaultFiles?.length) {
+      if (fileId !== "legacy-primary") {
+        return NextResponse.json({ error: "File not found." }, { status: 404 });
+      }
+      nextMetadata = { ...metadata, fileName: newName };
+    } else {
+      const idx = metadata.vaultFiles.findIndex((f) => f.id === fileId);
+      if (idx === -1) {
+        return NextResponse.json({ error: "File not found." }, { status: 404 });
+      }
+      const nextFiles = [...metadata.vaultFiles];
+      nextFiles[idx] = { ...nextFiles[idx], name: newName };
+      nextMetadata = { ...metadata, vaultFiles: nextFiles };
+      const primary = vaultFilesList(nextMetadata)[0];
+      if (primary?.id === fileId) {
+        nextMetadata = { ...nextMetadata, fileName: newName };
+      }
+    }
+
+    await storage.updateVaultMetadata(nextMetadata);
+    await storage.appendEvent(
+      slug,
+      createEvent("file_renamed", {
+        note: `Renamed file: ${prevName} → ${newName}`,
+        ...getRequestContext(request),
+      }),
+    );
     const latestMetadata = await storage.getVaultMetadata(slug);
     const events = await storage.getEvents(slug);
     return NextResponse.json({ metadata: latestMetadata, events });
