@@ -349,13 +349,16 @@ export default async function Home() {
         <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              How it works
+              Flow
             </p>
             <h2 className="mt-2 font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl sm:tracking-[-0.02em]">
-              Three steps. No webinar, no sales call, no surprise fourth.
+              How it works
             </h2>
-            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-[var(--tkn-text-support)] sm:text-base">
-              Client-side encryption, optional NDA, one link — then you’re done.
+            <p className="mx-auto mt-3 max-w-lg text-base font-medium leading-snug text-foreground sm:text-lg">
+              Three steps. No webinar, no sales call, no surprise fourth.
+            </p>
+            <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-[var(--tkn-text-support)] sm:text-base">
+              Client-side encryption, optional NDA, one link — then you&apos;re done.
             </p>
           </div>
 
