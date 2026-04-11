@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FileImage, FileText } from "lucide-react";
 
 import { formatBytes } from "@/lib/dataroom/helpers";
 import { formatMimeLabel } from "@/lib/dataroom/room-contents";
@@ -9,24 +10,33 @@ import { cn } from "@/lib/utils";
 
 const railStorageKey = (slug: string) => `tkn_share_rail_pos_${slug}`;
 
+function fileKindIcon(mime: string) {
+  if (mime.startsWith("image/")) return FileImage;
+  return FileText;
+}
+
 export function DraggableDecryptedFocusFileRail({
   vaultSlug,
   files,
   activeFileId,
   decryptedFiles,
   onPick,
+  /** Docked sidebar on lg+; horizontal strip below lg (tablet / touch laptops). Floating is legacy. */
+  layout = "docked",
 }: {
   vaultSlug: string;
   files: VaultFileEntry[];
   activeFileId: string | null;
   decryptedFiles: Record<string, { objectUrl: string; downloadName: string }>;
   onPick: (fileId: string) => void;
+  layout?: "docked" | "floating";
 }) {
-  const railRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLDivElement | null>(null);
   const dragStart = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
+    if (layout !== "floating") return;
     try {
       const raw = sessionStorage.getItem(railStorageKey(vaultSlug));
       if (raw) {
@@ -38,7 +48,7 @@ export function DraggableDecryptedFocusFileRail({
     } catch {
       /* ignore */
     }
-  }, [vaultSlug]);
+  }, [vaultSlug, layout]);
 
   const clampToViewport = useCallback((x: number, y: number) => {
     const el = railRef.current;
@@ -54,7 +64,7 @@ export function DraggableDecryptedFocusFileRail({
 
   const onHeaderPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (e.button !== 0) return;
+      if (layout !== "floating" || e.button !== 0) return;
       e.preventDefault();
       const el = railRef.current;
       if (!el) return;
@@ -67,7 +77,7 @@ export function DraggableDecryptedFocusFileRail({
       };
       e.currentTarget.setPointerCapture(e.pointerId);
     },
-    [pos],
+    [layout, pos],
   );
 
   const onHeaderPointerMove = useCallback(
@@ -103,18 +113,146 @@ export function DraggableDecryptedFocusFileRail({
     [vaultSlug],
   );
 
-  const style: React.CSSProperties =
+  const floatingStyle: React.CSSProperties =
     pos != null
       ? { left: pos.x, top: pos.y, transform: "none" }
       : { left: "0.5rem", top: "50%", transform: "translateY(-50%)" };
 
+  const items = files.map((f) => {
+    const label = decryptedFiles[f.id]?.downloadName ?? f.name;
+    const active = f.id === activeFileId;
+    const Icon = fileKindIcon(f.mimeType);
+    return (
+      <li key={f.id}>
+        <button
+          type="button"
+          onClick={() => onPick(f.id)}
+          title={label}
+          aria-current={active ? "true" : undefined}
+          className={cn(
+            "flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
+            active
+              ? "bg-[color:var(--color-accent)]/14 text-foreground shadow-[inset_3px_0_0_0_var(--color-accent)]"
+              : "text-muted-foreground hover:bg-muted/90 hover:text-foreground",
+          )}
+        >
+          <Icon
+            className={cn(
+              "mt-0.5 size-3.5 shrink-0",
+              active ? "text-[color:var(--color-accent)]" : "opacity-70",
+            )}
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <span className="min-w-0 flex-1">
+            {f.category ? (
+              <span className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/90">
+                {f.category}
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                "line-clamp-2 font-medium leading-snug",
+                layout === "docked" ? "text-[11px]" : "text-xs text-foreground",
+              )}
+            >
+              {label}
+            </span>
+            <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+              {formatMimeLabel(f.mimeType)} · {formatBytes(f.sizeBytes)}
+            </span>
+          </span>
+        </button>
+      </li>
+    );
+  });
+
+  if (layout === "docked") {
+    return (
+      <div className="contents">
+        <nav
+          className="flex w-full shrink-0 flex-col border-b border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/55 lg:hidden"
+          aria-label="Room files"
+        >
+          <div className="flex shrink-0 items-baseline justify-between gap-2 border-b border-[color:var(--tkn-panel-border)]/70 bg-card/85 px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Files
+            </p>
+            <p className="text-[11px] font-medium tabular-nums text-foreground">
+              {files.length} in room
+            </p>
+          </div>
+          <ul className="flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain px-2 py-2.5 [-webkit-overflow-scrolling:touch] sm:py-2">
+            {files.map((f) => {
+              const label = decryptedFiles[f.id]?.downloadName ?? f.name;
+              const active = f.id === activeFileId;
+              const Icon = fileKindIcon(f.mimeType);
+              return (
+                <li key={f.id} className="snap-start">
+                  <button
+                    type="button"
+                    onClick={() => onPick(f.id)}
+                    title={label}
+                    aria-current={active ? "true" : undefined}
+                    className={cn(
+                      "flex min-h-[3.25rem] w-[min(11.5rem,calc(100vw-4rem))] max-w-[13rem] shrink-0 flex-col rounded-xl border px-2.5 py-2 text-left transition-colors sm:min-h-[2.875rem] sm:w-44",
+                      active
+                        ? "border-[color:var(--color-accent)]/50 bg-[color:var(--color-accent)]/12 shadow-[inset_0_-2px_0_0_var(--color-accent)]"
+                        : "border-[color:var(--tkn-panel-border)] bg-card/90 hover:border-foreground/15 hover:bg-card",
+                    )}
+                  >
+                    <span className="flex items-start gap-2">
+                      <Icon
+                        className={cn(
+                          "mt-0.5 size-3.5 shrink-0",
+                          active ? "text-[color:var(--color-accent)]" : "text-muted-foreground",
+                        )}
+                        strokeWidth={1.75}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 text-xs font-semibold leading-snug text-foreground">
+                          {label}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                          {formatMimeLabel(f.mimeType)}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <div
+          ref={railRef}
+          className="hidden h-full min-h-0 w-[12.75rem] shrink-0 flex-col border-r border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/55 lg:flex"
+          role="navigation"
+          aria-label="Room files"
+        >
+          <div className="shrink-0 border-b border-[color:var(--tkn-panel-border)]/80 bg-card/80 px-2.5 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Files
+            </p>
+            <p className="mt-0.5 text-[11px] font-medium tabular-nums text-foreground">
+              {files.length} in room
+            </p>
+          </div>
+          <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain px-1.5 pb-2">
+            {items}
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={railRef}
-      style={style}
+      style={floatingStyle}
       className={cn(
         "pointer-events-auto fixed z-20 max-h-[min(72vh,560px)] w-44 overflow-hidden rounded-xl border border-[color:var(--tkn-panel-border)] bg-card/95 shadow-[0_8px_32px_rgba(35,31,26,0.14)] backdrop-blur-[6px]",
-        pos == null ? "" : "",
       )}
       role="navigation"
       aria-label="Room files"
@@ -133,34 +271,7 @@ export function DraggableDecryptedFocusFileRail({
         <p className="text-[9px] leading-tight text-muted-foreground/80">Drag header to move</p>
       </div>
       <ul className="max-h-[min(64vh,480px)] space-y-0.5 overflow-y-auto overscroll-contain px-1.5 pb-1.5">
-        {files.map((f) => {
-          const label = decryptedFiles[f.id]?.downloadName ?? f.name;
-          const active = f.id === activeFileId;
-          return (
-            <li key={f.id}>
-              <button
-                type="button"
-                onClick={() => onPick(f.id)}
-                className={cn(
-                  "w-full rounded-lg px-2 py-1.5 text-left transition-colors",
-                  active
-                    ? "bg-[color:var(--color-accent)]/12 font-medium text-foreground ring-1 ring-[color:var(--color-accent)]/35"
-                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-                )}
-              >
-                {f.category ? (
-                  <span className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/90">
-                    {f.category}
-                  </span>
-                ) : null}
-                <span className="line-clamp-2 text-xs leading-snug text-foreground">{label}</span>
-                <span className="mt-0.5 block text-[10px] text-muted-foreground">
-                  {formatMimeLabel(f.mimeType)} · {formatBytes(f.sizeBytes)}
-                </span>
-              </button>
-            </li>
-          );
-        })}
+        {items}
       </ul>
     </div>
   );

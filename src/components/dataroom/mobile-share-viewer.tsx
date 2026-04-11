@@ -202,9 +202,9 @@ export function MobileShareViewer({
   const displayError = localError || externalError;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background pt-[env(safe-area-inset-top,0px)]">
       {/* ── Top bar (recipient: product light shell, not theater-dark) ── */}
-      <div className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 shadow-sm">
+      <div className="relative z-10 flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 pb-0 shadow-sm">
         <div className="flex items-center gap-2.5 overflow-hidden">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
             <FileText className="size-4 text-muted-foreground" />
@@ -673,12 +673,17 @@ export function MobileShareViewer({
       <AnimatePresence>
         {!sheetOpen && (
           <motion.button
+            type="button"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
             onClick={() => setSheetOpen(true)}
-            className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-foreground shadow-lg"
+            aria-label={isNdaDone ? "Open unlock and room options" : "Open NDA and room options"}
+            className="absolute left-1/2 z-20 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-foreground shadow-lg"
+            style={{
+              bottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))",
+            }}
           >
             {isNdaDone ? <Lock className="size-4" /> : <ShieldCheck className="size-4" />}
             <span className="text-sm font-medium text-foreground">
@@ -722,28 +727,45 @@ function PdfDeckView({
     }
   };
 
-  const goPrev = () => setCurrentPage((p) => Math.max(1, p - 1));
-  const goNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
-  const toggleFullscreen = async () => {
-    if (!isFullscreen) {
+  const goPrev = useCallback(() => setCurrentPage((p) => Math.max(1, p - 1)), []);
+  const goNext = useCallback(
+    () => setCurrentPage((p) => Math.min(totalPages, p + 1)),
+    [totalPages],
+  );
+  const toggleFullscreen = useCallback(async () => {
+    if (!document.fullscreenElement) {
       await containerRef.current?.requestFullscreen?.();
       setIsFullscreen(true);
     } else {
       await document.exitFullscreen?.();
       setIsFullscreen(false);
     }
-  };
+  }, []);
 
-  // Keyboard navigation
+  // Keyboard navigation — ignore when typing in form fields (global listener)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") goPrev();
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") goNext();
-      if (e.key === "f" || e.key === "F") toggleFullscreen();
+      const t = e.target;
+      if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement)
+        return;
+      if (t instanceof HTMLElement && t.isContentEditable) return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        goPrev();
+      }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        goNext();
+      }
+      if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        void toggleFullscreen();
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [totalPages]);
+  }, [goPrev, goNext, toggleFullscreen]);
 
   return (
     <div
@@ -796,13 +818,15 @@ function PdfDeckView({
             animate={{ y: 0 }}
             exit={{ y: 80 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-2 bg-gradient-to-t from-black/90 to-transparent pt-12 pb-5 px-4"
+            className="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-2 bg-gradient-to-t from-black/90 to-transparent pt-12 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]"
           >
             {/* Page scrubber */}
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 onClick={goPrev}
                 disabled={currentPage <= 1}
+                aria-label="Previous page"
                 className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 disabled:opacity-30"
               >
                 <ChevronLeft className="size-5" />
@@ -815,13 +839,16 @@ function PdfDeckView({
                   max={Math.max(1, totalPages)}
                   value={currentPage}
                   onChange={(e) => setCurrentPage(Number(e.target.value))}
+                  aria-label="PDF page"
                   className="neutraliser h-1 w-full appearance-none rounded-full bg-white/20 accent-white"
                 />
               </div>
 
               <button
+                type="button"
                 onClick={goNext}
                 disabled={currentPage >= totalPages}
+                aria-label="Next page"
                 className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 disabled:opacity-30"
               >
                 <ChevronRight className="size-5" />
@@ -837,14 +864,18 @@ function PdfDeckView({
               <div className="flex items-center gap-1">
                 {/* Zoom controls */}
                 <button
+                  type="button"
                   onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}
+                  aria-label="Zoom out"
                   className="flex size-9 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white/70"
                 >
                   <span className="text-xs font-bold">A−</span>
                 </button>
                 <span className="w-10 text-center text-xs text-white/50">{Math.round(scale * 100)}%</span>
                 <button
+                  type="button"
                   onClick={() => setScale((s) => Math.min(3, s + 0.25))}
+                  aria-label="Zoom in"
                   className="flex size-9 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white/70"
                 >
                   <span className="text-sm font-bold">A+</span>
@@ -853,7 +884,9 @@ function PdfDeckView({
                 <div className="mx-1 h-4 w-px bg-white/20" />
 
                 <button
-                  onClick={toggleFullscreen}
+                  type="button"
+                  onClick={() => void toggleFullscreen()}
+                  aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
                   className="flex size-9 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white/70"
                 >
                   {isFullscreen ? (
@@ -864,12 +897,14 @@ function PdfDeckView({
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => {
                     const a = document.createElement("a");
                     a.href = src;
                     a.download = fileName;
                     a.click();
                   }}
+                  aria-label="Download PDF"
                   className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
                 >
                   <Download className="size-4" />

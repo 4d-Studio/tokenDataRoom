@@ -922,12 +922,17 @@ export function ShareExperience({
                     : "The sender has not uploaded a file. Check back later."}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <Badge variant={objectUrl ? "secondary" : "outline"} className="gap-1.5 border-[color:var(--tkn-panel-border)] font-normal">
+                           <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <Badge
+                  variant={objectUrl || Object.keys(decryptedFiles).length > 0 ? "secondary" : "outline"}
+                  className="gap-1.5 border-[color:var(--tkn-panel-border)] font-normal"
+                >
                   {!hasRecipientVaultFiles ? (
                     <><Clock className="size-3" /> Waiting</>
                   ) : objectUrl ? (
-                    <><CheckCircle2 className="size-3" /> Unlocked</>
+                    <><CheckCircle2 className="size-3" /> Viewing</>
+                  ) : Object.keys(decryptedFiles).length > 0 ? (
+                    <><CheckCircle2 className="size-3" /> Decrypted — pick a file</>
                   ) : (
                     <><Lock className="size-3" /> Encrypted</>
                   )}
@@ -1342,13 +1347,13 @@ export function ShareExperience({
         <div className="overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_28px_rgba(35,31,26,0.06)]">
           {/* Preview area — shown when a file is selected */}
           {objectUrl ? (
-            <div>
-              <div className="flex flex-col gap-3 border-b border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/45 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
+            <div className="flex flex-col overflow-hidden">
+              <div className="flex shrink-0 flex-col gap-2 border-b border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/45 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     Preview
                   </p>
-                  <p className="mt-1 truncate text-sm font-medium text-foreground sm:text-[0.9375rem]">
+                  <p className="mt-0.5 truncate text-sm font-medium text-foreground sm:text-[0.9375rem]">
                     {downloadName}
                   </p>
                 </div>
@@ -1371,8 +1376,12 @@ export function ShareExperience({
                   </Button>
                 </div>
               </div>
-              <div className="relative overflow-hidden bg-[color:var(--color-background-muted)]/25">
-                <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
+              <div
+                className={cn(
+                  "relative flex min-h-0 flex-col overflow-hidden bg-[color:var(--color-background-muted)]/25 lg:flex-row",
+                  "h-[min(calc(100dvh-12rem),88dvh)] min-h-[min(48dvh,400px)] sm:h-[min(calc(100dvh-13rem),90dvh)] lg:h-[min(calc(100dvh-14rem),920px)] lg:min-h-[min(52dvh,480px)]",
+                )}
+              >
                 {(() => {
                   const activePair = Object.entries(decryptedFiles).find(
                     ([, v]) => v.objectUrl === objectUrl,
@@ -1408,6 +1417,20 @@ export function ShareExperience({
                         };
 
                   const showFocusRail = unlockedManifestFiles.length > 1;
+                  const useNativeDocViewport =
+                    fileEntry.mimeType === "application/pdf" ||
+                    fileEntry.mimeType.startsWith("text/");
+
+                  const sidebar = showFocusRail ? (
+                    <DraggableDecryptedFocusFileRail
+                      vaultSlug={metadata.slug}
+                      layout="docked"
+                      files={unlockedManifestFiles}
+                      activeFileId={activeFileId}
+                      decryptedFiles={decryptedFiles}
+                      onPick={openDecryptedVaultFile}
+                    />
+                  ) : null;
 
                   if (fileEntry.mimeType.startsWith("image/")) {
                     const imgIdx =
@@ -1433,90 +1456,78 @@ export function ShareExperience({
                     };
                     return (
                       <>
-                        {showFocusRail ? (
-                          <DraggableDecryptedFocusFileRail
-                            vaultSlug={metadata.slug}
-                            files={unlockedManifestFiles}
-                            activeFileId={activeFileId}
-                            decryptedFiles={decryptedFiles}
-                            onPick={openDecryptedVaultFile}
-                          />
-                        ) : null}
-                        <SharePreviewViewport
-                          edgeNavLeft={
-                            hasImgNav ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="icon"
-                                className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
-                                disabled={imgIdx <= 0}
-                                onClick={goPrevImg}
-                                aria-label="Previous image"
-                              >
-                                <ChevronLeft className="size-5" />
-                              </Button>
-                            ) : null
-                          }
-                          edgeNavRight={
-                            hasImgNav ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="icon"
-                                className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
-                                disabled={
-                                  imgIdx < 0 ||
-                                  imgIdx >= orderedImagePreviewEntries.length - 1
-                                }
-                                onClick={goNextImg}
-                                aria-label="Next image"
-                              >
-                                <ChevronRight className="size-5" />
-                              </Button>
-                            ) : null
-                          }
-                        >
-                          <div className="flex min-h-[50vh] justify-center py-2 sm:min-h-[60vh]">
-                            {/* eslint-disable-next-line @next/next/no-img-element -- blob: object URLs */}
-                            <img
-                              src={objectUrl}
-                              alt={downloadName}
-                              draggable={false}
-                              className="relative z-0 max-h-[min(92vh,1200px)] w-full select-none object-contain"
-                            />
-                          </div>
-                        </SharePreviewViewport>
+                        {sidebar}
+                        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col p-1 sm:p-2">
+                          <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
+                          <SharePreviewViewport
+                            fillHeight
+                            edgeNavLeft={
+                              hasImgNav ? (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
+                                  disabled={imgIdx <= 0}
+                                  onClick={goPrevImg}
+                                  aria-label="Previous image"
+                                >
+                                  <ChevronLeft className="size-5" />
+                                </Button>
+                              ) : null
+                            }
+                            edgeNavRight={
+                              hasImgNav ? (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
+                                  disabled={
+                                    imgIdx < 0 ||
+                                    imgIdx >= orderedImagePreviewEntries.length - 1
+                                  }
+                                  onClick={goNextImg}
+                                  aria-label="Next image"
+                                >
+                                  <ChevronRight className="size-5" />
+                                </Button>
+                              ) : null
+                            }
+                          >
+                            <div className="flex h-full min-h-0 items-center justify-center py-1">
+                              {/* eslint-disable-next-line @next/next/no-img-element -- blob: object URLs */}
+                              <img
+                                src={objectUrl}
+                                alt={downloadName}
+                                draggable={false}
+                                className="relative z-0 max-h-full max-w-full select-none object-contain"
+                              />
+                            </div>
+                          </SharePreviewViewport>
+                        </div>
                       </>
                     );
                   }
+
                   return (
                     <>
-                      {showFocusRail ? (
-                        <DraggableDecryptedFocusFileRail
-                          vaultSlug={metadata.slug}
-                          files={unlockedManifestFiles}
-                          activeFileId={activeFileId}
-                          decryptedFiles={decryptedFiles}
-                          onPick={openDecryptedVaultFile}
-                        />
-                      ) : null}
-                      <SharePreviewViewport>
-                        <iframe
-                          key={activeFileId ? `doc-${activeFileId}` : `doc-${downloadName}`}
-                          title={downloadName}
-                          src={
-                            fileEntry.mimeType === "application/pdf"
-                              ? `${objectUrl}#page=1&zoom=page-width`
-                              : objectUrl
-                          }
-                          className={
-                            fileEntry.mimeType === "application/pdf"
-                              ? "relative z-0 h-[min(96vh,1800px)] min-h-[88vh] w-full min-w-0 border-0 sm:min-h-[90vh]"
-                              : "relative z-0 h-[min(92vh,1200px)] min-h-[75vh] w-full min-w-0 border-0 sm:min-h-[80vh]"
-                          }
-                        />
-                      </SharePreviewViewport>
+                      {sidebar}
+                      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+                        <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
+                        <SharePreviewViewport canvasMode={!useNativeDocViewport} fillHeight>
+                          <iframe
+                            key={activeFileId ? `doc-${activeFileId}` : `doc-${downloadName}`}
+                            title={downloadName}
+                            src={
+                              fileEntry.mimeType === "application/pdf"
+                                ? `${objectUrl}#page=1&zoom=page-width`
+                                : objectUrl
+                            }
+                            className="relative z-0 h-full min-h-0 w-full flex-1 border-0 bg-white"
+                          />
+                        </SharePreviewViewport>
+                      </div>
                     </>
                   );
                 })()}
@@ -1579,11 +1590,21 @@ export function ShareExperience({
                             fileEntry.mimeType.startsWith("image/") ||
                             fileEntry.mimeType === "application/pdf" ||
                             fileEntry.mimeType.startsWith("text/");
+                          const rowLabel = `${fname}, ${previewable ? "open preview" : "download"}`;
                           return (
                             <TableRow
                               key={fileEntry.id}
-                              className="cursor-pointer border-[color:var(--tkn-panel-border)]"
+                              tabIndex={0}
+                              role="button"
+                              aria-label={rowLabel}
+                              className="cursor-pointer border-[color:var(--tkn-panel-border)] focus-visible:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)]/35"
                               onClick={() => openDecryptedVaultFile(fileEntry.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  openDecryptedVaultFile(fileEntry.id);
+                                }
+                              }}
                             >
                               <TableCell className="max-w-[10rem] py-3 pl-4 whitespace-normal sm:max-w-[20rem] md:max-w-[28rem]">
                                 <span className="line-clamp-2 text-sm font-medium text-foreground">
@@ -1608,7 +1629,7 @@ export function ShareExperience({
                                   variant="ghost"
                                   size="sm"
                                   className={cn(
-                                    "h-auto gap-0.5 px-2 py-1 text-xs font-semibold hover:bg-transparent",
+                                    "h-auto min-h-10 gap-0.5 px-3 py-2 text-xs font-semibold hover:bg-transparent sm:min-h-9 sm:py-1.5",
                                     previewable
                                       ? "text-[var(--color-accent)] hover:text-[var(--color-accent)]"
                                       : "text-muted-foreground",

@@ -11,10 +11,16 @@ export function SharePreviewViewport({
   children,
   edgeNavLeft,
   edgeNavRight,
+  /** When false, children fill the container with no pan/zoom chrome (e.g. native PDF in iframe). */
+  canvasMode = true,
+  /** Stretch to parent flex height instead of a fixed viewport height. */
+  fillHeight = false,
 }: {
   children: React.ReactNode;
   edgeNavLeft?: ReactNode;
   edgeNavRight?: ReactNode;
+  canvasMode?: boolean;
+  fillHeight?: boolean;
 }) {
   const outerRef = useRef<HTMLDivElement>(null);
   const [zoomHint, setZoomHint] = useState("Wheel pans · Cmd/Ctrl + scroll zooms");
@@ -37,21 +43,25 @@ export function SharePreviewViewport({
     );
   }, []);
 
-  const handleWheelCapture = useCallback((e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
+  const handleWheelCapture = useCallback(
+    (e: React.WheelEvent) => {
+      if (!canvasMode) return;
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        const delta = e.deltaY > 0 ? -0.08 : 0.08;
+        setScale((s) => Math.min(2.75, Math.max(0.55, Math.round((s + delta) * 100) / 100)));
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
-      const delta = e.deltaY > 0 ? -0.08 : 0.08;
-      setScale((s) => Math.min(2.75, Math.max(0.55, Math.round((s + delta) * 100) / 100)));
-      return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    setPan((p) => ({
-      x: p.x - e.deltaX,
-      y: p.y - e.deltaY,
-    }));
-  }, []);
+      setPan((p) => ({
+        x: p.x - e.deltaX,
+        y: p.y - e.deltaY,
+      }));
+    },
+    [canvasMode],
+  );
 
   const resetView = useCallback(() => {
     setScale(1);
@@ -91,8 +101,31 @@ export function SharePreviewViewport({
     }
   }, []);
 
+  if (!canvasMode) {
+    return (
+      <div
+        className={cn(
+          "relative min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-[color:var(--color-background-muted)]/30",
+          fillHeight ? "flex flex-1 flex-col" : "min-h-[min(88vh,1200px)]",
+        )}
+      >
+        {edgeNavLeft || edgeNavRight ? (
+          <div className="pointer-events-none absolute inset-0 z-[25] flex items-center justify-between gap-2 px-1 sm:px-3">
+            <div className="pointer-events-auto flex shrink-0 items-center">{edgeNavLeft}</div>
+            <div className="pointer-events-auto flex shrink-0 items-center">{edgeNavRight}</div>
+          </div>
+        ) : null}
+        <div className={cn("relative h-full min-h-0 w-full", fillHeight && "flex min-h-0 flex-1 flex-col")}>
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      className={cn("flex flex-col gap-2", fillHeight && "min-h-0 flex-1")}
+    >
       <div className="flex flex-wrap items-center gap-2 px-1">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           Canvas
@@ -149,8 +182,11 @@ export function SharePreviewViewport({
       <div
         ref={outerRef}
         className={cn(
-          "relative h-[min(85vh,920px)] min-h-[380px] w-full overflow-hidden rounded-lg border border-[color:var(--tkn-panel-border)]/60 bg-[color:var(--color-background-muted)]/55 shadow-[inset_0_0_0_1px_rgba(35,31,26,0.04)]",
+          "relative w-full overflow-hidden rounded-lg border border-[color:var(--tkn-panel-border)]/60 bg-[color:var(--color-background-muted)]/55 shadow-[inset_0_0_0_1px_rgba(35,31,26,0.04)]",
           "bg-[radial-gradient(circle_at_1px_1px,rgba(35,31,26,0.07)_1px,transparent_0)] [background-size:20px_20px]",
+          fillHeight
+            ? "min-h-0 flex-1"
+            : "h-[min(85vh,920px)] min-h-[380px]",
         )}
         onWheelCapture={handleWheelCapture}
       >

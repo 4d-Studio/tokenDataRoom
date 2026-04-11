@@ -67,7 +67,7 @@ export function ShareRecipientAppBar({
                 variant="outline"
                 ariaLabel="Copy room link"
                 title="Copy link"
-                className="h-7 w-7 border-[color:var(--tkn-panel-border)] bg-white"
+                className="h-10 w-10 min-h-10 min-w-10 border-[color:var(--tkn-panel-border)] bg-white sm:h-7 sm:w-7 sm:min-h-0 sm:min-w-0"
               />
             </div>
           </div>
