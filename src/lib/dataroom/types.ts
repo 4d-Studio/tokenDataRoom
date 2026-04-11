@@ -88,6 +88,39 @@ export type AttachVaultPayloadInput = z.infer<typeof attachVaultPayloadSchema>;
 export type AcceptanceInput = z.infer<typeof acceptanceSchema>;
 
 export type VaultStatus = "active" | "revoked";
+
+/** Sequential e-sign on a single PDF in the room (invites per signer). */
+export type SigningRequestSignerStatus = "pending" | "signed";
+
+export type SigningRequestSigner = {
+  id: string;
+  email: string;
+  name?: string;
+  order: number;
+  status: SigningRequestSignerStatus;
+  signedAt?: string;
+  signatureName?: string;
+  signatureImage?: string;
+};
+
+export type SigningRequestStatus = "active" | "completed" | "voided";
+
+export type SigningRequest = {
+  id: string;
+  fileId: string;
+  message?: string;
+  createdAt: string;
+  status: SigningRequestStatus;
+  signers: SigningRequestSigner[];
+  /** Index into signers sorted by `order`; the active signer is at this index when status is active. */
+  currentOrderIndex: number;
+};
+
+/** Cap stored signing workflows per vault (metadata size). */
+export const MAX_SIGNING_REQUESTS_PER_VAULT = 15;
+
+export const MAX_SIGNERS_PER_SIGNING_REQUEST = 5;
+
 export type VaultEventType =
   | "created"
   | "viewed"
@@ -102,7 +135,11 @@ export type VaultEventType =
   | "access_requested"
   | "access_verified"
   | "files_decrypted"
-  | "invite_sent";
+  | "invite_sent"
+  | "document_signing_created"
+  | "document_signing_signed"
+  | "document_signing_completed"
+  | "document_signing_voided";
 
 export type VaultEvent = {
   id: string;
@@ -202,6 +239,10 @@ export type VaultRecord = {
   shareBanner?: ShareBannerMeta;
   /** Encrypted vault file IDs omitted from recipient manifest and bundle downloads. */
   recipientHiddenVaultFileIds?: string[];
+  /**
+   * In-room PDF signing workflows (sequential). Invites use signed URLs; completion is recorded here.
+   */
+  signingRequests?: SigningRequest[];
 };
 
 /** True if the vault has at least one encrypted file for recipients. */

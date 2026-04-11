@@ -21,6 +21,7 @@ import {
 
 import { CopyButton } from "@/components/dataroom/copy-button";
 import { VaultOwnerDocumentUpload } from "@/components/dataroom/vault-owner-document-upload";
+import { VaultSigningWorkflows } from "@/components/dataroom/vault-signing-workflows";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,16 +66,21 @@ const EVENT_LABELS: Record<VaultEvent["type"], string> = {
   document_attached: "Document updated",
   file_renamed: "File renamed",
   files_reordered: "File order updated",
+  document_signing_created: "Document signing started",
+  document_signing_signed: "Document signing step",
+  document_signing_completed: "Document signing completed",
+  document_signing_voided: "Document signing voided",
 };
 
 const SECTIONS = [
   { id: "owner-settings", num: "1", label: "Room settings" },
   { id: "owner-document", num: "2", label: "Room documents" },
-  { id: "owner-notes", num: "3", label: "File notes" },
-  { id: "owner-stats", num: "4", label: "Summary" },
-  { id: "owner-reviewers", num: "5", label: "Reviewers" },
-  { id: "owner-timeline", num: "6", label: "Timeline" },
-  { id: "owner-overview", num: "7", label: "Links & access" },
+  { id: "owner-signing", num: "3", label: "Document signing" },
+  { id: "owner-notes", num: "4", label: "File notes" },
+  { id: "owner-stats", num: "5", label: "Summary" },
+  { id: "owner-reviewers", num: "6", label: "Reviewers" },
+  { id: "owner-timeline", num: "7", label: "Timeline" },
+  { id: "owner-overview", num: "8", label: "Links & access" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -1329,6 +1335,23 @@ export const VaultOwnerPanel = ({
                   setMetadata(next);
                   setEvents(nextEvents);
                   setOwnerNotesDraft(next.ownerNotes ?? "");
+                }}
+              />
+            </SectionShell>
+          ) : null}
+
+          {activeSection === "owner-signing" ? (
+            <SectionShell
+              id="owner-signing"
+              title="Document signing"
+              description="Sequential e-sign links for a PDF in this room — separate from the NDA gate. Each signer gets a private link; you get a completion certificate when everyone has signed."
+            >
+              <VaultSigningWorkflows
+                metadata={metadata}
+                ownerKey={ownerKey}
+                onUpdate={(next, nextEvents) => {
+                  setMetadata(next);
+                  setEvents(nextEvents);
                 }}
               />
             </SectionShell>

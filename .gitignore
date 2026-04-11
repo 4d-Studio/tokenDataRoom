@@ -43,6 +43,8 @@ yarn-error.log*
 
 # playwright test artifacts
 .playwright-cli/
+e2e/.sign-url
+/test-results/
 
 # typescript
 *.tsbuildinfo

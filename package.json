@@ -13,6 +13,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "db:migrate": "node scripts/db-migrate.mjs",
     "secrets:scan": "bash scripts/secret-scan-trufflehog.sh",
     "secrets:scan:ci": "bash scripts/secret-scan-trufflehog.sh --fail"
@@ -57,6 +58,7 @@
     "eslint-config-next": "16.2.1",
     "shadcn": "^4.1.1",
     "tailwindcss": "^4",
+    "@playwright/test": "^1.57.0",
     "typescript": "^5",
     "vitest": "^4.1.2"
   }

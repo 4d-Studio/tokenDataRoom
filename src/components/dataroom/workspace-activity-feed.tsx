@@ -8,6 +8,7 @@ import {
   Download,
   Eye,
   FileCheck2,
+  FileSignature,
   KeyRound,
   LayoutPanelTop,
   Lock,
@@ -121,6 +122,30 @@ const EVENT_CONFIG: Record<
     color: "text-[var(--color-accent)]",
     label: "Decrypted",
     action: "decrypted files in",
+  },
+  document_signing_created: {
+    icon: FileSignature,
+    color: "text-[var(--color-accent)]",
+    label: "Signing started",
+    action: "started document signing in",
+  },
+  document_signing_signed: {
+    icon: FileSignature,
+    color: "text-muted-foreground",
+    label: "Signing step",
+    action: "signed a document in",
+  },
+  document_signing_completed: {
+    icon: FileCheck2,
+    color: "text-[var(--color-accent)]",
+    label: "Signing done",
+    action: "completed document signing in",
+  },
+  document_signing_voided: {
+    icon: Lock,
+    color: "text-[var(--destructive)]",
+    label: "Signing voided",
+    action: "voided document signing in",
   },
 };
 

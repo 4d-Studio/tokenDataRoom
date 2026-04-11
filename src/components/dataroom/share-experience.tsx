@@ -24,6 +24,8 @@ import {
   ShareRecipientCompactHeader,
 } from "@/components/dataroom/share-entry-welcome";
 import { SignatureCanvas } from "@/components/dataroom/signature-canvas";
+import { DraggableDecryptedFocusFileRail } from "@/components/dataroom/share-draggable-file-rail";
+import { SharePreviewViewport } from "@/components/dataroom/share-preview-viewport";
 import { ViewerWatermarkOverlay } from "@/components/dataroom/viewer-watermark-overlay";
 import { decryptFile } from "@/lib/dataroom/client-crypto";
 import { getOrCreateViewerBinding } from "@/lib/dataroom/viewer-binding-client";
@@ -35,7 +37,6 @@ import {
   recipientVisibleVaultFiles,
   vaultHasRecipientVisibleDocument,
   type VaultAcceptanceRecord,
-  type VaultFileEntry,
   type VaultRecord,
 } from "@/lib/dataroom/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -70,60 +71,6 @@ import { cn } from "@/lib/utils";
 
 const ndaFormInputClassName =
   "h-11 rounded-xl border-2 border-foreground/10 bg-card px-3.5 text-sm shadow-[0_2px_8px_rgba(35,31,26,0.06)] transition-[box-shadow,border-color] placeholder:text-foreground/40 focus-visible:border-[color:var(--color-accent)] focus-visible:shadow-[0_0_0_3px_rgba(243,91,45,0.18),0_2px_10px_rgba(35,31,26,0.07)] focus-visible:ring-0";
-
-function DecryptedFocusFileRail({
-  files,
-  activeFileId,
-  decryptedFiles,
-  onPick,
-}: {
-  files: VaultFileEntry[];
-  activeFileId: string | null;
-  decryptedFiles: Record<string, { objectUrl: string; downloadName: string }>;
-  onPick: (fileId: string) => void;
-}) {
-  return (
-    <div
-      className="pointer-events-auto absolute left-2 top-1/2 z-20 max-h-[min(72vh,560px)] w-44 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-xl border border-[color:var(--tkn-panel-border)] bg-card/95 p-1.5 shadow-[0_8px_32px_rgba(35,31,26,0.14)] backdrop-blur-[6px]"
-      role="navigation"
-      aria-label="Room files"
-    >
-      <p className="sticky top-0 z-10 bg-card/95 px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Files
-      </p>
-      <ul className="space-y-0.5 pt-0.5">
-        {files.map((f) => {
-          const label = decryptedFiles[f.id]?.downloadName ?? f.name;
-          const active = f.id === activeFileId;
-          return (
-            <li key={f.id}>
-              <button
-                type="button"
-                onClick={() => onPick(f.id)}
-                className={cn(
-                  "w-full rounded-lg px-2 py-1.5 text-left transition-colors",
-                  active
-                    ? "bg-[color:var(--color-accent)]/12 font-medium text-foreground ring-1 ring-[color:var(--color-accent)]/35"
-                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-                )}
-              >
-                {f.category ? (
-                  <span className="mb-0.5 block text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/90">
-                    {f.category}
-                  </span>
-                ) : null}
-                <span className="line-clamp-2 text-xs leading-snug text-foreground">{label}</span>
-                <span className="mt-0.5 block text-[10px] text-muted-foreground">
-                  {formatMimeLabel(f.mimeType)} · {formatBytes(f.sizeBytes)}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
 
 type AccessResponse = {
   acceptance?: VaultAcceptanceRecord;
@@ -1461,9 +1408,6 @@ export function ShareExperience({
                         };
 
                   const showFocusRail = unlockedManifestFiles.length > 1;
-                  const imgNavLeft = showFocusRail
-                    ? "left-[12.75rem] sm:left-[13.25rem]"
-                    : "left-2 sm:left-4";
 
                   if (fileEntry.mimeType.startsWith("image/")) {
                     const imgIdx =
@@ -1490,35 +1434,37 @@ export function ShareExperience({
                     return (
                       <>
                         {showFocusRail ? (
-                          <DecryptedFocusFileRail
+                          <DraggableDecryptedFocusFileRail
+                            vaultSlug={metadata.slug}
                             files={unlockedManifestFiles}
                             activeFileId={activeFileId}
                             decryptedFiles={decryptedFiles}
                             onPick={openDecryptedVaultFile}
                           />
                         ) : null}
-                        <div className="relative flex min-h-[min(92vh,1200px)] items-center justify-center py-2 sm:min-h-[75vh] sm:py-4">
-                          {hasImgNav ? (
-                            <>
+                        <SharePreviewViewport
+                          edgeNavLeft={
+                            hasImgNav ? (
                               <Button
                                 type="button"
                                 variant="secondary"
                                 size="icon"
-                                className={cn(
-                                  "absolute top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12",
-                                  imgNavLeft,
-                                )}
+                                className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
                                 disabled={imgIdx <= 0}
                                 onClick={goPrevImg}
                                 aria-label="Previous image"
                               >
                                 <ChevronLeft className="size-5" />
                               </Button>
+                            ) : null
+                          }
+                          edgeNavRight={
+                            hasImgNav ? (
                               <Button
                                 type="button"
                                 variant="secondary"
                                 size="icon"
-                                className="absolute right-2 top-1/2 z-10 h-11 w-11 -translate-y-1/2 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:right-4 sm:h-12 sm:w-12"
+                                className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
                                 disabled={
                                   imgIdx < 0 ||
                                   imgIdx >= orderedImagePreviewEntries.length - 1
@@ -1528,42 +1474,49 @@ export function ShareExperience({
                               >
                                 <ChevronRight className="size-5" />
                               </Button>
-                            </>
-                          ) : null}
-                          {/* eslint-disable-next-line @next/next/no-img-element -- blob: object URLs */}
-                          <img
-                            src={objectUrl}
-                            alt={downloadName}
-                            className="relative z-0 max-h-[min(92vh,1200px)] w-full object-contain"
-                          />
-                        </div>
+                            ) : null
+                          }
+                        >
+                          <div className="flex min-h-[50vh] justify-center py-2 sm:min-h-[60vh]">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- blob: object URLs */}
+                            <img
+                              src={objectUrl}
+                              alt={downloadName}
+                              draggable={false}
+                              className="relative z-0 max-h-[min(92vh,1200px)] w-full select-none object-contain"
+                            />
+                          </div>
+                        </SharePreviewViewport>
                       </>
                     );
                   }
                   return (
                     <>
                       {showFocusRail ? (
-                        <DecryptedFocusFileRail
+                        <DraggableDecryptedFocusFileRail
+                          vaultSlug={metadata.slug}
                           files={unlockedManifestFiles}
                           activeFileId={activeFileId}
                           decryptedFiles={decryptedFiles}
                           onPick={openDecryptedVaultFile}
                         />
                       ) : null}
-                      <iframe
-                        key={activeFileId ? `doc-${activeFileId}` : `doc-${downloadName}`}
-                        title={downloadName}
-                        src={
-                          fileEntry.mimeType === "application/pdf"
-                            ? `${objectUrl}#page=1&zoom=page-width`
-                            : objectUrl
-                        }
-                        className={
-                          fileEntry.mimeType === "application/pdf"
-                            ? "relative z-0 h-[min(96vh,1800px)] min-h-[88vh] w-full min-w-0 border-0 sm:min-h-[90vh]"
-                            : "relative z-0 h-[min(92vh,1200px)] min-h-[75vh] w-full min-w-0 border-0 sm:min-h-[80vh]"
-                        }
-                      />
+                      <SharePreviewViewport>
+                        <iframe
+                          key={activeFileId ? `doc-${activeFileId}` : `doc-${downloadName}`}
+                          title={downloadName}
+                          src={
+                            fileEntry.mimeType === "application/pdf"
+                              ? `${objectUrl}#page=1&zoom=page-width`
+                              : objectUrl
+                          }
+                          className={
+                            fileEntry.mimeType === "application/pdf"
+                              ? "relative z-0 h-[min(96vh,1800px)] min-h-[88vh] w-full min-w-0 border-0 sm:min-h-[90vh]"
+                              : "relative z-0 h-[min(92vh,1200px)] min-h-[75vh] w-full min-w-0 border-0 sm:min-h-[80vh]"
+                          }
+                        />
+                      </SharePreviewViewport>
                     </>
                   );
                 })()}

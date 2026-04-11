@@ -10,6 +10,7 @@ import {
   FileSpreadsheet,
   FileText,
   FolderOpen,
+  GripVertical,
   ImageIcon,
   Loader2,
   Lock,
@@ -76,11 +77,21 @@ const CATEGORY_META: Record<
   other: { label: "Other files", icon: FileText },
 };
 
+/** One collapsible folder section in the room file list (custom tag or auto type bucket). */
+type FileGroup = {
+  label: string;
+  icon: typeof FileText;
+  files: VaultFileEntry[];
+  bucket: "custom" | "auto";
+  /** When `bucket === "auto"`, the mime bucket key; otherwise null. */
+  autoKey: FileCategory | null;
+};
+
 /**
  * Group files by custom category name first; uncategorized files fall
  * back to auto-detection by mime type.
  */
-function groupByLabel(files: VaultFileEntry[]): { label: string; icon: typeof FileText; files: VaultFileEntry[] }[] {
+function groupByLabel(files: VaultFileEntry[]): FileGroup[] {
   const customGroups = new Map<string, VaultFileEntry[]>();
   const autoGroups: Partial<Record<FileCategory, VaultFileEntry[]>> = {};
 
@@ -95,21 +106,37 @@ function groupByLabel(files: VaultFileEntry[]): { label: string; icon: typeof Fi
     }
   }
 
-  const result: { label: string; icon: typeof FileText; files: VaultFileEntry[] }[] = [];
+  const result: FileGroup[] = [];
 
   for (const [label, grouped] of customGroups) {
-    result.push({ label, icon: FolderOpen, files: grouped });
+    result.push({
+      label,
+      icon: FolderOpen,
+      files: grouped,
+      bucket: "custom",
+      autoKey: null,
+    });
   }
 
   const autoOrder: FileCategory[] = ["documents", "images", "spreadsheets", "other"];
   for (const cat of autoOrder) {
     const grouped = autoGroups[cat];
     if (grouped?.length) {
-      result.push({ label: CATEGORY_META[cat].label, icon: CATEGORY_META[cat].icon, files: grouped });
+      result.push({
+        label: CATEGORY_META[cat].label,
+        icon: CATEGORY_META[cat].icon,
+        files: grouped,
+        bucket: "auto",
+        autoKey: cat,
+      });
     }
   }
 
   return result;
+}
+
+function fileGroupKey(g: FileGroup): string {
+  return g.bucket === "custom" ? `c:${g.label}` : `a:${g.autoKey ?? "x"}`;
 }
 
 /** Collect all unique custom category names from existing files. */
@@ -295,7 +322,7 @@ function CategoryPicker({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.65rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="flex items-center gap-1 rounded-md px-1 py-0.5 text-[0.625rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         title="Move to category"
       >
         <Tag className="size-3" />
@@ -310,7 +337,7 @@ function CategoryPicker({
                 key={c}
                 type="button"
                 onClick={() => apply(c)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-muted/40"
+                className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[0.6875rem] text-foreground transition-colors hover:bg-muted/40"
               >
                 <FolderOpen className="size-3 text-muted-foreground" />
                 {c}
@@ -320,7 +347,7 @@ function CategoryPicker({
             <button
               type="button"
               onClick={() => apply("")}
-              className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/40"
+              className="flex w-full items-center gap-2 border-t border-border px-2.5 py-1.5 text-left text-[0.6875rem] text-muted-foreground transition-colors hover:bg-muted/40"
             >
               <X className="size-3" />
               Remove category
@@ -403,7 +430,7 @@ function FileRenameControl({
             onChange={(e) => setDraft(e.target.value)}
             maxLength={200}
             disabled={saving}
-            className="h-9 min-w-0 flex-1 rounded-md border border-border bg-muted/20 px-2.5 text-sm focus:border-[var(--color-accent)] focus:outline-none sm:min-w-[12rem]"
+            className="h-8 min-w-0 flex-1 rounded-md border border-border bg-muted/20 px-2 text-xs focus:border-[var(--color-accent)] focus:outline-none sm:min-w-[12rem]"
             autoFocus
             aria-label="New file name"
             aria-busy={saving}
@@ -416,7 +443,7 @@ function FileRenameControl({
             type="button"
             disabled={saving || !draft.trim()}
             onClick={() => void submit()}
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-foreground px-3 text-xs font-semibold text-white disabled:opacity-40"
+            className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md bg-foreground px-2.5 text-[0.6875rem] font-semibold text-white disabled:opacity-40"
           >
             {saving ? (
               <>
@@ -431,7 +458,7 @@ function FileRenameControl({
             type="button"
             disabled={saving}
             onClick={cancel}
-            className="h-9 shrink-0 rounded-md border border-border px-3 text-xs text-muted-foreground hover:bg-muted/50"
+            className="h-8 shrink-0 rounded-md border border-border px-2.5 text-[0.6875rem] text-muted-foreground hover:bg-muted/50"
           >
             Cancel
           </button>
@@ -443,18 +470,18 @@ function FileRenameControl({
     );
   }
 
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground" title={file.name}>
+   return (
+    <div className="flex min-w-0 items-center gap-1">
+      <p className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground sm:text-[0.8125rem]" title={file.name}>
         {file.name}
       </p>
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-label={`Rename ${file.name}`}
       >
-        <PencilLine className="size-3.5" strokeWidth={1.75} />
+        <PencilLine className="size-3" strokeWidth={1.75} />
       </button>
     </div>
   );
@@ -464,6 +491,8 @@ function CategoryGroup({
   label,
   icon: Icon,
   files,
+  groupMeta,
+  groupKey,
   existingCategories,
   onRemove,
   onPreview,
@@ -473,134 +502,206 @@ function CategoryGroup({
   reorderEnabled,
   reorderBusy,
   onReorderFile,
+  dropTargetKey,
+  setDropTargetKey,
+  onDropAssign,
+  draggingFileId,
+  setDraggingFileId,
 }: {
   label: string;
   icon: typeof FileText;
   files: VaultFileEntry[];
+  groupMeta: FileGroup;
+  groupKey: string;
   existingCategories: string[];
   onRemove: (fileId: string) => void;
   onPreview: (file: VaultFileEntry) => void;
   onCategoryChange: (fileId: string, category: string) => void;
   onRenameFile: (fileId: string, name: string) => Promise<void>;
-  /** Full room file list order (same as recipient order). */
   orderedFiles: VaultFileEntry[];
   reorderEnabled: boolean;
   reorderBusy: boolean;
   onReorderFile: (fileId: string, direction: "up" | "down") => Promise<void>;
+  dropTargetKey: string | null;
+  setDropTargetKey: (key: string | null) => void;
+  onDropAssign: (fileId: string) => void | Promise<void>;
+  draggingFileId: string | null;
+  setDraggingFileId: (id: string | null) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
 
+  const isDropTarget = dropTargetKey === groupKey && draggingFileId !== null;
+  const showDragHint = draggingFileId !== null;
+
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-white",
-        categoryMenuOpen ? "relative z-[150] overflow-visible shadow-md" : "overflow-hidden",
+        "rounded-xl border-2 border-[color:var(--tkn-panel-border)] bg-card shadow-[0_6px_28px_rgba(35,31,26,0.09)] transition-[box-shadow,ring,border-color] duration-150",
+        isDropTarget &&
+          "border-[var(--color-accent)]/55 shadow-[0_8px_32px_rgba(35,31,26,0.12)] ring-2 ring-[var(--color-accent)]/30 ring-offset-2 ring-offset-background",
+        categoryMenuOpen ? "relative z-[150] overflow-visible" : "overflow-hidden",
       )}
+      onDragOver={(e) => {
+        if (!draggingFileId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDropTargetKey(groupKey);
+        setOpen(true);
+      }}
+      onDragLeave={(e) => {
+        if (
+          !e.currentTarget.contains(e.relatedTarget as Node) &&
+          dropTargetKey === groupKey
+        ) {
+          setDropTargetKey(null);
+        }
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const id = e.dataTransfer.getData("text/plain");
+        setDropTargetKey(null);
+        setDraggingFileId(null);
+        if (id) void Promise.resolve(onDropAssign(id));
+      }}
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30"
+        className={cn(
+          "flex w-full items-center gap-2 border-b border-[color:var(--tkn-panel-border)]/80 bg-gradient-to-b from-[color:var(--color-background-muted)]/95 to-[color:var(--color-background-muted)]/55 px-3 py-2 text-left transition-colors hover:from-muted/90 hover:to-muted/50",
+          showDragHint && "cursor-copy",
+        )}
       >
-        <Icon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-        <span className="flex-1 text-sm font-semibold text-foreground">
-          {label}
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--tkn-panel-border)] bg-white/95 shadow-sm">
+          <Icon className="size-4 text-[var(--color-accent)]" strokeWidth={1.65} />
         </span>
-        <span className="text-xs text-muted-foreground">
-          {files.length} file{files.length !== 1 ? "s" : ""}
+        <div className="min-w-0 flex-1">
+          <span className="block text-sm font-bold tracking-tight text-foreground">{label}</span>
+          {showDragHint ? (
+            <span className="mt-0.5 block text-[0.625rem] font-medium text-[var(--color-accent)]">
+              Drop here to move into this folder
+            </span>
+          ) : (
+            <span className="mt-0.5 block text-[0.625rem] text-muted-foreground">
+              {groupMeta.bucket === "custom" ? "Custom category" : "By file type"}
+            </span>
+          )}
+        </div>
+        <span className="shrink-0 rounded-full bg-white/90 px-2 py-0.5 text-[0.625rem] font-semibold tabular-nums text-foreground ring-1 ring-[color:var(--tkn-panel-border)]/60">
+          {files.length}
         </span>
         <ChevronDown
           className={cn(
-            "size-4 text-muted-foreground transition-transform",
+            "size-4 shrink-0 text-muted-foreground transition-transform",
             open && "rotate-180",
           )}
         />
       </button>
 
       {open && (
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-border bg-white/40">
           {files.map((f) => {
             const globalIdx = orderedFiles.findIndex((x) => x.id === f.id);
             const canUp = reorderEnabled && globalIdx > 0;
             const canDown = reorderEnabled && globalIdx >= 0 && globalIdx < orderedFiles.length - 1;
             return (
-            <div
-              key={f.id}
-              className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/20 sm:flex-row sm:items-center sm:gap-3"
-            >
-              {reorderEnabled ? (
-                <div className="flex flex-row items-center gap-1.5 sm:flex-col sm:gap-0.5 sm:pt-0.5">
-                  <button
-                    type="button"
-                    disabled={reorderBusy || !canUp}
-                    onClick={() => void onReorderFile(f.id, "up")}
-                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30"
-                    aria-label={`Move ${f.name} earlier in the room list`}
-                  >
-                    <ChevronUp className="size-4" strokeWidth={2} />
-                  </button>
-                  <span className="min-w-[1.25rem] text-center text-[10px] font-semibold tabular-nums text-muted-foreground">
-                    {globalIdx >= 0 ? globalIdx + 1 : "—"}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={reorderBusy || !canDown}
-                    onClick={() => void onReorderFile(f.id, "down")}
-                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30"
-                    aria-label={`Move ${f.name} later in the room list`}
-                  >
-                    <ChevronDown className="size-4" strokeWidth={2} />
-                  </button>
-                </div>
-              ) : null}
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
-                {f.mimeType.startsWith("image/") ? (
-                  <ImageIcon className="size-4 text-muted-foreground" strokeWidth={1.5} />
-                ) : f.mimeType === "application/pdf" ? (
-                  <FileText className="size-4 text-red-400" strokeWidth={1.5} />
-                ) : (
-                  <Icon className="size-4 text-muted-foreground" strokeWidth={1.5} />
+              <div
+                key={f.id}
+                className={cn(
+                  "flex flex-col gap-1.5 px-2 py-2 transition-colors hover:bg-muted/25 sm:flex-row sm:items-center sm:gap-2 sm:px-3",
+                  draggingFileId === f.id && "opacity-50",
                 )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <FileRenameControl file={f} onRename={onRenameFile} />
-                <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
-                  <span>
-                    {formatBytes(f.sizeBytes)} · {formatMimeLabel(f.mimeType)}
-                  </span>
-                  {f.addedAt ? (
-                    <span className="text-[0.65rem] text-muted-foreground/90">
-                      Added {formatDateTime(f.addedAt)}
+              >
+                <div
+                  className="flex shrink-0 cursor-grab touch-manipulation items-center justify-center rounded-md border border-transparent p-0.5 text-muted-foreground/85 hover:border-border hover:bg-muted/55 active:cursor-grabbing"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", f.id);
+                    e.dataTransfer.effectAllowed = "move";
+                    setDraggingFileId(f.id);
+                  }}
+                  onDragEnd={() => {
+                    setDraggingFileId(null);
+                    setDropTargetKey(null);
+                  }}
+                  title="Drag to another folder"
+                  aria-label={`Drag ${f.name} to another folder`}
+                >
+                  <GripVertical className="size-4" strokeWidth={2} />
+                </div>
+                {reorderEnabled ? (
+                  <div className="flex flex-row items-center gap-0.5 sm:flex-col sm:gap-px sm:py-0.5">
+                    <button
+                      type="button"
+                      disabled={reorderBusy || !canUp}
+                      onClick={() => void onReorderFile(f.id, "up")}
+                      className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30"
+                      aria-label={`Move ${f.name} earlier in the room list`}
+                    >
+                      <ChevronUp className="size-3.5" strokeWidth={2} />
+                    </button>
+                    <span className="min-w-[1rem] text-center text-[9px] font-bold tabular-nums text-muted-foreground">
+                      {globalIdx >= 0 ? globalIdx + 1 : "—"}
                     </span>
-                  ) : null}
+                    <button
+                      type="button"
+                      disabled={reorderBusy || !canDown}
+                      onClick={() => void onReorderFile(f.id, "down")}
+                      className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30"
+                      aria-label={`Move ${f.name} later in the room list`}
+                    >
+                      <ChevronDown className="size-3.5" strokeWidth={2} />
+                    </button>
+                  </div>
+                ) : null}
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/45">
+                  {f.mimeType.startsWith("image/") ? (
+                    <ImageIcon className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  ) : f.mimeType === "application/pdf" ? (
+                    <FileText className="size-3.5 text-red-400" strokeWidth={1.5} />
+                  ) : (
+                    <Icon className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <FileRenameControl file={f} onRename={onRenameFile} />
+                  <div className="mt-0.5 flex flex-col gap-0 text-[0.6875rem] leading-snug text-muted-foreground">
+                    <span>
+                      {formatBytes(f.sizeBytes)} · {formatMimeLabel(f.mimeType)}
+                    </span>
+                    {f.addedAt ? (
+                      <span className="text-[0.625rem] text-muted-foreground/90">
+                        Added {formatDateTime(f.addedAt)}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center justify-end gap-0.5 sm:justify-start">
+                  <CategoryPicker
+                    file={f}
+                    existingCategories={existingCategories}
+                    onPick={onCategoryChange}
+                    onOpenChange={setCategoryMenuOpen}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onPreview(f)}
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label={`Preview ${f.name}`}
+                  >
+                    <Eye className="size-3.5" strokeWidth={1.75} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(f.id)}
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                    aria-label={`Delete ${f.name}`}
+                  >
+                    <Trash2 className="size-3.5" strokeWidth={1.75} />
+                  </button>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center justify-end gap-1 sm:justify-start">
-                <CategoryPicker
-                  file={f}
-                  existingCategories={existingCategories}
-                  onPick={onCategoryChange}
-                  onOpenChange={setCategoryMenuOpen}
-                />
-                <button
-                  type="button"
-                  onClick={() => onPreview(f)}
-                  className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  aria-label={`Preview ${f.name}`}
-                >
-                  <Eye className="size-4" strokeWidth={1.75} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onRemove(f.id)}
-                  className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                  aria-label={`Delete ${f.name}`}
-                >
-                  <Trash2 className="size-4" strokeWidth={1.75} />
-                </button>
-              </div>
-            </div>
             );
           })}
         </div>
@@ -634,6 +735,8 @@ export function VaultOwnerDocumentUpload({
   const [, startRemoveTransition] = useTransition();
   const [lightboxFile, setLightboxFile] = useState<VaultFileEntry | null>(null);
   const [reorderBusy, setReorderBusy] = useState(false);
+  const [dropTargetKey, setDropTargetKey] = useState<string | null>(null);
+  const [draggingFileId, setDraggingFileId] = useState<string | null>(null);
 
   const isCompact = variant === "compact";
   const existingFiles: VaultFileEntry[] = vaultFilesList(metadata);
@@ -873,29 +976,62 @@ export function VaultOwnerDocumentUpload({
     startUploads(password);
   };
 
+  const patchFileCategory = async (fileId: string, category: string) => {
+    const res = await fetch(`/api/vaults/${slug}/owner`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ownerKey,
+        action: "update_file_category",
+        fileId,
+        category,
+      }),
+    });
+    const data = (await res.json()) as {
+      error?: string;
+      metadata?: VaultRecord;
+      events?: VaultEvent[];
+    };
+    if (!res.ok || !data.metadata || !data.events) {
+      throw new Error(data.error || "Unable to update category.");
+    }
+    onUploaded(data.metadata, data.events);
+  };
+
   const updateFileCategory = async (fileId: string, category: string) => {
     try {
-      const res = await fetch(`/api/vaults/${slug}/owner`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          ownerKey,
-          action: "update_file_category",
-          fileId,
-          category,
-        }),
-      });
-      const data = (await res.json()) as {
-        error?: string;
-        metadata?: VaultRecord;
-        events?: VaultEvent[];
-      };
-      if (!res.ok || !data.metadata || !data.events) {
-        throw new Error(data.error || "Unable to update category.");
-      }
-      onUploaded(data.metadata, data.events);
+      await patchFileCategory(fileId, category);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to update category.");
+    }
+  };
+
+  const assignFileToGroupFromDrop = async (fileId: string, group: FileGroup) => {
+    const file = existingFiles.find((x) => x.id === fileId);
+    if (!file) return;
+    setError("");
+    try {
+      if (group.bucket === "custom") {
+        if (file.category === group.label) return;
+        await patchFileCategory(fileId, group.label);
+        return;
+      }
+      if (group.autoKey && categorize(file.mimeType) !== group.autoKey) {
+        setError(
+          `That file doesn’t match “${group.label}”. Use another folder or the tag menu.`,
+        );
+        return;
+      }
+      if (
+        !file.category &&
+        group.autoKey &&
+        categorize(file.mimeType) === group.autoKey
+      ) {
+        return;
+      }
+      await patchFileCategory(fileId, "");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to move file.");
     }
   };
 
@@ -963,17 +1099,16 @@ export function VaultOwnerDocumentUpload({
     <div className="flex flex-col gap-6">
       {/* ── Section 1: Room files ──────────────────────────────── */}
       {existingFiles.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-foreground">Room files</h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {existingFiles.length} file
-                {existingFiles.length !== 1 ? "s" : ""} uploaded · encrypted at rest
+              <p className="mt-0.5 max-w-xl text-[0.6875rem] leading-snug text-muted-foreground">
+                {existingFiles.length} file{existingFiles.length !== 1 ? "s" : ""} · encrypted at rest
                 {canReorderFiles ? (
                   <>
                     {" "}
-                    · Recipients see files in this order (#1 is the default preview).
+                    · #1 is the default recipient preview
                     {reorderBusy ? (
                       <span className="ml-1 inline-flex items-center gap-1 text-[var(--color-accent)]">
                         <Loader2 className="size-3 animate-spin" aria-hidden />
@@ -982,17 +1117,20 @@ export function VaultOwnerDocumentUpload({
                     ) : null}
                   </>
                 ) : null}
+                <> · Drag the grip to move a file into another folder.</>
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {grouped.map((group) => (
               <CategoryGroup
-                key={group.label}
+                key={fileGroupKey(group)}
                 label={group.label}
                 icon={group.icon}
                 files={group.files}
+                groupMeta={group}
+                groupKey={fileGroupKey(group)}
                 existingCategories={allCategories}
                 onRemove={removeUploaded}
                 onPreview={setLightboxFile}
@@ -1002,6 +1140,11 @@ export function VaultOwnerDocumentUpload({
                 reorderEnabled={canReorderFiles}
                 reorderBusy={reorderBusy}
                 onReorderFile={reorderVaultFile}
+                dropTargetKey={dropTargetKey}
+                setDropTargetKey={setDropTargetKey}
+                onDropAssign={(fileId) => void assignFileToGroupFromDrop(fileId, group)}
+                draggingFileId={draggingFileId}
+                setDraggingFileId={setDraggingFileId}
               />
             ))}
           </div>
