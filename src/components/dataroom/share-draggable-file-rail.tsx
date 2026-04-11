@@ -23,6 +23,8 @@ export function DraggableDecryptedFocusFileRail({
   onPick,
   /** Docked sidebar on lg+; horizontal strip below lg (tablet / touch laptops). Floating is legacy. */
   layout = "docked",
+  /** Full-width horizontal file strip only (full-screen reading mode). */
+  readingStrip = false,
 }: {
   vaultSlug: string;
   files: VaultFileEntry[];
@@ -30,6 +32,7 @@ export function DraggableDecryptedFocusFileRail({
   decryptedFiles: Record<string, { objectUrl: string; downloadName: string }>;
   onPick: (fileId: string) => void;
   layout?: "docked" | "floating";
+  readingStrip?: boolean;
 }) {
   const railRef = useRef<HTMLDivElement | null>(null);
   const dragStart = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
@@ -117,6 +120,64 @@ export function DraggableDecryptedFocusFileRail({
     pos != null
       ? { left: pos.x, top: pos.y, transform: "none" }
       : { left: "0.5rem", top: "50%", transform: "translateY(-50%)" };
+
+  if (readingStrip) {
+    return (
+      <nav
+        className="flex w-full shrink-0 flex-col border-b border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/55"
+        aria-label="Room files"
+      >
+        <div className="flex shrink-0 items-baseline justify-between gap-2 border-b border-[color:var(--tkn-panel-border)]/70 bg-card/85 px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Files
+          </p>
+          <p className="text-[11px] font-medium tabular-nums text-foreground">{files.length} in room</p>
+        </div>
+        <ul className="flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain px-2 py-2.5 [-webkit-overflow-scrolling:touch] sm:py-2">
+          {files.map((f) => {
+            const label = decryptedFiles[f.id]?.downloadName ?? f.name;
+            const active = f.id === activeFileId;
+            const Icon = fileKindIcon(f.mimeType);
+            return (
+              <li key={f.id} className="snap-start">
+                <button
+                  type="button"
+                  onClick={() => onPick(f.id)}
+                  title={label}
+                  aria-current={active ? "true" : undefined}
+                  className={cn(
+                    "flex min-h-[3.25rem] w-[min(11.5rem,calc(100vw-4rem))] max-w-[13rem] shrink-0 flex-col rounded-xl border px-2.5 py-2 text-left transition-colors sm:min-h-[2.875rem] sm:w-44",
+                    active
+                      ? "border-[color:var(--color-accent)]/50 bg-[color:var(--color-accent)]/12 shadow-[inset_0_-2px_0_0_var(--color-accent)]"
+                      : "border-[color:var(--tkn-panel-border)] bg-card/90 hover:border-foreground/15 hover:bg-card",
+                  )}
+                >
+                  <span className="flex items-start gap-2">
+                    <Icon
+                      className={cn(
+                        "mt-0.5 size-3.5 shrink-0",
+                        active ? "text-[color:var(--color-accent)]" : "text-muted-foreground",
+                      )}
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="line-clamp-2 text-xs font-semibold leading-snug text-foreground">
+                        {label}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                        {formatMimeLabel(f.mimeType)}
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    );
+  }
 
   const items = files.map((f) => {
     const label = decryptedFiles[f.id]?.downloadName ?? f.name;

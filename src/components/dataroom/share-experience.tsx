@@ -2,9 +2,11 @@
 
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
+  BookOpen,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -37,6 +39,7 @@ import {
   recipientVisibleVaultFiles,
   vaultHasRecipientVisibleDocument,
   type VaultAcceptanceRecord,
+  type VaultFileEntry,
   type VaultRecord,
 } from "@/lib/dataroom/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -92,6 +95,181 @@ type NdaFormDraft = {
   signerAddress: string;
   signatureName: string;
 };
+
+function DesktopDecryptedPreviewContent({
+  objectUrl,
+  downloadName,
+  metadata,
+  vaultSlug,
+  decryptedFiles,
+  unlockedManifestFiles,
+  orderedImagePreviewEntries,
+  viewerWatermarkLabel,
+  openDecryptedVaultFile,
+  setObjectUrl,
+  setDownloadName,
+  readingStrip,
+}: {
+  objectUrl: string;
+  downloadName: string;
+  metadata: VaultRecord;
+  vaultSlug: string;
+  decryptedFiles: Record<string, { objectUrl: string; downloadName: string }>;
+  unlockedManifestFiles: VaultFileEntry[];
+  orderedImagePreviewEntries: { id: string; objectUrl: string; downloadName: string }[];
+  viewerWatermarkLabel: string;
+  openDecryptedVaultFile: (fileId: string) => void;
+  setObjectUrl: (url: string | null) => void;
+  setDownloadName: (name: string) => void;
+  readingStrip: boolean;
+}) {
+  const activePair = Object.entries(decryptedFiles).find(([, v]) => v.objectUrl === objectUrl);
+  const activeFileId = activePair?.[0] ?? null;
+  const manifestActive = activeFileId
+    ? unlockedManifestFiles.find((f) => f.id === activeFileId)
+    : undefined;
+  const fileEntry: {
+    id: string;
+    name: string;
+    mimeType: string;
+    sizeBytes: number;
+  } = manifestActive
+    ? {
+        id: manifestActive.id,
+        name: manifestActive.name,
+        mimeType: manifestActive.mimeType,
+        sizeBytes: manifestActive.sizeBytes,
+      }
+    : activePair
+      ? {
+          id: activePair[0],
+          name: activePair[1].downloadName,
+          mimeType: metadata.mimeType,
+          sizeBytes: metadata.fileSize,
+        }
+      : {
+          id: "",
+          name: downloadName,
+          mimeType: metadata.mimeType,
+          sizeBytes: metadata.fileSize,
+        };
+
+  const showFocusRail = unlockedManifestFiles.length > 1;
+  const useNativeDocViewport =
+    fileEntry.mimeType === "application/pdf" || fileEntry.mimeType.startsWith("text/");
+
+  const sidebar = showFocusRail ? (
+    <DraggableDecryptedFocusFileRail
+      vaultSlug={vaultSlug}
+      layout="docked"
+      readingStrip={readingStrip}
+      files={unlockedManifestFiles}
+      activeFileId={activeFileId}
+      decryptedFiles={decryptedFiles}
+      onPick={openDecryptedVaultFile}
+    />
+  ) : null;
+
+  const mainChrome = readingStrip
+    ? "relative flex min-h-0 min-w-0 flex-1 flex-col"
+    : "relative flex min-h-0 min-w-0 flex-1 flex-col p-1 sm:p-2";
+
+  const mainChromePdf = readingStrip
+    ? "relative flex min-h-0 min-w-0 flex-1 flex-col"
+    : "relative flex min-h-0 min-w-0 flex-1 flex-col";
+
+  if (fileEntry.mimeType.startsWith("image/")) {
+    const imgIdx =
+      activeFileId != null
+        ? orderedImagePreviewEntries.findIndex((e) => e.id === activeFileId)
+        : -1;
+    const hasImgNav = orderedImagePreviewEntries.length > 1;
+    const goPrevImg = () => {
+      if (imgIdx <= 0) return;
+      const e = orderedImagePreviewEntries[imgIdx - 1];
+      setObjectUrl(e.objectUrl);
+      setDownloadName(e.downloadName);
+    };
+    const goNextImg = () => {
+      if (imgIdx < 0 || imgIdx >= orderedImagePreviewEntries.length - 1) return;
+      const e = orderedImagePreviewEntries[imgIdx + 1];
+      setObjectUrl(e.objectUrl);
+      setDownloadName(e.downloadName);
+    };
+    return (
+      <>
+        {sidebar}
+        <div className={mainChrome}>
+          <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
+          <SharePreviewViewport
+            fillHeight
+            edgeNavLeft={
+              hasImgNav ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
+                  disabled={imgIdx <= 0}
+                  onClick={goPrevImg}
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="size-5" />
+                </Button>
+              ) : null
+            }
+            edgeNavRight={
+              hasImgNav ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
+                  disabled={imgIdx < 0 || imgIdx >= orderedImagePreviewEntries.length - 1}
+                  onClick={goNextImg}
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="size-5" />
+                </Button>
+              ) : null
+            }
+          >
+            <div className="flex h-full min-h-0 items-center justify-center py-1">
+              {/* eslint-disable-next-line @next/next/no-img-element -- blob: object URLs */}
+              <img
+                src={objectUrl}
+                alt={downloadName}
+                draggable={false}
+                className="relative z-0 max-h-full max-w-full select-none object-contain"
+              />
+            </div>
+          </SharePreviewViewport>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {sidebar}
+      <div className={mainChromePdf}>
+        <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
+        <SharePreviewViewport canvasMode={!useNativeDocViewport} fillHeight>
+          <iframe
+            key={activeFileId ? `doc-${activeFileId}` : `doc-${downloadName}`}
+            title={downloadName}
+            src={
+              fileEntry.mimeType === "application/pdf"
+                ? `${objectUrl}#page=1&zoom=page-width`
+                : objectUrl
+            }
+            className="relative z-0 h-full min-h-0 w-full flex-1 border-0 bg-white"
+          />
+        </SharePreviewViewport>
+      </div>
+    </>
+  );
+}
 
 export function ShareExperience({
   metadata,
@@ -159,6 +337,8 @@ export function ShareExperience({
     signerAddress: initialAcceptance?.signerAddress ?? "",
     signatureName: initialAcceptance?.signatureName ?? "",
   }));
+  const [readingMode, setReadingMode] = useState(false);
+  const [readingPortalReady, setReadingPortalReady] = useState(false);
 
   const hasRecipientVaultFiles = vaultHasRecipientVisibleDocument(metadata);
   const shareBannerSrc = metadata.shareBanner
@@ -195,6 +375,31 @@ export function ShareExperience({
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
+
+  useEffect(() => {
+    setReadingPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!objectUrl) setReadingMode(false);
+  }, [objectUrl]);
+
+  useEffect(() => {
+    if (!readingMode) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setReadingMode(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [readingMode]);
 
   useEffect(() => {
     void fetch(`/api/vaults/${metadata.slug}/view`, { method: "POST" });
@@ -1366,6 +1571,18 @@ export function ShareExperience({
                   </Button>
                   <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 border-[color:var(--tkn-panel-border)] bg-white"
+                    onClick={() => setReadingMode(true)}
+                    aria-label="Reading mode — full screen preview"
+                  >
+                    <BookOpen className="size-4" />
+                    <span className="hidden sm:inline">Reading mode</span>
+                    <span className="sm:hidden">Focus</span>
+                  </Button>
+                  <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     className="gap-1.5 text-muted-foreground hover:text-foreground"
@@ -1382,155 +1599,20 @@ export function ShareExperience({
                   "h-[min(calc(100dvh-12rem),88dvh)] min-h-[min(48dvh,400px)] sm:h-[min(calc(100dvh-13rem),90dvh)] lg:h-[min(calc(100dvh-14rem),920px)] lg:min-h-[min(52dvh,480px)]",
                 )}
               >
-                {(() => {
-                  const activePair = Object.entries(decryptedFiles).find(
-                    ([, v]) => v.objectUrl === objectUrl,
-                  );
-                  const activeFileId = activePair?.[0] ?? null;
-                  const manifestActive = activeFileId
-                    ? unlockedManifestFiles.find((f) => f.id === activeFileId)
-                    : undefined;
-                  const fileEntry: {
-                    id: string;
-                    name: string;
-                    mimeType: string;
-                    sizeBytes: number;
-                  } = manifestActive
-                    ? {
-                        id: manifestActive.id,
-                        name: manifestActive.name,
-                        mimeType: manifestActive.mimeType,
-                        sizeBytes: manifestActive.sizeBytes,
-                      }
-                    : activePair
-                      ? {
-                          id: activePair[0],
-                          name: activePair[1].downloadName,
-                          mimeType: metadata.mimeType,
-                          sizeBytes: metadata.fileSize,
-                        }
-                      : {
-                          id: "",
-                          name: downloadName,
-                          mimeType: metadata.mimeType,
-                          sizeBytes: metadata.fileSize,
-                        };
-
-                  const showFocusRail = unlockedManifestFiles.length > 1;
-                  const useNativeDocViewport =
-                    fileEntry.mimeType === "application/pdf" ||
-                    fileEntry.mimeType.startsWith("text/");
-
-                  const sidebar = showFocusRail ? (
-                    <DraggableDecryptedFocusFileRail
-                      vaultSlug={metadata.slug}
-                      layout="docked"
-                      files={unlockedManifestFiles}
-                      activeFileId={activeFileId}
-                      decryptedFiles={decryptedFiles}
-                      onPick={openDecryptedVaultFile}
-                    />
-                  ) : null;
-
-                  if (fileEntry.mimeType.startsWith("image/")) {
-                    const imgIdx =
-                      activeFileId != null
-                        ? orderedImagePreviewEntries.findIndex((e) => e.id === activeFileId)
-                        : -1;
-                    const hasImgNav = orderedImagePreviewEntries.length > 1;
-                    const goPrevImg = () => {
-                      if (imgIdx <= 0) return;
-                      const e = orderedImagePreviewEntries[imgIdx - 1];
-                      setObjectUrl(e.objectUrl);
-                      setDownloadName(e.downloadName);
-                    };
-                    const goNextImg = () => {
-                      if (
-                        imgIdx < 0 ||
-                        imgIdx >= orderedImagePreviewEntries.length - 1
-                      )
-                        return;
-                      const e = orderedImagePreviewEntries[imgIdx + 1];
-                      setObjectUrl(e.objectUrl);
-                      setDownloadName(e.downloadName);
-                    };
-                    return (
-                      <>
-                        {sidebar}
-                        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col p-1 sm:p-2">
-                          <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
-                          <SharePreviewViewport
-                            fillHeight
-                            edgeNavLeft={
-                              hasImgNav ? (
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="icon"
-                                  className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
-                                  disabled={imgIdx <= 0}
-                                  onClick={goPrevImg}
-                                  aria-label="Previous image"
-                                >
-                                  <ChevronLeft className="size-5" />
-                                </Button>
-                              ) : null
-                            }
-                            edgeNavRight={
-                              hasImgNav ? (
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="icon"
-                                  className="h-11 w-11 rounded-full border border-[color:var(--tkn-panel-border)] shadow-md sm:h-12 sm:w-12"
-                                  disabled={
-                                    imgIdx < 0 ||
-                                    imgIdx >= orderedImagePreviewEntries.length - 1
-                                  }
-                                  onClick={goNextImg}
-                                  aria-label="Next image"
-                                >
-                                  <ChevronRight className="size-5" />
-                                </Button>
-                              ) : null
-                            }
-                          >
-                            <div className="flex h-full min-h-0 items-center justify-center py-1">
-                              {/* eslint-disable-next-line @next/next/no-img-element -- blob: object URLs */}
-                              <img
-                                src={objectUrl}
-                                alt={downloadName}
-                                draggable={false}
-                                className="relative z-0 max-h-full max-w-full select-none object-contain"
-                              />
-                            </div>
-                          </SharePreviewViewport>
-                        </div>
-                      </>
-                    );
-                  }
-
-                  return (
-                    <>
-                      {sidebar}
-                      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-                        <ViewerWatermarkOverlay label={viewerWatermarkLabel} variant="dark" />
-                        <SharePreviewViewport canvasMode={!useNativeDocViewport} fillHeight>
-                          <iframe
-                            key={activeFileId ? `doc-${activeFileId}` : `doc-${downloadName}`}
-                            title={downloadName}
-                            src={
-                              fileEntry.mimeType === "application/pdf"
-                                ? `${objectUrl}#page=1&zoom=page-width`
-                                : objectUrl
-                            }
-                            className="relative z-0 h-full min-h-0 w-full flex-1 border-0 bg-white"
-                          />
-                        </SharePreviewViewport>
-                      </div>
-                    </>
-                  );
-                })()}
+                <DesktopDecryptedPreviewContent
+                  objectUrl={objectUrl}
+                  downloadName={downloadName}
+                  metadata={metadata}
+                  vaultSlug={metadata.slug}
+                  decryptedFiles={decryptedFiles}
+                  unlockedManifestFiles={unlockedManifestFiles}
+                  orderedImagePreviewEntries={orderedImagePreviewEntries}
+                  viewerWatermarkLabel={viewerWatermarkLabel}
+                  openDecryptedVaultFile={openDecryptedVaultFile}
+                  setObjectUrl={setObjectUrl}
+                  setDownloadName={setDownloadName}
+                  readingStrip={false}
+                />
               </div>
             </div>
                    ) : (
@@ -1712,6 +1794,67 @@ export function ShareExperience({
           )}
         </div>
       ) : null}
+
+      {readingPortalReady &&
+      readingMode &&
+      objectUrl &&
+      typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[200] flex flex-col bg-background"
+              style={{
+                paddingTop: "env(safe-area-inset-top, 0px)",
+                paddingBottom: "env(safe-area-inset-bottom, 0px)",
+              }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="share-reading-mode-title"
+            >
+              <div className="flex h-14 shrink-0 items-center gap-2 border-b border-[color:var(--tkn-panel-border)] bg-card px-3 shadow-sm sm:h-[3.25rem] sm:gap-3 sm:px-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 gap-1.5 px-2 text-foreground sm:px-3"
+                  onClick={() => setReadingMode(false)}
+                  aria-label="Exit reading mode"
+                >
+                  <ChevronLeft className="size-4 shrink-0" />
+                  <span className="hidden sm:inline">Exit reading mode</span>
+                </Button>
+                <p
+                  id="share-reading-mode-title"
+                  className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
+                >
+                  {downloadName}
+                </p>
+                <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5 px-2 sm:px-3">
+                  <a href={objectUrl} download={downloadName}>
+                    <Download className="size-4 shrink-0" />
+                    <span className="hidden sm:inline">Download</span>
+                  </a>
+                </Button>
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[color:var(--color-background-muted)]/25">
+                <DesktopDecryptedPreviewContent
+                  objectUrl={objectUrl}
+                  downloadName={downloadName}
+                  metadata={metadata}
+                  vaultSlug={metadata.slug}
+                  decryptedFiles={decryptedFiles}
+                  unlockedManifestFiles={unlockedManifestFiles}
+                  orderedImagePreviewEntries={orderedImagePreviewEntries}
+                  viewerWatermarkLabel={viewerWatermarkLabel}
+                  openDecryptedVaultFile={openDecryptedVaultFile}
+                  setObjectUrl={setObjectUrl}
+                  setDownloadName={setDownloadName}
+                  readingStrip
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
 
       <p className="mx-auto max-w-lg text-center text-[10px] leading-relaxed tracking-wide text-[color:var(--tkn-text-fine)] sm:text-[11px]">
         {SHARE_RECIPIENT_DISCLAIMER}
