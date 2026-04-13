@@ -384,6 +384,9 @@ export const VaultOwnerPanel = ({
   const [inviteFeedback, setInviteFeedback] = useState("");
   /** Same browser session as Room documents password (8+ chars in sessionStorage). */
   const [inviteVaultPasswordReady, setInviteVaultPasswordReady] = useState(false);
+  const [contributorEmailsDraft, setContributorEmailsDraft] = useState(() =>
+    (initialMetadata.contributorRecipientEmails ?? []).join("\n"),
+  );
 
   const [activeSection, setActiveSection] = useState<SectionId>("owner-settings");
 
@@ -394,10 +397,23 @@ export const VaultOwnerPanel = ({
   }, [shareBase, currentVanitySlug, metadata.slug]);
 
   const savedAllowedList = metadata.allowedRecipientEmails ?? [];
+  const savedContributorList = metadata.contributorRecipientEmails ?? [];
   const allowedParsed = useMemo(
     () => parseOwnerEmailList(allowedEmailsDraft),
     [allowedEmailsDraft],
   );
+  const contributorParsed = useMemo(
+    () => parseOwnerEmailList(contributorEmailsDraft),
+    [contributorEmailsDraft],
+  );
+  const contributorListDirty = useMemo(() => {
+    const a = normalizeRecipientEmailList(contributorParsed);
+    const b = normalizeRecipientEmailList(savedContributorList);
+    if (a.length !== b.length) return true;
+    const as = [...a].sort();
+    const bs = [...b].sort();
+    return as.some((v, i) => v !== bs[i]);
+  }, [contributorParsed, savedContributorList]);
   const inviteTokensUnbounded = useMemo(
     () => parseOwnerEmailTokens(inviteBatchDraft),
     [inviteBatchDraft],
@@ -665,8 +681,37 @@ export const VaultOwnerPanel = ({
     setMetadata(payload.metadata);
     setEvents(payload.events);
     setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
+    setContributorEmailsDraft((payload.metadata.contributorRecipientEmails ?? []).join("\n"));
     setInviteFeedback("Saved invited addresses.");
     setTimeout(() => setInviteFeedback(""), 3000);
+  };
+
+  const saveContributorRecipientEmails = async () => {
+    setError("");
+    setInviteFeedback("");
+    const emails = parseOwnerEmailList(contributorEmailsDraft);
+    const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ownerKey,
+        action: "set_contributor_recipient_emails",
+        emails,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      metadata?: VaultRecord;
+      events?: VaultEvent[];
+    };
+    if (!response.ok || !payload.metadata || !payload.events) {
+      throw new Error(payload.error || "Unable to save team uploaders.");
+    }
+    setMetadata(payload.metadata);
+    setEvents(payload.events);
+    setContributorEmailsDraft((payload.metadata.contributorRecipientEmails ?? []).join("\n"));
+    setInviteFeedback("Saved team upload permissions.");
+    setTimeout(() => setInviteFeedback(""), 4000);
   };
 
   const sendRecipientInvites = async () => {
@@ -714,6 +759,7 @@ export const VaultOwnerPanel = ({
     setMetadata(payload.metadata);
     setEvents(payload.events);
     setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
+    setContributorEmailsDraft((payload.metadata.contributorRecipientEmails ?? []).join("\n"));
     setInviteBatchDraft("");
     setInviteFeedback(`Invites completed for ${emails.length} recipient${emails.length === 1 ? "" : "s"}.`);
     setTimeout(() => setInviteFeedback(""), 5000);
@@ -816,7 +862,8 @@ export const VaultOwnerPanel = ({
                       <p className="max-w-prose text-[11px] leading-snug text-muted-foreground">
                         Control who can request a code and download files. Invites add people to the list and email them
                         the link plus the same room password you use under Room documents (from this browser — we never
-                        store it on our servers).
+                        store it on our servers). Team uploaders can add encrypted files on the share page with that same
+                        password and may remove only what they upload.
                       </p>
                     </div>
                   </div>
@@ -931,6 +978,63 @@ export const VaultOwnerPanel = ({
                       <span className="self-center text-[10px] text-muted-foreground">Unsaved changes</span>
                     ) : null}
                   </div>
+                </div>
+
+                {/* — Team uploaders — */}
+                <div className="space-y-3 rounded-xl border border-border/80 bg-muted/15 p-3.5 sm:p-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-foreground">Team uploaders</p>
+                    <p className="text-[10px] leading-snug text-muted-foreground">
+                      One address per line (or commas). These people can upload from the recipient page after they
+                      verify their email; invite-only rooms still require their address on the access list above. They
+                      use the same room password as everyone else — it is never sent to our servers.
+                    </p>
+                  </div>
+                  {savedContributorList.length > 0 ? (
+                    <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-2">
+                      {savedContributorList.map((e) => (
+                        <Badge
+                          key={e}
+                          variant="secondary"
+                          className="max-w-full truncate font-mono text-[10px] font-normal"
+                          title={e}
+                        >
+                          {e}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : null}
+                  <Field>
+                    <FieldLabel htmlFor="contributor-recipient-emails" className="text-xs font-semibold">
+                      Team uploaders (emails)
+                    </FieldLabel>
+                    <Textarea
+                      id="contributor-recipient-emails"
+                      className="min-h-[4.5rem] resize-y font-mono text-xs leading-relaxed"
+                      value={contributorEmailsDraft}
+                      onChange={(e) => setContributorEmailsDraft(e.target.value)}
+                      placeholder={"counsel@firm.com\nanalyst@company.com"}
+                      maxLength={8000}
+                    />
+                    <div className="mt-1 text-[10px] text-muted-foreground">
+                      <span className="font-medium text-foreground">{contributorParsed.length}</span> valid in editor
+                    </div>
+                  </Field>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={contributorListDirty ? "default" : "outline"}
+                    disabled={isPending || !contributorListDirty}
+                    onClick={() =>
+                      startTransition(() => {
+                        void saveContributorRecipientEmails().catch((e: unknown) => {
+                          setError(e instanceof Error ? e.message : "Unable to save team uploaders.");
+                        });
+                      })
+                    }
+                  >
+                    Save team uploaders
+                  </Button>
                 </div>
 
                 {/* — Send invites — */}

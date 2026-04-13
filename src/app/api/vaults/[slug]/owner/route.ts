@@ -30,6 +30,7 @@ import {
 } from "@/lib/dataroom/vault-recipient-access";
 import { getVanitySlugForRoom } from "@/lib/dataroom/vanity-slugs";
 import {
+  clampContributorRecipientEmails,
   clampRecipientEmailList,
   MAX_RECIPIENT_INVITES_PER_SEND,
   normalizeRecipientEmailList,
@@ -107,6 +108,11 @@ const ownerPostSchema = z.discriminatedUnion("action", [
   z.object({
     ownerKey: z.string().min(32).max(128),
     action: z.literal("replace_allowed_recipient_emails"),
+    emails: z.array(z.string().email()).max(100),
+  }),
+  z.object({
+    ownerKey: z.string().min(32).max(128),
+    action: z.literal("set_contributor_recipient_emails"),
     emails: z.array(z.string().email()).max(100),
   }),
   z.object({
@@ -357,9 +363,26 @@ export async function POST(
 
   if (parsed.data.action === "replace_allowed_recipient_emails") {
     const merged = clampRecipientEmailList(parsed.data.emails);
+    const draftMeta = { ...metadata, allowedRecipientEmails: merged };
+    const nextContributors = clampContributorRecipientEmails(
+      metadata.contributorRecipientEmails ?? [],
+      draftMeta,
+    );
+    const nextMetadata = {
+      ...draftMeta,
+      contributorRecipientEmails: nextContributors.length ? nextContributors : undefined,
+    };
+    await storage.updateVaultMetadata(nextMetadata);
+    const latestMetadata = await storage.getVaultMetadata(slug);
+    const events = await storage.getEvents(slug);
+    return NextResponse.json({ metadata: latestMetadata, events });
+  }
+
+  if (parsed.data.action === "set_contributor_recipient_emails") {
+    const nextContributors = clampContributorRecipientEmails(parsed.data.emails, metadata);
     const nextMetadata = {
       ...metadata,
-      allowedRecipientEmails: merged,
+      contributorRecipientEmails: nextContributors.length ? nextContributors : undefined,
     };
     await storage.updateVaultMetadata(nextMetadata);
     const latestMetadata = await storage.getVaultMetadata(slug);

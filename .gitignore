@@ -44,6 +44,7 @@ yarn-error.log*
 # playwright test artifacts
 .playwright-cli/
 e2e/.sign-url
+e2e/.contrib-manage-url
 /test-results/
 
 # typescript

@@ -16,9 +16,11 @@ import {
   Lock,
   Mail,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 
 import { MobileShareViewer } from "@/components/dataroom/mobile-share-viewer";
+import { ShareContributorUploadStrip } from "@/components/dataroom/share-contributor-upload";
 import { RecipientRecordPanel } from "@/components/dataroom/recipient-record-panel";
 import { ShareRecipientAppBar } from "@/components/dataroom/share-recipient-app-bar";
 import {
@@ -42,6 +44,10 @@ import {
   type VaultFileEntry,
   type VaultRecord,
 } from "@/lib/dataroom/types";
+import {
+  normalizeRecipientEmail,
+  recipientVaultAccessRoleForEmail,
+} from "@/lib/dataroom/vault-recipient-access";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -272,7 +278,7 @@ function DesktopDecryptedPreviewContent({
 }
 
 export function ShareExperience({
-  metadata,
+  metadata: metadataFromServer,
   initialAcceptance,
   initialAccessGranted,
   ndaCardTitle,
@@ -286,6 +292,7 @@ export function ShareExperience({
   workspaceCompanyName,
   shareExpiresLabel,
   recipientShareUrl,
+  showPoweredByToken = true,
 }: {
   metadata: VaultRecord;
   initialAcceptance: VaultAcceptanceRecord | null;
@@ -303,8 +310,15 @@ export function ShareExperience({
   shareExpiresLabel: string;
   /** Canonical HTTPS share URL (vanity slug when set) — built on the server. */
   recipientShareUrl: string;
+  /** Mirrors workspace owner plan: Free shows Token mark on share chrome. */
+  showPoweredByToken?: boolean;
 }) {
   const router = useRouter();
+  const [metadata, setMetadata] = useState(metadataFromServer);
+  useEffect(() => {
+    setMetadata(metadataFromServer);
+  }, [metadataFromServer]);
+
   const [isMobile, setIsMobile] = useState(false);
   const [accessGranted, setAccessGranted] = useState(initialAccessGranted);
   const [acceptance, setAcceptance] = useState(initialAcceptance);
@@ -312,7 +326,7 @@ export function ShareExperience({
     initialAcceptance?.signatureImage,
   );
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [downloadName, setDownloadName] = useState(metadata.fileName);
+  const [downloadName, setDownloadName] = useState(metadataFromServer.fileName);
   // Map of fileId → decrypted blob URL + filename (multi-file support)
   const [decryptedFiles, setDecryptedFiles] = useState<Record<string, { objectUrl: string; downloadName: string }>>({});
   const [error, setError] = useState("");
@@ -339,6 +353,23 @@ export function ShareExperience({
   }));
   const [readingMode, setReadingMode] = useState(false);
   const [readingPortalReady, setReadingPortalReady] = useState(false);
+  const [vaultUnlockPassword, setVaultUnlockPassword] = useState("");
+  const [contributorRemoveBusy, startContributorRemove] = useTransition();
+
+  const identifiedSignerEmail = useMemo(() => {
+    const fromAcceptance = acceptance?.signerEmail?.trim().toLowerCase();
+    if (fromAcceptance) return fromAcceptance;
+    const fromDraft = ndaDraft.signerEmail.trim().toLowerCase();
+    if (fromDraft.includes("@")) return fromDraft;
+    return returnEmail.trim().toLowerCase();
+  }, [acceptance?.signerEmail, ndaDraft.signerEmail, returnEmail]);
+
+  const canContributeToRoom = useMemo(
+    () =>
+      Boolean(identifiedSignerEmail) &&
+      recipientVaultAccessRoleForEmail(metadata, identifiedSignerEmail) === "contributor",
+    [metadata, identifiedSignerEmail],
+  );
 
   const hasRecipientVaultFiles = vaultHasRecipientVisibleDocument(metadata);
   const shareBannerSrc = metadata.shareBanner
@@ -624,6 +655,8 @@ export function ShareExperience({
             /* sessionStorage unavailable */
           }
 
+          setVaultUnlockPassword(pw);
+
           void fetch(`/api/vaults/${metadata.slug}/view`, {
             method: "PUT",
             headers: { "content-type": "application/json" },
@@ -688,7 +721,11 @@ export function ShareExperience({
 
     return (
       <>
-        <ShareRecipientAppBar accessGranted={accessGranted} recipientShareUrl={recipientShareUrl} />
+        <ShareRecipientAppBar
+          accessGranted={accessGranted}
+          recipientShareUrl={recipientShareUrl}
+          showPoweredByToken={showPoweredByToken}
+        />
         <MobileShareViewer
         hasDocument={hasRecipientVaultFiles}
         shareBannerSrc={shareBannerSrc ?? undefined}
@@ -718,6 +755,21 @@ export function ShareExperience({
         }}
         signingInProgress={isPending}
       />
+        {canContributeToRoom && vaultUnlockPassword.length >= 8 ? (
+          <div className="mx-4 mb-4 mt-2 max-w-lg">
+            <ShareContributorUploadStrip
+              slug={metadata.slug}
+              vaultPassword={vaultUnlockPassword}
+              onRoomUpdated={({ metadata: next }) => {
+                setMetadata(next);
+                setFetchedFiles(false);
+              }}
+              onRetryDecrypt={(pw) => {
+                handleUnlockDocument(pw);
+              }}
+            />
+          </div>
+        ) : null}
       </>
     );
   }
@@ -835,6 +887,8 @@ export function ShareExperience({
           // sessionStorage may be unavailable in some contexts
         }
 
+        setVaultUnlockPassword(pw);
+
         // Log decrypt event
         void fetch(`/api/vaults/${metadata.slug}/view`, {
           method: "PUT",
@@ -843,6 +897,43 @@ export function ShareExperience({
         }).catch(() => {});
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unable to unlock.");
+      }
+    });
+  };
+
+  const handleContributorRemoveFile = (fileId: string, fileLabel: string) => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Remove “${fileLabel}” from this room? This cannot be undone.`)
+    ) {
+      return;
+    }
+    startContributorRemove(async () => {
+      setError("");
+      try {
+        const res = await fetch(`/api/vaults/${metadata.slug}/payload?fileId=${encodeURIComponent(fileId)}`, {
+          method: "DELETE",
+        });
+        const data = (await res.json()) as { error?: string; metadata?: VaultRecord };
+        if (!res.ok || !data.metadata) {
+          throw new Error(data.error || "Could not remove file.");
+        }
+        setMetadata(data.metadata);
+        setFetchedFiles(false);
+        const pw =
+          vaultUnlockPassword.trim() ||
+          (typeof window !== "undefined"
+            ? (() => {
+                try {
+                  return sessionStorage.getItem(`tkn_share_pw_${metadata.slug}`) ?? "";
+                } catch {
+                  return "";
+                }
+              })()
+            : "");
+        if (pw) handleUnlock(pw);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not remove file.");
       }
     });
   };
@@ -872,7 +963,11 @@ export function ShareExperience({
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 sm:space-y-10 2xl:max-w-6xl">
-      <ShareRecipientAppBar accessGranted={accessGranted} recipientShareUrl={recipientShareUrl} />
+      <ShareRecipientAppBar
+        accessGranted={accessGranted}
+        recipientShareUrl={recipientShareUrl}
+        showPoweredByToken={showPoweredByToken}
+      />
       {accessGranted ? (
         <ShareRecipientCompactHeader
           shareHostLabel={shareHostLabel}
@@ -1634,9 +1729,24 @@ export function ShareExperience({
                   </span>
                 </p>
               </div>
+              {canContributeToRoom && vaultUnlockPassword.length >= 8 ? (
+                <ShareContributorUploadStrip
+                  slug={metadata.slug}
+                  vaultPassword={vaultUnlockPassword}
+                  onRoomUpdated={({ metadata: next }) => {
+                    setMetadata(next);
+                    setFetchedFiles(false);
+                  }}
+                  onRetryDecrypt={(pw) => {
+                    handleUnlock(pw);
+                  }}
+                />
+              ) : null}
                            {(() => {
                 const unlockedOrdered = unlockedManifestFiles;
                 const hasCategories = unlockedOrdered.some((f) => Boolean(f.category));
+
+                const showContributorRemove = canContributeToRoom;
 
                 const renderFileTable = (files: typeof unlockedOrdered, sectionKey: string) => (
                   <div
@@ -1658,6 +1768,11 @@ export function ShareExperience({
                           <TableHead className="hidden h-11 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground md:table-cell">
                             Added
                           </TableHead>
+                          {showContributorRemove ? (
+                            <TableHead className="h-11 w-[1%] px-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              <span className="sr-only">Remove your upload</span>
+                            </TableHead>
+                          ) : null}
                           <TableHead className="h-11 w-[1%] pr-4 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                             <span className="sr-only">Open</span>
                           </TableHead>
@@ -1673,6 +1788,11 @@ export function ShareExperience({
                             fileEntry.mimeType === "application/pdf" ||
                             fileEntry.mimeType.startsWith("text/");
                           const rowLabel = `${fname}, ${previewable ? "open preview" : "download"}`;
+                          const isOwnContributorFile =
+                            showContributorRemove &&
+                            Boolean(fileEntry.uploadedBySignerEmail) &&
+                            normalizeRecipientEmail(fileEntry.uploadedBySignerEmail ?? "") ===
+                              normalizeRecipientEmail(identifiedSignerEmail);
                           return (
                             <TableRow
                               key={fileEntry.id}
@@ -1705,6 +1825,28 @@ export function ShareExperience({
                               <TableCell className="hidden py-3 text-sm text-[color:var(--tkn-text-support)] md:table-cell">
                                 {fileEntry.addedAt ? formatDateTime(fileEntry.addedAt) : "—"}
                               </TableCell>
+                              {showContributorRemove ? (
+                                <TableCell className="px-2 py-3 text-center">
+                                  {isOwnContributorFile ? (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      disabled={contributorRemoveBusy}
+                                      className="size-9 p-0 text-muted-foreground hover:text-destructive"
+                                      aria-label={`Remove ${fname} from this room`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleContributorRemoveFile(fileEntry.id, fname);
+                                      }}
+                                    >
+                                      <Trash2 className="size-4" />
+                                    </Button>
+                                  ) : (
+                                    <span className="inline-block min-w-[2.25rem]" aria-hidden />
+                                  )}
+                                </TableCell>
+                              ) : null}
                               <TableCell className="py-3 pr-4 text-right">
                                 <Button
                                   type="button"

@@ -1,5 +1,7 @@
 import type { VaultAcceptanceRecord, VaultRecord } from "@/lib/dataroom/types";
 
+export type RecipientVaultAccessRole = "viewer" | "contributor";
+
 /** Stored on acceptance records created after email OTP when the room has no NDA. */
 export const EMAIL_GATE_NDA_VERSION = "tkn-email-verified-v1";
 
@@ -27,6 +29,42 @@ export function isRecipientEmailAllowed(metadata: VaultRecord, email: string): b
   const norm = normalizeRecipientEmail(email);
   const list = metadata.allowedRecipientEmails ?? [];
   return list.some((e) => normalizeRecipientEmail(e) === norm);
+}
+
+/** Normalized contributor list from room metadata. */
+export function contributorRecipientEmailSet(metadata: VaultRecord): Set<string> {
+  return new Set(normalizeRecipientEmailList(metadata.contributorRecipientEmails ?? []));
+}
+
+/**
+ * Whether this address may upload on the share page. Always false when not on the contributor list.
+ * When invite-only is on, the address must also be allowed to access the room.
+ */
+export function recipientVaultAccessRoleForEmail(
+  metadata: VaultRecord,
+  email: string,
+): RecipientVaultAccessRole {
+  const norm = normalizeRecipientEmail(email);
+  if (!contributorRecipientEmailSet(metadata).has(norm)) {
+    return "viewer";
+  }
+  if (metadata.restrictRecipientEmails && !isRecipientEmailAllowed(metadata, norm)) {
+    return "viewer";
+  }
+  return "contributor";
+}
+
+/** Clamp contributor emails to caps and, when invite-only, to the allowed list. */
+export function clampContributorRecipientEmails(
+  contributors: string[],
+  metadata: VaultRecord,
+): string[] {
+  const norm = normalizeRecipientEmailList(contributors);
+  if (metadata.restrictRecipientEmails) {
+    const allowed = new Set(normalizeRecipientEmailList(metadata.allowedRecipientEmails ?? []));
+    return norm.filter((e) => allowed.has(e)).slice(0, MAX_ALLOWED_RECIPIENT_EMAILS);
+  }
+  return norm.slice(0, MAX_ALLOWED_RECIPIENT_EMAILS);
 }
 
 export function isEmailGateOnlyAcceptance(a: VaultAcceptanceRecord): boolean {

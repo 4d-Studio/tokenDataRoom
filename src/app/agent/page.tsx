@@ -36,7 +36,11 @@ const apiRoutes = [
   ["POST", "/api/auth/verify-code", "Verify OTP and set session cookie"],
   ["POST", "/api/workspaces", "Create workspace for the logged-in user"],
   ["POST", "/api/vaults", "Create room (metadata + optional encrypted payload)"],
-  ["POST", "/api/vaults/[slug]/payload", "Owner uploads encrypted file (ownerKey + FormData)"],
+  [
+    "POST",
+    "/api/vaults/[slug]/payload",
+    "Owner uploads (ownerKey + FormData) or team contributors (contributorUpload + access cookie)",
+  ],
   ["POST", "/api/vaults/[slug]/access", "Room NDA acceptance → access cookie"],
   ["POST", "/api/vaults/[slug]/workspace-nda", "Workspace NDA + vault + workspace cookies"],
   ["POST", "/api/vaults/[slug]/bootstrap-workspace-access", "Vault cookie from workspace NDA (sibling rooms)"],

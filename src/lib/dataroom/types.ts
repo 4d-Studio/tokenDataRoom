@@ -64,6 +64,17 @@ export const attachVaultPayloadSchema = z.object({
   pbkdf2Iterations: z.number().int().min(100_000).max(500_000),
 });
 
+/** Recipient contributor upload (no ownerKey; auth is access cookie + metadata role). */
+export const contributorAttachVaultPayloadSchema = z.object({
+  contributorUpload: z.literal(true),
+  fileName: z.string().trim().min(1).max(160),
+  mimeType: z.string().trim().min(1).max(160),
+  fileSize: z.number().int().positive().max(FILE_SIZE_LIMIT_BYTES),
+  salt: z.string().min(1),
+  iv: z.string().min(1),
+  pbkdf2Iterations: z.number().int().min(100_000).max(500_000),
+});
+
 export const acceptanceSchema = z.object({
   signerName: z.string().trim().min(2).max(60),
   signerEmail: z.string().trim().email().max(120),
@@ -188,6 +199,12 @@ export type VaultFileEntry = {
   addedAt?: string;
   /** Owner-defined category/section name (e.g. "Agreements", "Pitch deck", "NDAs") */
   category?: string;
+  /**
+   * When a recipient added this file (contributor flow). Server uses this with the access cookie
+   * so contributors may delete only their own uploads; owner may delete any file.
+   */
+  uploadedBySignerEmail?: string;
+  uploadedByAcceptanceId?: string;
   /** Base64-encoded random salt for this file's key derivation */
   salt: string;
   /** Base64-encoded random IV for AES-GCM */
@@ -213,6 +230,11 @@ export type VaultRecord = {
   restrictRecipientEmails?: boolean;
   /** Normalized lowercase emails invited by the owner (max 100). */
   allowedRecipientEmails?: string[];
+  /**
+   * Subset of invited addresses allowed to upload ciphertext on the share page (same room password).
+   * When `restrictRecipientEmails` is true, must stay within `allowedRecipientEmails`.
+   */
+  contributorRecipientEmails?: string[];
   requiresNda: boolean;
   ndaText?: string;
   ndaVersion: string;
