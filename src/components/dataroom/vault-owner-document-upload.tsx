@@ -739,6 +739,7 @@ export function VaultOwnerDocumentUpload({
   const [draggingFileId, setDraggingFileId] = useState<string | null>(null);
 
   const isCompact = variant === "compact";
+  const isFeatured = variant === "featured";
   const existingFiles: VaultFileEntry[] = vaultFilesList(metadata);
   const canReorderFiles = Boolean(metadata.vaultFiles && metadata.vaultFiles.length >= 2);
   const grouped = groupByLabel(existingFiles);
@@ -1102,7 +1103,12 @@ export function VaultOwnerDocumentUpload({
   // ── Render ─────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      className={cn(
+        "flex flex-col gap-6",
+        isFeatured && "min-h-0 flex-1",
+      )}
+    >
       {/* ── Section 1: Room files ──────────────────────────────── */}
       {existingFiles.length > 0 && (
         <div className="flex flex-col gap-2.5">
@@ -1293,6 +1299,8 @@ export function VaultOwnerDocumentUpload({
           className={cn(
             "upload-zone flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-white py-8 text-center transition-colors",
             "hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5",
+            isFeatured &&
+              "min-h-[min(16rem,38dvh)] flex-1 py-10 lg:min-h-[min(20rem,44dvh)] lg:py-14",
           )}
           onClick={() => inputRef.current?.click()}
         >

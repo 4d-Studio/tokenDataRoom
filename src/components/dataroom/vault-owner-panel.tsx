@@ -2,18 +2,27 @@
 
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Activity,
+  BarChart3,
   Check,
   Download,
   Eye,
   ExternalLink,
+  FileSignature,
+  FolderOpen,
+  History,
   Link2,
   LockKeyhole,
+  MailPlus,
   MapPin,
+  NotebookPen,
+  Settings,
   ShieldCheck,
   Trash2,
+  Users,
 } from "lucide-react";
 
 import { CopyButton } from "@/components/dataroom/copy-button";
@@ -76,14 +85,13 @@ const EVENT_LABELS: Record<VaultEvent["type"], string> = {
 };
 
 const SECTIONS = [
-  { id: "owner-settings", num: "1", label: "Room settings" },
-  { id: "owner-document", num: "2", label: "Room documents" },
-  { id: "owner-signing", num: "3", label: "Document signing" },
-  { id: "owner-notes", num: "4", label: "File notes" },
-  { id: "owner-stats", num: "5", label: "Summary" },
-  { id: "owner-reviewers", num: "6", label: "Reviewers" },
-  { id: "owner-timeline", num: "7", label: "Timeline" },
-  { id: "owner-overview", num: "8", label: "Links & access" },
+  { id: "owner-settings", num: "1", label: "Room settings", icon: Settings },
+  { id: "owner-document", num: "2", label: "Room documents", icon: FolderOpen },
+  { id: "owner-signing", num: "3", label: "Document signing", icon: FileSignature },
+  { id: "owner-notes", num: "4", label: "File notes", icon: NotebookPen },
+  { id: "owner-stats", num: "5", label: "Summary", icon: BarChart3 },
+  { id: "owner-reviewers", num: "6", label: "Reviewers", icon: Users },
+  { id: "owner-timeline", num: "7", label: "Timeline", icon: History },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -91,9 +99,11 @@ type SectionId = (typeof SECTIONS)[number]["id"];
 function ManageStepsStrip({
   hasDocument,
   onGo,
+  linksAccessHref,
 }: {
   hasDocument: boolean;
   onGo: (id: SectionId) => void;
+  linksAccessHref: string;
 }) {
   return (
     <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5">
@@ -119,13 +129,12 @@ function ManageStepsStrip({
           →
         </li>
         <li className="flex flex-wrap items-center gap-2 text-[12px]">
-          <button
-            type="button"
-            onClick={() => onGo("owner-overview")}
+          <Link
+            href={linksAccessHref}
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            Copy share link
-          </button>
+            Links & access
+          </Link>
         </li>
         <li className="hidden text-muted-foreground sm:block" aria-hidden>
           →
@@ -141,17 +150,20 @@ function ManageStepsStrip({
 function SectionNav({
   active,
   onSelect,
+  linksAccessHref,
 }: {
   active: SectionId;
   onSelect: (id: SectionId) => void;
+  linksAccessHref: string;
 }) {
   return (
     <nav
-      className="flex gap-0.5 overflow-x-auto border-b border-border pb-2 lg:sticky lg:top-20 lg:w-56 lg:shrink-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:border-b-0 lg:border-r lg:pb-0 lg:pr-4"
+      className="flex gap-0.5 overflow-x-auto border-b border-border pb-2 lg:sticky lg:top-20 lg:w-60 lg:shrink-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:border-b-0 lg:border-r lg:pb-0 lg:pr-4"
       aria-label="Manage room sections"
     >
       {SECTIONS.map((s) => {
         const isActive = s.id === active;
+        const Icon = s.icon;
         return (
           <button
             key={s.id}
@@ -159,17 +171,42 @@ function SectionNav({
             onClick={() => onSelect(s.id)}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "whitespace-nowrap rounded-md px-2 py-1.5 text-left text-xs font-medium transition-colors",
-              "lg:block lg:rounded-sm lg:px-1.5 lg:py-1 lg:text-[12px]",
+              "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium transition-colors",
+              "lg:rounded-sm lg:px-2 lg:py-1.5 lg:text-[12px]",
               isActive
                 ? "bg-muted text-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
             )}
           >
-            <span className="text-muted-foreground/80">{s.num}.</span> {s.label}
+            <Icon
+              className={cn(
+                "size-4 shrink-0",
+                isActive ? "text-[color:var(--color-accent)]" : "opacity-70",
+              )}
+              strokeWidth={1.75}
+              aria-hidden
+            />
+            <span className="min-w-0">
+              <span className="text-muted-foreground/80">{s.num}.</span> {s.label}
+            </span>
           </button>
         );
       })}
+      <Link
+        href={linksAccessHref}
+        className={cn(
+          "mt-1 flex w-full min-w-0 items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-xs font-medium transition-colors",
+          "lg:rounded-sm lg:px-2 lg:py-1.5 lg:text-[12px]",
+          "text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground",
+        )}
+      >
+        <Link2
+          className="size-4 shrink-0 opacity-70"
+          strokeWidth={1.75}
+          aria-hidden
+        />
+        <span className="min-w-0">Links & access</span>
+      </Link>
     </nav>
   );
 }
@@ -287,12 +324,15 @@ function SectionShell({
   description,
   children,
   className,
+  contentClassName,
 }: {
   id: string;
   title: string;
   description?: string;
   children: ReactNode;
   className?: string;
+  /** Applied to the wrapper around `children` (below title/description). */
+  contentClassName?: string;
 }) {
   return (
     <section
@@ -306,27 +346,31 @@ function SectionShell({
       {description ? (
         <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{description}</p>
       ) : null}
-      <div className="mt-2.5">{children}</div>
+      <div className={cn("mt-2.5", contentClassName)}>{children}</div>
     </section>
   );
 }
 
 export const VaultOwnerPanel = ({
+  variant = "default",
   initialAcceptances,
   initialMetadata,
   initialEvents,
   ownerKey,
   shareUrl,
   manageUrl,
+  linksAccessHref,
   signedNdaBaseUrl,
   initialVanitySlug,
 }: {
+  variant?: "default" | "links-access";
   initialAcceptances: VaultAcceptanceRecord[];
   initialMetadata: VaultRecord;
   initialEvents: VaultEvent[];
   ownerKey: string;
   shareUrl: string;
   manageUrl: string;
+  linksAccessHref: string;
   signedNdaBaseUrl: string;
   initialVanitySlug: string | null;
 }) => {
@@ -421,11 +465,16 @@ export const VaultOwnerPanel = ({
     trimmedVanityInput.length >= 3 && trimmedVanityInput !== (currentVanitySlug ?? "");
 
   useEffect(() => {
+    if (variant === "links-access") return;
     const raw = window.location.hash.replace(/^#/, "");
+    if (raw === "owner-overview") {
+      router.replace(linksAccessHref);
+      return;
+    }
     if (SECTIONS.some((s) => s.id === raw)) {
       queueMicrotask(() => setActiveSection(raw as SectionId));
     }
-  }, []);
+  }, [variant, router, linksAccessHref]);
 
   useEffect(() => {
     try {
@@ -1020,21 +1069,68 @@ export const VaultOwnerPanel = ({
           </SectionShell>
   );
 
+  if (variant === "links-access") {
+    const manageRelativeHref = `/m/${metadata.slug}?key=${encodeURIComponent(ownerKey)}`;
+    return (
+      <div className="flex min-w-0 flex-col gap-4">
+        <Link
+          href={manageRelativeHref}
+          className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+        >
+          ← Back to manage room
+        </Link>
+        {overviewShell}
+      </div>
+    );
+  }
+
+  const inviteHref = `${linksAccessHref}#send-invites`;
+  const isDocumentsFocus = activeSection === "owner-document";
+
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-6 xl:gap-8">
-      <SectionNav active={activeSection} onSelect={selectSection} />
+    <div
+      className={cn(
+        "flex flex-col gap-3 lg:flex-row lg:gap-6 xl:gap-8",
+        isDocumentsFocus ? "lg:items-stretch" : "lg:items-start",
+      )}
+    >
+      <SectionNav
+        active={activeSection}
+        onSelect={selectSection}
+        linksAccessHref={linksAccessHref}
+      />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <ManageStepsStrip hasDocument={hasDocument} onGo={selectSection} />
-
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 flex-col gap-3",
+          isDocumentsFocus && "lg:min-h-0 lg:flex-1",
+        )}
+      >
         <div
           className={cn(
-            "grid min-w-0 flex-1 gap-5 lg:items-start xl:gap-6 2xl:gap-8",
-            activeSection !== "owner-overview" &&
-              "lg:grid-cols-[minmax(0,1fr)_minmax(22rem,30vw)] xl:grid-cols-[minmax(0,1fr)_minmax(26rem,34vw)] 2xl:grid-cols-[minmax(0,1fr)_minmax(30rem,38vw)]",
+            "flex shrink-0 gap-3",
+            isDocumentsFocus ? "justify-end" : "flex-col sm:flex-row sm:items-start sm:justify-between",
           )}
         >
-        <div className="min-w-0">
+          {!isDocumentsFocus ? (
+            <div className="min-w-0 flex-1">
+              <ManageStepsStrip
+                hasDocument={hasDocument}
+                onGo={selectSection}
+                linksAccessHref={linksAccessHref}
+              />
+            </div>
+          ) : null}
+          <div className={cn("flex shrink-0 justify-end", !isDocumentsFocus && "sm:pt-0.5")}>
+            <Button type="button" variant="outline" size="icon" className="shrink-0" asChild>
+              <Link href={inviteHref} aria-label="Send invites" title="Send invites">
+                <MailPlus className="size-4" strokeWidth={1.75} aria-hidden />
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className={cn("min-w-0 flex-1", isDocumentsFocus && "flex min-h-0 min-w-0 flex-col")}>
           {activeSection === "owner-settings" ? (
             <SectionShell
               id="owner-settings"
@@ -1043,13 +1139,12 @@ export const VaultOwnerPanel = ({
             >
               <div className="space-y-4">
                 <p className="text-xs text-muted-foreground">
-                  <button
-                    type="button"
-                    onClick={() => selectSection("owner-overview")}
+                  <Link
+                    href={linksAccessHref}
                     className="font-medium text-primary underline-offset-4 hover:underline"
                   >
                     Links & access
-                  </button>{" "}
+                  </Link>{" "}
                   — copy the share link, optional custom URL, revoke or delete.
                 </p>
                 <Field>
@@ -1267,6 +1362,8 @@ export const VaultOwnerPanel = ({
               id="owner-document"
               title="Room documents"
               description="Files are encrypted in your browser before upload. Recipients only see the share link and password — not this page."
+              className="flex min-h-0 flex-1 flex-col border-primary/10 shadow-md lg:min-h-[calc(100dvh-12.5rem)]"
+              contentClassName="flex min-h-0 flex-1 flex-col"
             >
               <VaultOwnerDocumentUpload
                 variant="featured"
@@ -1471,13 +1568,6 @@ export const VaultOwnerPanel = ({
               )}
             </SectionShell>
           ) : null}
-
-          {activeSection === "owner-overview" ? overviewShell : null}
-        </div>
-
-        {activeSection !== "owner-overview" ? (
-          <aside className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-20 lg:self-start">{overviewShell}</aside>
-        ) : null}
         </div>
       </div>
     </div>

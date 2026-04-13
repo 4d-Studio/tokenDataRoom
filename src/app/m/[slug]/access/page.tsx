@@ -7,16 +7,16 @@ import { notFound } from "next/navigation";
 import { BrandMark } from "@/components/dataroom/brand-mark";
 import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
 import { VaultOwnerPanelSkeleton } from "@/components/dataroom/route-loading";
+import { loadManageRoomForOwner } from "@/app/m/resolve-manage-slug";
+import { getBaseUrlFromHeaders } from "@/lib/dataroom/helpers";
+import { getVaultStorage } from "@/lib/dataroom/storage";
+import { getVanitySlugForRoom } from "@/lib/dataroom/vanity-slugs";
 
 const VaultOwnerPanel = dynamic(
   () =>
     import("@/components/dataroom/vault-owner-panel").then((m) => m.VaultOwnerPanel),
   { loading: () => <VaultOwnerPanelSkeleton /> },
 );
-import { loadManageRoomForOwner } from "@/app/m/resolve-manage-slug";
-import { getBaseUrlFromHeaders } from "@/lib/dataroom/helpers";
-import { getVaultStorage } from "@/lib/dataroom/storage";
-import { getVanitySlugForRoom } from "@/lib/dataroom/vanity-slugs";
 
 export async function generateMetadata({
   params,
@@ -29,16 +29,15 @@ export async function generateMetadata({
   const { key } = await searchParams;
   const loaded = await loadManageRoomForOwner(rawSlug, key);
   if (!loaded) {
-    return { title: "Manage room", robots: { index: false, follow: false } };
+    return { title: "Links & access", robots: { index: false, follow: false } };
   }
-  const vault = loaded.metadata;
   return {
-    title: `Manage · ${vault.title}`,
+    title: `Links & access · ${loaded.metadata.title}`,
     robots: { index: false, follow: false },
   };
 }
 
-export default async function ManagePage({
+export default async function ManageRoomAccessPage({
   params,
   searchParams,
 }: {
@@ -52,7 +51,6 @@ export default async function ManagePage({
 
   const { slug, metadata } = loaded;
   const storage = getVaultStorage();
-
   const events = await storage.getEvents(slug);
   const acceptances = await storage.getAcceptances(slug);
   const headerMap = await headers();
@@ -76,28 +74,25 @@ export default async function ManagePage({
             All rooms
           </Link>
           <ProductBreadcrumb
-            items={[{ label: "Manage room" }, { label: metadata.title }]}
+            items={[
+              { label: "Manage room", href: manageUrl },
+              { label: "Links & access" },
+            ]}
           />
         </div>
       </header>
       <div className="page-hero pt-2">
-        <div className="mb-3 border-b border-border pb-3">
+        <div className="mb-5 border-b border-border pb-4">
           <h1 className="text-[1.05rem] font-semibold tracking-[-0.02em] text-foreground">
-            Manage this room
+            Links & access
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{metadata.title}</span> — sidebar for
-            settings, files, signing, activity.{" "}
-            <Link
-              href={linksAccessHref}
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              Links & access
-            </Link>{" "}
-            for share URL, people, invites, revoke/delete.
+          <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+            Share URL, custom link, people and invites, revoke and delete — for{" "}
+            <span className="font-medium text-foreground">{metadata.title}</span>.
           </p>
         </div>
         <VaultOwnerPanel
+          variant="links-access"
           initialAcceptances={acceptances}
           initialMetadata={metadata}
           initialEvents={events}

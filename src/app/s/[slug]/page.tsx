@@ -4,10 +4,14 @@ import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { ShareExperienceSkeleton } from "@/components/dataroom/route-loading";
+import { SHARE_PAGE_MAIN_CLASS } from "@/app/s/share-page-shell";
 
 const ShareExperience = nextDynamic(
   () =>
-    import("@/components/dataroom/share-experience").then((m) => m.ShareExperience),
+    import(
+      /* webpackPrefetch: true */
+      "@/components/dataroom/share-experience"
+    ).then((m) => m.ShareExperience),
   { loading: () => <ShareExperienceSkeleton /> },
 );
 import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
@@ -151,7 +155,7 @@ export default async function SharePage({
   const recipientShareUrl = `${baseUrl}/s/${vanitySlug ?? slug}`;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-8 sm:py-12">
+    <main className={SHARE_PAGE_MAIN_CLASS}>
       <div className="pb-20">
         <ShareExperience
           metadata={metadata}

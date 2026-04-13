@@ -34,7 +34,11 @@ test.describe("Team uploaders (manage page)", () => {
       test.skip(true, "Missing e2e/.contrib-manage-url");
     }
     const manageUrl = readFileSync(urlPath, "utf8").trim();
-    await page.goto(`${manageUrl}#owner-overview`);
+    const base = new URL(manageUrl);
+    const slug = base.pathname.split("/").filter(Boolean)[1];
+    const key = base.searchParams.get("key") ?? "";
+    const accessUrl = `${base.origin}/m/${slug}/access?key=${encodeURIComponent(key)}`;
+    await page.goto(accessUrl);
 
     const field = page.locator("#contributor-recipient-emails");
     await expect(field).toBeVisible({ timeout: 30_000 });

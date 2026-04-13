@@ -469,7 +469,11 @@ export function RoomShareAccessPanel({
           </Button>
         </section>
 
-        <section className="space-y-3 border-t border-border/60 pt-5" aria-labelledby="send-invites-heading">
+        <section
+          id="send-invites"
+          className="scroll-mt-24 space-y-3 border-t border-border/60 pt-5"
+          aria-labelledby="send-invites-heading"
+        >
           <div className="flex items-center gap-2">
             <Send className="size-4 text-[var(--color-accent)]" aria-hidden />
             <h3 id="send-invites-heading" className="text-xs font-semibold text-foreground">

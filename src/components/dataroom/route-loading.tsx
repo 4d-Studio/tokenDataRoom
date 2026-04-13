@@ -207,24 +207,60 @@ export function PageShellSkeleton() {
 
 export function ShareExperienceSkeleton() {
   return (
-    <div className="w-full max-w-2xl space-y-8">
-      <div className="flex gap-4 border-b border-border pb-5">
-        <Skeleton className="size-12 shrink-0 rounded-xl sm:size-14" />
-        <div className="min-w-0 flex-1 space-y-2">
-          <Skeleton className="h-3 w-40" />
-          <Skeleton className="h-8 w-4/5 max-w-md" />
-          <Skeleton className="h-4 w-48" />
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="share-experience-skeleton w-full space-y-6 sm:space-y-8"
+    >
+      <span className="sr-only">Loading room…</span>
+
+      {/* Mirrors share header: logo + title + expiry / actions */}
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/80 pb-6 sm:gap-6">
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+          <Skeleton className="size-12 shrink-0 rounded-xl sm:size-14" />
+          <div className="min-w-0 flex-1 space-y-2.5">
+            <Skeleton className="h-2.5 w-28 sm:h-3 sm:w-36" />
+            <Skeleton className="h-7 w-full max-w-[min(100%,28rem)] sm:h-8" />
+            <div className="flex flex-wrap gap-2 pt-0.5">
+              <Skeleton className="h-3 w-24 sm:w-28" />
+              <Skeleton className="h-3 w-20 sm:w-24" />
+            </div>
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Skeleton className="hidden h-9 w-24 rounded-lg sm:block sm:w-28" />
+          <Skeleton className="h-9 w-9 rounded-lg sm:h-9 sm:w-10" />
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3 border-y border-border py-4">
-        <Skeleton className="size-9 shrink-0 rounded-lg" />
-        <div className="min-w-0 flex-1 space-y-2">
-          <Skeleton className="h-4 w-52 max-w-full" />
-          <Skeleton className="h-3 w-64 max-w-full" />
+
+      {/* Sender note / workspace context strip */}
+      <div className="rounded-xl border border-border/70 bg-muted/25 px-4 py-4 sm:px-5 sm:py-5">
+        <div className="mx-auto max-w-2xl space-y-2.5 sm:space-y-3">
+          <Skeleton className="mx-auto h-3.5 w-3/5 max-w-md" />
+          <Skeleton className="mx-auto h-3.5 w-full max-w-xl" />
+          <Skeleton className="mx-auto h-3.5 w-full max-w-lg" />
         </div>
-        <Skeleton className="h-7 w-20 rounded-full" />
       </div>
-      <Skeleton className="h-40 w-full rounded-xl border border-border sm:h-48" />
+
+      {/* Primary card (NDA / unlock flow) */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div className="mx-auto w-full max-w-2xl space-y-4 sm:space-y-5">
+          <Skeleton className="h-5 w-52 sm:w-64" />
+          <Skeleton className="h-36 w-full rounded-xl sm:h-44" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <Skeleton className="h-11 w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-11 w-full max-w-xs rounded-xl sm:h-12" />
+        </div>
+      </div>
+
+      {/* Lower chrome hint */}
+      <div className="flex flex-wrap items-center justify-center gap-3 border-t border-border/60 pt-6">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-3 w-20 opacity-70" />
+      </div>
     </div>
   );
 }
