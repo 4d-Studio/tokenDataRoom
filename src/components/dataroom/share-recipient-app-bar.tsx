@@ -8,16 +8,21 @@ import { cn } from "@/lib/utils";
 
 const panelBorder = "border-[color:var(--tkn-panel-border)]";
 
+export interface ShareRecipientAppBarProps {
+  accessGranted: boolean;
+  recipientShareUrl: string;
+  /** Free-tier share pages show Token attribution; Personal/Pro hide it. */
+  showPoweredByToken?: boolean;
+}
+
 /**
  * Slim top bar — reference: editorial product nav; colors stay on Token tokens (cream, ink, emerald trust, primary CTA elsewhere).
  */
 export function ShareRecipientAppBar({
   accessGranted,
   recipientShareUrl,
-}: {
-  accessGranted: boolean;
-  recipientShareUrl: string;
-}) {
+  showPoweredByToken = true,
+}: ShareRecipientAppBarProps) {
   return (
     <header
       className={cn(
@@ -26,8 +31,18 @@ export function ShareRecipientAppBar({
         "border-b",
       )}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <PoweredByToken className="shrink-0 text-left sm:pt-0.5" />
+      {!showPoweredByToken ? (
+        <span className="sr-only">Shared securely via Token</span>
+      ) : null}
+      <div
+        className={cn(
+          "flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6",
+          showPoweredByToken ? "sm:justify-between" : "sm:justify-end",
+        )}
+      >
+        {showPoweredByToken ? (
+          <PoweredByToken className="shrink-0 text-left sm:pt-0.5" />
+        ) : null}
         {accessGranted ? (
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground sm:text-right">
             Shared room
