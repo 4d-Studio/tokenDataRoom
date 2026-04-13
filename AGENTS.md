@@ -29,14 +29,14 @@ Token is a lightweight secure-sharing app for sharing sensitive documents throug
 
 Production runs on **Railway** (`railway.toml`: release `npm run db:migrate`, start `npm run start`). **Vercel is not used for hosting**; `@vercel/blob` is optional **file storage** when no S3-compatible bucket is configured.
 
-## Plan limits (src/lib/dataroom/auth-store.ts PLAN_LIMITS)
+## Plan limits (`src/lib/dataroom/plan-limits.ts` — `PLAN_LIMITS`)
 
 Marketing vs slug: **Personal** = `plus`, **Pro** = `unicorn`.
 
 | Plan     | Slug      | Rooms     | Files     | Custom Domain | Board Minutes |
 |----------|-----------|-----------|-----------|---------------|---------------|
 | Free     | `free`    | 1         | 10 total  | No            | No            |
-| Personal | `plus`    | 1         | 500       | No            | No            |
+| Personal | `plus`    | 3         | 500 / room | No            | No            |
 | Pro      | `unicorn` | Unlimited | Unlimited | Yes           | Yes           |
 
 Plan limits drive UI gates in `CreateVaultForm` (room cap from `getPlanLimits`).

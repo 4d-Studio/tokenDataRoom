@@ -68,13 +68,13 @@ const plans = [
     annualTotalLabel: "~$99/year",
     period: "/month",
     description:
-      "One seat, one room — ideal for a single pitch, vendor packet, or diligence bundle. Your logo, no Token branding on the share, up to 500 files.",
+      "One seat, up to three active rooms — ideal for a few parallel deals. Your logo, no Token branding on the share, up to 500 files per room.",
     badge: "Checkout soon",
     cta: "Get started",
     ctaHref: "/login",
     features: {
       seats: "1 seat",
-      rooms: "1 room",
+      rooms: "3 rooms",
       filesPerRoom: "500 files",
       viewers: "Unlimited",
       ndaGating: true,
@@ -178,8 +178,8 @@ const faq = [
     a: "Turn NDA on per room. Recipients sign in the browser; you download signed PDFs from manage. Customize the template under Workspace settings.",
   },
   {
-    q: "Why is Personal limited to one room?",
-    a: "Personal is priced for a single active deal (one pitch, one vendor, one diligence set). Pro removes the room cap for teams running many rooms at once.",
+    q: "Why is Personal limited to three rooms?",
+    a: "Personal is priced for solo operators running a handful of parallel deals. Pro removes the room cap for teams that need many rooms, custom domains, and board minutes.",
   },
   {
     q: "What does “DocuSign-class” mean on Pro?",

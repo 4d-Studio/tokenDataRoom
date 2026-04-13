@@ -277,7 +277,7 @@ export function VaultOwnerPanelSkeleton() {
 /** Owner manage page (`/m/...`) — wide shell, not authenticated sidebar */
 export function OwnerPageSkeleton() {
   return (
-    <main className="page-shell max-w-[78rem] min-h-svh">
+    <main className="page-shell max-w-none lg:px-8 xl:px-12 2xl:px-16 min-h-svh">
       <header className="page-header">
         <div className="flex items-center gap-2">
           <Skeleton className="h-9 w-9 rounded-full" />

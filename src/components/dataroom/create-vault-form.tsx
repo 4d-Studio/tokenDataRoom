@@ -481,13 +481,13 @@ export const CreateVaultForm = ({
     });
   };
 
-  // ── Room cap gate (Free + Personal = 1 room; upgrade to Pro for more) ──
+  // ── Room cap gate (Free = 1; Personal = 3; Pro unlimited) ──
   if (isAtRoomLimit) {
     return (
       <Card className="rounded-2xl border border-border bg-white p-6">
         <p className="font-semibold text-foreground">Plan limit reached</p>
         <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
-          Your plan allows {planRoomCap} room{planRoomCap === 1 ? "" : "s"} and you&apos;ve used {currentRoomCount}. Upgrade to Pro for unlimited rooms.
+          Your plan allows {planRoomCap} room{planRoomCap === 1 ? "" : "s"} and you&apos;ve used {currentRoomCount}. Upgrade to Pro for unlimited rooms and premium features.
         </p>
         <Button asChild size="sm" className="mt-4">
           <Link href="/pricing">View plans</Link>

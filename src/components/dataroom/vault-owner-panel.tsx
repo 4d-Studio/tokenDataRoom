@@ -147,7 +147,7 @@ function SectionNav({
 }) {
   return (
     <nav
-      className="flex gap-0.5 overflow-x-auto border-b border-border pb-2 lg:sticky lg:top-20 lg:w-[10.5rem] lg:shrink-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:border-b-0 lg:border-r lg:pb-0 lg:pr-3"
+      className="flex gap-0.5 overflow-x-auto border-b border-border pb-2 lg:sticky lg:top-20 lg:w-56 lg:shrink-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:border-b-0 lg:border-r lg:pb-0 lg:pr-4"
       aria-label="Manage room sections"
     >
       {SECTIONS.map((s) => {
@@ -1021,7 +1021,7 @@ export const VaultOwnerPanel = ({
   );
 
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-6 xl:gap-8">
       <SectionNav active={activeSection} onSelect={selectSection} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -1029,9 +1029,9 @@ export const VaultOwnerPanel = ({
 
         <div
           className={cn(
-            "grid min-w-0 flex-1 gap-4 lg:items-start",
+            "grid min-w-0 flex-1 gap-5 lg:items-start xl:gap-6 2xl:gap-8",
             activeSection !== "owner-overview" &&
-              "lg:grid-cols-[minmax(0,1fr)_min(18rem,100%)] xl:grid-cols-[minmax(0,1fr)_20.5rem]",
+              "lg:grid-cols-[minmax(0,1fr)_minmax(22rem,30vw)] xl:grid-cols-[minmax(0,1fr)_minmax(26rem,34vw)] 2xl:grid-cols-[minmax(0,1fr)_minmax(30rem,38vw)]",
           )}
         >
         <div className="min-w-0">

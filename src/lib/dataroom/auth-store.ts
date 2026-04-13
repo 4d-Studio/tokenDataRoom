@@ -11,7 +11,7 @@ import {
 import type { WorkspaceRoomSummary } from "@/lib/dataroom/workspace-types";
 import type { VaultEvent } from "@/lib/dataroom/types";
 
-import type { WorkspacePlan } from "@/lib/dataroom/plan-limits";
+import { resolveEffectiveWorkspacePlan, type WorkspacePlan } from "@/lib/dataroom/plan-limits";
 
 export type TknUser = {
   id: string;
@@ -79,6 +79,11 @@ const hashCode = (code: string) =>
   createHash("sha256").update(code).digest("hex");
 
 export const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+const withEffectivePlan = (user: TknUser): TknUser => ({
+  ...user,
+  plan: resolveEffectiveWorkspacePlan(user),
+});
 
 const ensureRoot = async () => {
   await mkdir(authRoot, { recursive: true });
@@ -175,12 +180,13 @@ export const verifyLoginCode = async (email: string, code: string) => {
 
   await writeState(state);
 
-  return user;
+  return withEffectivePlan(user);
 };
 
 export const getUserById = async (userId: string) => {
   const state = await readState();
-  return state.users.find((user) => user.id === userId) ?? null;
+  const user = state.users.find((u) => u.id === userId) ?? null;
+  return user ? withEffectivePlan(user) : null;
 };
 
 export const updateUserPlan = async (userId: string, plan: TknUser["plan"]) => {
@@ -189,7 +195,7 @@ export const updateUserPlan = async (userId: string, plan: TknUser["plan"]) => {
   if (!user) return null;
   user.plan = plan;
   await writeState(state);
-  return user;
+  return withEffectivePlan(user);
 };
 
 export type { PlanLimits } from "@/lib/dataroom/plan-limits";

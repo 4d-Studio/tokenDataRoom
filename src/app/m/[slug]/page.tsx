@@ -77,7 +77,7 @@ export default async function ManagePage({
   const signedNdaBaseUrl = `${baseUrl}/api/vaults/${slug}/signed-nda?key=${metadata.ownerKey}`;
 
   return (
-    <main className="page-shell max-w-[78rem]">
+    <main className="page-shell max-w-none lg:px-8 xl:px-12 2xl:px-16">
       <header className="page-header flex-wrap">
         <BrandMark />
         <div className="flex flex-wrap items-center gap-3">
