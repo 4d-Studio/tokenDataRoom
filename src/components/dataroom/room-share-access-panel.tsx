@@ -1,8 +1,8 @@
 "use client";
 
 import type { KeyboardEvent } from "react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Link2, Send, Upload, UserRound, X } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Link2, Send, UserRound, X } from "lucide-react";
 
 import { CopyButton } from "@/components/dataroom/copy-button";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +11,6 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { shortenUrlForDisplay } from "@/lib/dataroom/helpers";
 import {
   peopleRowsFromBulkLists,
@@ -70,7 +62,7 @@ export type RoomShareAccessPanelProps = {
 };
 
 /**
- * Share surface: link, restricted toggle, people table, add flow with keyboard-friendly access picker, invites.
+ * Share surface: link, restricted toggle, simple people grid, invites.
  */
 export function RoomShareAccessPanel({
   effectiveShareUrl,
@@ -87,36 +79,15 @@ export function RoomShareAccessPanel({
   onSendInvites,
 }: RoomShareAccessPanelProps) {
   const [addEmailInput, setAddEmailInput] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerHighlight, setPickerHighlight] = useState<0 | 1>(0);
   const [inviteInput, setInviteInput] = useState("");
   const [inviteStaging, setInviteStaging] = useState<string[]>([]);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [bulkAllowed, setBulkAllowed] = useState("");
   const [bulkContributors, setBulkContributors] = useState("");
-  const pickerWrapRef = useRef<HTMLDivElement>(null);
-  const option0Ref = useRef<HTMLButtonElement>(null);
-  const option1Ref = useRef<HTMLButtonElement>(null);
 
   const candidate = addEmailInput.trim().toLowerCase();
   const candidateValid = EMAIL_RE.test(candidate);
   const alreadyListed = candidateValid && peopleRows.some((r) => r.email === candidate);
-
-  useEffect(() => {
-    if (!pickerOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (pickerWrapRef.current && !pickerWrapRef.current.contains(e.target as Node)) {
-        setPickerOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [pickerOpen]);
-
-  useEffect(() => {
-    if (!pickerOpen) return;
-    (pickerHighlight === 0 ? option0Ref : option1Ref).current?.focus();
-  }, [pickerOpen, pickerHighlight]);
 
   const addPerson = useCallback(
     (email: string, withUpload: boolean) => {
@@ -135,8 +106,6 @@ export function RoomShareAccessPanel({
       }));
       onPeopleRowsChange(rows);
       setAddEmailInput("");
-      setPickerOpen(false);
-      setPickerHighlight(0);
     },
     [peopleRows, onPeopleRowsChange],
   );
@@ -170,31 +139,9 @@ export function RoomShareAccessPanel({
   };
 
   const onAddKeyDown = (ev: KeyboardEvent<HTMLInputElement>) => {
-    if (ev.key === "Escape") {
-      setPickerOpen(false);
-      return;
-    }
-    if (!pickerOpen || !candidateValid || alreadyListed) {
-      if (ev.key === "Enter" && candidateValid && !alreadyListed) {
-        ev.preventDefault();
-        setPickerOpen(true);
-        setPickerHighlight(0);
-      }
-      return;
-    }
-    if (ev.key === "ArrowDown") {
+    if (ev.key === "Enter" && candidateValid && !alreadyListed) {
       ev.preventDefault();
-      setPickerHighlight((h) => (h === 0 ? 1 : 0));
-      return;
-    }
-    if (ev.key === "ArrowUp") {
-      ev.preventDefault();
-      setPickerHighlight((h) => (h === 0 ? 1 : 0));
-      return;
-    }
-    if (ev.key === "Enter") {
-      ev.preventDefault();
-      addPerson(candidate, pickerHighlight === 1);
+      addPerson(candidate, false);
     }
   };
 
@@ -213,44 +160,45 @@ export function RoomShareAccessPanel({
   }, [inviteInput]);
 
   const inviteTooMany = inviteStaging.length > MAX_RECIPIENT_INVITES_PER_SEND;
-  const listboxId = useId();
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/90 bg-card shadow-sm">
       <div className="border-b border-border/80 bg-muted/20 px-4 py-3 sm:px-5">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground">
-            <Link2 className="size-4" aria-hidden />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground">
+              <Link2 className="size-4" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-foreground">Room link</p>
+              <p className="truncate font-mono text-[10px] text-muted-foreground sm:max-w-[min(100%,28rem)]">
+                {shortenUrlForDisplay(effectiveShareUrl, 56)}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1 space-y-2">
-            <p className="text-xs font-semibold text-foreground">Share link</p>
-            <p className="break-all font-mono text-[11px] leading-snug text-muted-foreground">
-              {shortenUrlForDisplay(effectiveShareUrl, 72)}
-            </p>
-            <CopyButton
-              value={effectiveShareUrl}
-              label="Copy link"
-              variant="default"
-              size="sm"
-              className="h-8"
-              ariaLabel="Copy share link"
-              title="Copy link"
-            />
-          </div>
+          <CopyButton
+            value={effectiveShareUrl}
+            label="Copy link"
+            variant="default"
+            size="sm"
+            className="h-10 w-full shrink-0 px-4 text-sm font-semibold sm:w-auto sm:min-w-[8.5rem] bg-[var(--color-accent)] text-white hover:opacity-95 hover:text-white"
+            ariaLabel="Copy share link"
+            title="Copy link"
+          />
         </div>
       </div>
 
       <div className="space-y-5 px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2.5">
           <div className="min-w-0">
-            <p className="text-xs font-medium text-foreground">Restricted access</p>
-            <p className="text-[10px] text-muted-foreground">Only listed people can open this room.</p>
+            <p className="text-xs font-medium text-foreground">Only listed emails</p>
+            <p className="text-[10px] text-muted-foreground">Turn on to limit who can open the room.</p>
           </div>
           <Switch
             checked={restrictEnforced}
             disabled={isPending}
             onCheckedChange={onRestrictChange}
-            aria-label="Restrict to invited emails only"
+            aria-label="Only listed emails can open this room"
           />
         </div>
 
@@ -258,21 +206,20 @@ export function RoomShareAccessPanel({
           <div className="flex flex-wrap items-center gap-2">
             <UserRound className="size-4 text-muted-foreground" aria-hidden />
             <h3 id="people-access-heading" className="text-xs font-semibold text-foreground">
-              People & access
+              Who can open this room
             </h3>
             <Badge variant="secondary" className="ml-auto text-[10px] font-normal tabular-nums">
               {savedAllowedCount} saved · {slotsRemaining} left
             </Badge>
           </div>
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            <strong className="font-medium text-foreground">Room access</strong> means verify email, complete any NDA,
-            unlock with the room password, and view or download files. <strong className="font-medium text-foreground">Can upload files</strong> adds encrypted uploads on the share page only — it does not grant owner tools, signing admin, or
-            revoke/delete.
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            One row per email. Turn on <span className="font-medium text-foreground">Upload</span> if they may add
+            encrypted files on the share page (not owner tools).
           </p>
 
-          <div ref={pickerWrapRef} className="relative space-y-1.5">
+          <div className="space-y-2">
             <FieldLabel htmlFor="add-person-email" className="text-[11px] text-muted-foreground">
-              Add someone by email
+              Add email
             </FieldLabel>
             <Input
               id="add-person-email"
@@ -280,144 +227,88 @@ export function RoomShareAccessPanel({
               autoComplete="off"
               placeholder="name@company.com"
               value={addEmailInput}
-              onChange={(e) => {
-                setAddEmailInput(e.target.value);
-                const v = e.target.value.trim().toLowerCase();
-                setPickerOpen(EMAIL_RE.test(v) && !peopleRows.some((r) => r.email === v));
-                setPickerHighlight(0);
-              }}
-              onFocus={() => {
-                if (candidateValid && !alreadyListed) setPickerOpen(true);
-              }}
+              onChange={(e) => setAddEmailInput(e.target.value)}
               onKeyDown={onAddKeyDown}
-              role="combobox"
-              aria-expanded={pickerOpen}
-              aria-controls={pickerOpen ? listboxId : undefined}
-              aria-autocomplete="list"
-              className="h-9 text-sm"
+              className="h-10 text-sm"
             />
-            {pickerOpen && candidateValid && !alreadyListed ? (
-              <div
-                id={listboxId}
-                role="listbox"
-                aria-label="Choose access level"
-                className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-border bg-popover shadow-md sm:max-w-md"
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-10 flex-1 sm:flex-none"
+                disabled={!candidateValid || alreadyListed || isPending}
+                onClick={() => addPerson(candidate, false)}
               >
-                <button
-                  ref={option0Ref}
-                  type="button"
-                  role="option"
-                  aria-selected={pickerHighlight === 0}
-                  className={cn(
-                    "flex w-full items-start gap-2 border-b border-border/60 px-3 py-2.5 text-left text-sm outline-none",
-                    pickerHighlight === 0 ? "bg-muted/90" : "hover:bg-muted/80",
-                  )}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onMouseEnter={() => setPickerHighlight(0)}
-                  onClick={() => addPerson(candidate, false)}
-                >
-                  <span className="mt-0.5 font-medium text-foreground">Room access only</span>
-                  <span className="ml-auto shrink-0 rounded border border-border/80 bg-muted/40 px-1.5 py-px text-[10px] font-medium text-muted-foreground">
-                    View
-                  </span>
-                </button>
-                <button
-                  ref={option1Ref}
-                  type="button"
-                  role="option"
-                  aria-selected={pickerHighlight === 1}
-                  className={cn(
-                    "flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm outline-none",
-                    pickerHighlight === 1 ? "bg-muted/90" : "hover:bg-muted/80",
-                  )}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onMouseEnter={() => setPickerHighlight(1)}
-                  onClick={() => addPerson(candidate, true)}
-                >
-                  <span className="mt-0.5 font-medium text-foreground">Room access + can upload files</span>
-                  <span className="ml-auto flex shrink-0 gap-1">
-                    <Badge variant="outline" className="text-[10px] font-normal">
-                      View
-                    </Badge>
-                    <Badge variant="default" className="text-[10px] font-normal">
-                      Upload
-                    </Badge>
-                  </span>
-                </button>
-                <p className="border-t border-border/50 px-3 py-1.5 text-[9px] text-muted-foreground">
-                  ↑↓ to move · Enter to choose · Esc to close
-                </p>
-              </div>
-            ) : null}
+                Add — view only
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-10 flex-1 bg-[var(--color-accent)] text-white hover:opacity-95 hover:text-white sm:flex-none"
+                disabled={!candidateValid || alreadyListed || isPending}
+                onClick={() => addPerson(candidate, true)}
+              >
+                Add — can upload
+              </Button>
+            </div>
             {alreadyListed && candidateValid ? (
-              <p className="text-[10px] text-muted-foreground">This address is already in the table.</p>
+              <p className="text-[10px] text-muted-foreground">Already in the list.</p>
             ) : null}
           </div>
 
           {peopleRows.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border/70 bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">
-              No people yet. Type an email and choose an access level.
+              No one listed yet. Add an email above, then save.
             </p>
           ) : (
             <div className="overflow-hidden rounded-lg border border-border/60">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</TableHead>
-                    <TableHead className="text-[10px] uppercase tracking-wide text-muted-foreground">Access</TableHead>
-                    <TableHead className="w-[120px] text-right text-[10px] uppercase tracking-wide text-muted-foreground">
-                      Can upload files
-                    </TableHead>
-                    <TableHead className="w-12 pr-2 text-right text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {""}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {peopleRows.map((row) => (
-                    <TableRow key={row.email} className="text-[11px]">
-                      <TableCell className="max-w-[min(100%,14rem)] font-mono text-foreground sm:max-w-[20rem]">
-                        <span className="block truncate" title={row.email}>
-                          {row.email}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          <Badge variant="secondary" className="text-[10px] font-normal">
-                            Room access
-                          </Badge>
-                          {row.canUpload ? (
-                            <Badge variant="default" className="gap-0.5 text-[10px] font-normal">
-                              <Upload className="size-2.5 opacity-90" aria-hidden />
-                              Upload
-                            </Badge>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Switch
-                          checked={row.canUpload}
-                          disabled={isPending}
-                          onCheckedChange={(on) => setUploadFor(row.email, on)}
-                          aria-label={`Allow ${row.email} to upload encrypted files`}
-                        />
-                      </TableCell>
-                      <TableCell className="pr-1 text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-muted-foreground hover:text-destructive"
-                          aria-label={`Remove ${row.email}`}
-                          onClick={() => removePerson(row.email)}
-                        >
-                          <X className="size-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div
+                className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                role="row"
+              >
+                <span>Email</span>
+                <span className="text-center">Upload</span>
+                <span className="sr-only">Remove</span>
+              </div>
+              <ul className="divide-y divide-border/60">
+                {peopleRows.map((row) => (
+                  <li
+                    key={row.email}
+                    className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-2.5"
+                    role="row"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-[12px] text-foreground" title={row.email}>
+                        {row.email}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                        {row.canUpload ? "Opens room · may upload files" : "Opens room · view & download"}
+                      </p>
+                    </div>
+                    <div className="flex justify-center px-1">
+                      <Switch
+                        checked={row.canUpload}
+                        disabled={isPending}
+                        onCheckedChange={(on) => setUploadFor(row.email, on)}
+                        aria-label={`Allow uploads for ${row.email}`}
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-9 text-muted-foreground hover:text-destructive"
+                        aria-label={`Remove ${row.email}`}
+                        onClick={() => removePerson(row.email)}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -465,7 +356,7 @@ export function RoomShareAccessPanel({
             variant={peopleDirty ? "default" : "outline"}
             onClick={() => void onSavePeople()}
           >
-            Save people
+            Save list
           </Button>
         </section>
 
@@ -477,12 +368,12 @@ export function RoomShareAccessPanel({
           <div className="flex items-center gap-2">
             <Send className="size-4 text-[var(--color-accent)]" aria-hidden />
             <h3 id="send-invites-heading" className="text-xs font-semibold text-foreground">
-              Send invites
+              Email invites
             </h3>
           </div>
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            We email the share link and the room password from this browser session (never stored on our servers). Adds
-            people to the access list and turns on restricted access.
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            We send the link and room password from this browser. Adds addresses to the list above and turns on{" "}
+            <span className="font-medium text-foreground">only listed emails</span>.
           </p>
           {inviteStaging.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 rounded-lg border border-border/60 bg-muted/15 p-2">
@@ -504,7 +395,7 @@ export function RoomShareAccessPanel({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               type="email"
-              placeholder="Add email, then Add to list"
+              placeholder="Email to invite"
               value={inviteInput}
               onChange={(e) => setInviteInput(e.target.value)}
               onKeyDown={(e) => {
@@ -513,10 +404,10 @@ export function RoomShareAccessPanel({
                   addInviteToStaging();
                 }
               }}
-              className="h-9 text-sm"
+              className="h-10 text-sm"
             />
-            <Button type="button" size="sm" variant="secondary" onClick={addInviteToStaging}>
-              Add to send list
+            <Button type="button" size="sm" variant="secondary" className="h-10 shrink-0" onClick={addInviteToStaging}>
+              Add
             </Button>
           </div>
           {inviteTooMany ? (
@@ -525,9 +416,9 @@ export function RoomShareAccessPanel({
             </p>
           ) : null}
           {!inviteVaultPasswordReady ? (
-            <p className="rounded-md border border-amber-500/25 bg-amber-500/[0.06] px-2.5 py-2 text-[10px] leading-snug text-amber-950 dark:text-amber-200">
-              Enter the room password under <strong>Room documents</strong> first (8+ characters) so invite emails can
-              include it from this device.
+            <p className="rounded-md border border-amber-500/25 bg-amber-500/[0.06] px-2.5 py-2 text-[11px] leading-snug text-amber-950 dark:text-amber-200">
+              Open <strong>Room documents</strong> on the manage page and enter the room password here first (8+
+              characters) so we can put it in the invite email.
             </p>
           ) : null}
           <Button
