@@ -12,7 +12,7 @@ import { ProductPageIntro } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
 import { roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
-import { getPlanLimits } from "@/lib/dataroom/auth-store";
+import { getPlanLimits } from "@/lib/dataroom/plan-limits";
 import { describePlanForWorkspace } from "@/lib/dataroom/plan-descriptions";
 
 export const metadata: Metadata = {
@@ -136,13 +136,18 @@ export default async function WorkspaceSettingsPage() {
 
         <SettingsSection
           title="Logo"
-          description="Shown on shared room pages (recipient header) when NDA is enabled."
+          description={
+            user.plan === "free"
+              ? "Personal and Pro: your logo on share pages; Free shows Token branding. NDA rooms also show workspace context when enabled."
+              : "Shown on shared room pages (recipient header) when your workspace is tied to the room."
+          }
           preview={logoPreview}
         >
           <WorkspaceLogoUploader
             logoUrl={workspace.logoUrl}
             workspaceName={workspace.name}
             companyName={workspace.companyName}
+            plan={user.plan}
           />
         </SettingsSection>
 

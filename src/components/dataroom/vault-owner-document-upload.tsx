@@ -897,6 +897,12 @@ export function VaultOwnerDocumentUpload({
             }
 
             if (!res.ok || !data.metadata || !data.events) {
+              if (res.status === 409 && data.code === "FILE_NAME_CONFLICT") {
+                throw new Error(
+                  data.error ||
+                    "A file with this name already exists and you cannot replace it. Rename your file or ask the room owner to replace it.",
+                );
+              }
               throw new Error(data.error || "Upload failed.");
             }
 

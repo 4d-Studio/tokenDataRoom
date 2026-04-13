@@ -22,11 +22,11 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Token data room plans. New accounts include Plus during launch; paid upgrades coming soon.",
+    "Token data room plans — free tier, Personal from $9.95/mo, Pro from $29.95/mo with unlimited rooms and document signing.",
   alternates: { canonical: "/pricing" },
 };
 
-const annualNote = "Paid checkout coming soon — new accounts get Plus limits today";
+const annualNote = "Stripe checkout soon — monthly prices shown; annual discounts at launch";
 
 const plans = [
   {
@@ -38,88 +38,97 @@ const plans = [
     priceMonthly: "$0",
     priceAnnual: "$0",
     period: "forever",
-    description: "Reference tier. Limits below; new sign-ups currently receive Plus caps at no charge.",
+    description:
+      "Try the full flow: one room, encrypted uploads, optional NDA, and share links. Upgrade when you need your logo and more file capacity.",
     badge: null,
     cta: "Get started",
     ctaHref: "/login",
     features: {
-      rooms: "3 rooms",
-      filesPerRoom: "10 files total, pooled",
+      seats: "Solo",
+      rooms: "1 room",
+      filesPerRoom: "10 files",
       viewers: "Unlimited",
       ndaGating: true,
-      customLogo: true,
+      eSignatures: "NDA & acceptance",
+      customLogo: false,
+      removeBranding: false,
       customDomain: false,
       boardMinutes: false,
       emailSupport: false,
-      removeBranding: false,
     },
   },
   {
-    name: "Plus",
+    name: "Personal",
     slug: "plus" as const,
-    comingSoon: true,
-    featured: true,
+    comingSoon: false,
+    featured: false,
     accent: false,
-    priceMonthly: "$9.99",
-    /** Effective monthly when paying yearly ($96/12). */
-    priceAnnual: "$8",
-    /** Shown after annual line — total yearly charge. */
-    annualTotalLabel: "$96/year",
+    priceMonthly: "$9.95",
+    priceAnnual: "$8.29",
+    annualTotalLabel: "~$99/year",
     period: "/month",
     description:
-      "For people who share sensitive files often. Checkout soon — included for new accounts now.",
-    badge: "Launch · included now",
+      "One seat, one room — ideal for a single pitch, vendor packet, or diligence bundle. Your logo, no Token branding on the share, up to 500 files.",
+    badge: "Checkout soon",
     cta: "Get started",
     ctaHref: "/login",
     features: {
-      rooms: "Unlimited rooms",
-      filesPerRoom: "500 files / room",
+      seats: "1 seat",
+      rooms: "1 room",
+      filesPerRoom: "500 files",
       viewers: "Unlimited",
       ndaGating: true,
+      eSignatures: "Room signing + certificates",
       customLogo: true,
-      customDomain: true,
+      removeBranding: true,
+      customDomain: false,
       boardMinutes: false,
       emailSupport: true,
-      removeBranding: false,
     },
   },
   {
-    name: "Unicorn",
+    name: "Pro",
     slug: "unicorn" as const,
-    comingSoon: true,
-    featured: false,
-    accent: true,
-    priceMonthly: "$99.99",
-    priceAnnual: "$79.99",
+    comingSoon: false,
+    featured: true,
+    accent: false,
+    priceMonthly: "$29.95",
+    priceAnnual: "$24.96",
+    annualTotalLabel: "~$299/year",
     period: "/month",
-    description: "Board workflows, unlimited scale, and white-label polish when you need the full stack.",
-    badge: "Coming soon",
+    description:
+      "Unlimited rooms and files, custom domain, board minutes, and document signing workflows comparable to DocuSign for in-room deals.",
+    badge: "Most popular",
     cta: "Get started",
     ctaHref: "/login",
     features: {
-      rooms: "Unlimited rooms",
-      filesPerRoom: "Unlimited files",
+      seats: "Team-ready",
+      rooms: "Unlimited",
+      filesPerRoom: "Unlimited",
       viewers: "Unlimited",
       ndaGating: true,
+      eSignatures: "Full signing · DocuSign-class",
       customLogo: true,
+      removeBranding: true,
       customDomain: true,
       boardMinutes: true,
       emailSupport: true,
-      removeBranding: true,
     },
   },
 ] as const;
 
 const comparisonRows = [
+  { key: "seats", label: "Seats" },
   { key: "rooms", label: "Rooms" },
   { key: "filesPerRoom", label: "Files" },
-  { key: "viewers", label: "Viewers" },
+  { key: "viewers", label: "Visitors" },
   { key: "ndaGating", label: "NDA gating" },
-  { key: "customLogo", label: "Workspace logo" },
+  { key: "eSignatures", label: "Document signing" },
+  { key: "customLogo", label: "Your logo" },
+  { key: "removeBranding", label: "Remove Token branding" },
   { key: "customDomain", label: "Custom domain" },
   { key: "boardMinutes", label: "Board minutes" },
   { key: "emailSupport", label: "Email support" },
-  { key: "removeBranding", label: "Remove Token branding" },
 ] as const;
 
 const includedEverywhere = [
@@ -158,23 +167,27 @@ const includedEverywhere = [
 const faq = [
   {
     q: "Can I change plans later?",
-    a: "Yes. When paid checkout launches, you can move between tiers. Until then, new accounts use Plus-level limits at no charge.",
+    a: "Yes. When Stripe checkout is live you can move between Free, Personal, and Pro. Until then, new accounts start on Free limits.",
   },
   {
     q: "What counts as a viewer?",
-    a: "Anyone who opens your share link. There is no per-viewer fee on current tiers.",
+    a: "Anyone who opens your share link. There is no per-viewer fee.",
   },
   {
     q: "How do NDAs work?",
     a: "Turn NDA on per room. Recipients sign in the browser; you download signed PDFs from manage. Customize the template under Workspace settings.",
   },
   {
-    q: "What does Free “10 files pooled” mean?",
-    a: "Up to 10 encrypted files across all rooms combined (not 10 per room). Upgrade to Plus for 500 files per room.",
+    q: "Why is Personal limited to one room?",
+    a: "Personal is priced for a single active deal (one pitch, one vendor, one diligence set). Pro removes the room cap for teams running many rooms at once.",
+  },
+  {
+    q: "What does “DocuSign-class” mean on Pro?",
+    a: "In-room document signing, certificates, and workflows suitable for investor and vendor packets — without the overhead of a full enterprise e-sign suite. Exact quotas ship with billing.",
   },
   {
     q: "What are board minutes?",
-    a: "A structured minute-taking workspace inside a room (Unicorn). Due soon as billing goes live.",
+    a: "Structured minute-taking inside a room on the Pro plan.",
   },
   {
     q: "Is my data encrypted?",
@@ -215,8 +228,8 @@ export default function PricingPage() {
             Straightforward tiers. Heavyweight outcomes.
           </h1>
           <p className="tkn-support mx-auto mt-3 max-w-xl text-[0.9375rem] leading-relaxed">
-            Lighter than Dropbox or Box for deal-by-deal sharing, and far less overhead than full e-sign suites when
-            you only need password + optional NDA + a trail you control.
+            Open, founder-friendly data rooms: encrypted sharing, optional NDAs, and signing that scales on Pro — without
+            the per-seat sticker shock of legacy pitch tools.
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
@@ -226,7 +239,7 @@ export default function PricingPage() {
             </span>
             <span className="flex items-center gap-1.5 text-xs text-[var(--tkn-text-support)]">
               <Sparkles className="size-4 text-[var(--color-accent)]" />
-              Plus limits today
+              Free tier · fair paid upgrades
             </span>
           </div>
         </div>
@@ -242,8 +255,9 @@ export default function PricingPage() {
           <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Included on every plan
           </h2>
-          <p className="mx-auto mt-2 max-w-lg text-center text-sm text-[var(--tkn-text-support)]">
-            Product features you get regardless of tier — limits above mainly cap rooms, files, and premium add-ons.
+                   <p className="mx-auto mt-2 max-w-lg text-center text-sm text-[var(--tkn-text-support)]">
+            Core product behavior is the same on every tier — plans mainly differ by seats, room count, file caps, branding,
+            domain, and signing depth.
           </p>
           <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {includedEverywhere.map(({ icon: Icon, title, body }) => (
@@ -265,7 +279,9 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <div
               key={plan.name}
-              id={plan.slug === "plus" ? "plan-plus" : undefined}
+              id={
+                plan.slug === "plus" ? "plan-personal" : plan.slug === "unicorn" ? "plan-pro" : undefined
+              }
               className={cn(
                 "relative flex flex-col rounded-2xl border bg-white p-6 pt-8 shadow-sm transition-shadow",
                 plan.featured &&
@@ -290,31 +306,17 @@ export default function PricingPage() {
               <div className="flex flex-1 flex-col">
                 <div className="label-title text-[0.7rem]">{plan.name}</div>
 
-                {plan.comingSoon ? (
-                  <div className="mt-3">
-                    <p className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.65rem]">
-                      {plan.featured ? "Included" : "Coming soon"}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--tkn-text-fine)]">
-                      Planned from {plan.priceMonthly}
-                      {plan.period}
-                      <span>
-                        {" "}
-                        · {plan.priceAnnual}/mo billed annually
-                        {"annualTotalLabel" in plan && plan.annualTotalLabel
-                          ? ` (${plan.annualTotalLabel})`
-                          : ""}
-                      </span>
-                    </p>
-                  </div>
-                ) : (
-                  <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                      {plan.priceMonthly}
-                    </span>
-                    <span className="text-sm text-[var(--tkn-text-support)]">{plan.period}</span>
-                  </div>
-                )}
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                    {plan.priceMonthly}
+                  </span>
+                  <span className="text-sm text-[var(--tkn-text-support)]">{plan.period}</span>
+                </div>
+                {"annualTotalLabel" in plan ? (
+                  <p className="mt-1 text-xs text-[var(--tkn-text-fine)]">
+                    ~{plan.priceAnnual}/mo billed annually ({plan.annualTotalLabel})
+                  </p>
+                ) : null}
 
                 <p className="mt-3 text-sm leading-relaxed text-[var(--tkn-text-support)]">{plan.description}</p>
 
@@ -330,10 +332,6 @@ export default function PricingPage() {
                 <ul className="flex flex-col gap-2.5 text-sm">
                   {comparisonRows.map(({ key, label }) => {
                     const value = plan.features[key as keyof typeof plan.features];
-                    const isSoon =
-                      (key === "customDomain" && plan.comingSoon) ||
-                      (key === "boardMinutes" && plan.name !== "Unicorn") ||
-                      (key === "emailSupport" && plan.comingSoon);
                     return (
                       <li key={key} className="flex items-start justify-between gap-3">
                         <span className="text-[var(--tkn-text-support)]">{label}</span>
@@ -342,17 +340,14 @@ export default function PricingPage() {
                             value ? (
                               <span className="inline-flex items-center gap-1 font-medium text-foreground">
                                 <Check className="size-4 shrink-0 text-[var(--color-accent)]" />
-                                {isSoon ? (
-                                  <span className="text-[0.65rem] font-normal uppercase tracking-wide text-muted-foreground">
-                                    soon
-                                  </span>
-                                ) : null}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )
                           ) : (
-                            <span className="font-medium text-foreground">{value}</span>
+                            <span className="max-w-[12rem] font-medium text-foreground sm:max-w-none">
+                              {value}
+                            </span>
                           )}
                         </span>
                       </li>
@@ -398,10 +393,6 @@ export default function PricingPage() {
                     <td className="py-2.5 pl-4 text-[var(--tkn-text-support)] sm:pl-5">{label}</td>
                     {plans.map((plan) => {
                       const value = plan.features[key as keyof typeof plan.features];
-                      const isSoon =
-                        (key === "customDomain" && plan.comingSoon) ||
-                        (key === "boardMinutes" && plan.name !== "Unicorn") ||
-                        (key === "emailSupport" && plan.comingSoon);
                       return (
                         <td
                           key={plan.name}
@@ -414,9 +405,6 @@ export default function PricingPage() {
                             value ? (
                               <span className="inline-flex items-center justify-center gap-1">
                                 <Check className="size-4 text-[var(--color-accent)]" />
-                                {isSoon ? (
-                                  <span className="text-[0.65rem] uppercase text-muted-foreground">soon</span>
-                                ) : null}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>
@@ -436,14 +424,10 @@ export default function PricingPage() {
                       key={plan.name}
                       className={cn("py-3 text-center", plan.featured && "bg-[var(--color-accent)]/[0.06]")}
                     >
-                      {plan.comingSoon ? (
-                        <span className="text-sm font-medium text-[var(--tkn-text-support)]">See card</span>
-                      ) : (
-                        <>
-                          {plan.priceMonthly}
-                          <span className="font-normal text-[var(--tkn-text-fine)]"> {plan.period}</span>
-                        </>
-                      )}
+                      <>
+                        {plan.priceMonthly}
+                        <span className="font-normal text-[var(--tkn-text-fine)]"> {plan.period}</span>
+                      </>
                     </td>
                   ))}
                 </tr>

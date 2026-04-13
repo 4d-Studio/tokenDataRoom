@@ -14,6 +14,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (process.env.TKN_ALLOW_PLAN_OVERRIDE !== "1") {
+    return NextResponse.json(
+      {
+        error:
+          "Plan changes are not available through this endpoint. Use checkout when billing is enabled, or set TKN_ALLOW_PLAN_OVERRIDE=1 for local testing.",
+      },
+      { status: 403 },
+    );
+  }
+
   const body = schema.safeParse(await request.json());
   if (!body.success) {
     return NextResponse.json({ error: "Invalid plan." }, { status: 400 });

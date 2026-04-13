@@ -13,7 +13,8 @@ import { fileURLToPath } from "node:url";
 const e2eDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(e2eDir, "..");
 
-const SLUG = "fm-e2e00000001";
+/** Must match `fm-` + 12 hex chars (see `isValidPublicVaultSlug`). */
+const SLUG = "fm-e2e000000010";
 const REQUEST_ID = "22222222-2222-2222-2222-222222222222";
 const SIGNER_ID = "33333333-3333-3333-3333-333333333333";
 

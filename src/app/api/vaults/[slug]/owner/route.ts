@@ -59,6 +59,8 @@ const ownerPostSchema = z.discriminatedUnion("action", [
     message: z.string().trim().max(240).optional(),
     senderName: z.string().trim().min(2).max(60).optional(),
     senderCompany: z.string().trim().max(60).optional(),
+    meetingScheduleUrl: z.string().trim().max(2048).optional(),
+    ownerTelegram: z.string().trim().max(120).optional(),
   }),
   z.object({
     ownerKey: z.string().min(32).max(128),
@@ -182,6 +184,7 @@ export async function POST(
   try {
     body = await request.json();
   } catch {
+    console.warn("[vault owner] invalid or oversized JSON body", { slug });
     return NextResponse.json(
       { error: "Request body was too large or invalid. Try again with a smaller payload." },
       { status: 400 },
@@ -189,6 +192,10 @@ export async function POST(
   }
   const parsed = ownerPostSchema.safeParse(body);
   if (!parsed.success) {
+    console.warn("[vault owner] request body failed validation", {
+      slug,
+      issues: parsed.error.flatten(),
+    });
     return NextResponse.json({ error: "Invalid request.", details: parsed.error.flatten() }, { status: 400 });
   }
   if (!verifyOwnerKey(parsed.data.ownerKey, metadata.ownerKey)) {
@@ -212,6 +219,29 @@ export async function POST(
     if (parsed.data.message !== undefined) updates.message = parsed.data.message;
     if (parsed.data.senderName !== undefined) updates.senderName = parsed.data.senderName;
     if (parsed.data.senderCompany !== undefined) updates.senderCompany = parsed.data.senderCompany;
+    if (parsed.data.meetingScheduleUrl !== undefined) {
+      const u = parsed.data.meetingScheduleUrl.trim();
+      if (u) {
+        try {
+          const url = new URL(u);
+          if (url.protocol !== "https:") {
+            console.warn("[vault owner] edit_room meeting URL not https", { slug });
+            return NextResponse.json(
+              { error: "Meeting link must use https://" },
+              { status: 400 },
+            );
+          }
+        } catch {
+          console.warn("[vault owner] edit_room meeting URL invalid", { slug });
+          return NextResponse.json({ error: "Meeting link must be a valid https URL." }, { status: 400 });
+        }
+      }
+      updates.meetingScheduleUrl = u ? u : undefined;
+    }
+    if (parsed.data.ownerTelegram !== undefined) {
+      const tg = parsed.data.ownerTelegram.trim();
+      updates.ownerTelegram = tg ? tg : undefined;
+    }
     const nextMetadata = { ...metadata, ...updates };
     await storage.updateVaultMetadata(nextMetadata);
     const latestMetadata = await storage.getVaultMetadata(slug);

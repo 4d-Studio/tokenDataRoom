@@ -31,13 +31,15 @@ Production runs on **Railway** (`railway.toml`: release `npm run db:migrate`, st
 
 ## Plan limits (src/lib/dataroom/auth-store.ts PLAN_LIMITS)
 
-| Plan    | Rooms | Files/room | Custom Domain | Board Minutes |
-|---------|-------|------------|---------------|---------------|
-| Free    | 3     | 10 pooled  | ❌            | ❌            |
-| Plus    | ∞     | 500        | ✅            | ❌            |
-| Unicorn | ∞     | ∞          | ✅            | ✅            |
+Marketing vs slug: **Personal** = `plus`, **Pro** = `unicorn`.
 
-Free plan: 10 files total pooled across all 3 rooms. Plus: custom domain included. Unicorn: unlimited + board minutes. Plan limits drive UI gates in CreateVaultForm.
+| Plan     | Slug      | Rooms     | Files     | Custom Domain | Board Minutes |
+|----------|-----------|-----------|-----------|---------------|---------------|
+| Free     | `free`    | 1         | 10 total  | No            | No            |
+| Personal | `plus`    | 1         | 500       | No            | No            |
+| Pro      | `unicorn` | Unlimited | Unlimited | Yes           | Yes           |
+
+Plan limits drive UI gates in `CreateVaultForm` (room cap from `getPlanLimits`).
 
 ## Working areas
 

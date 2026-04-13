@@ -6,6 +6,7 @@ import {
   Clock,
   Download,
   Eye,
+  FileSignature,
   FileText,
   Link2,
   Lock,
@@ -60,15 +61,21 @@ const features = [
     body: "Files are encrypted in the browser with AES-256-GCM. We store ciphertext; your password never reaches our servers.",
   },
   {
+    icon: FileSignature,
+    title: "NDA & document signing",
+    body: "Recipients can accept your terms and sign documents in the room — with certificates you can download for your records.",
+  },
+  {
     icon: Eye,
     title: "See every open and download",
-    body: "Track access, NDA signatures, and file downloads — then revoke or restore the room anytime.",
+    body: "Track access, signatures, and file downloads — then revoke or restore the room anytime.",
   },
 ] as const;
 
 const trustBadges = [
   "Client-side encryption",
   "Optional NDA gate",
+  "Document signing in the room",
   "Open / download audit trail",
   "Revoke access anytime",
   "No full-drive exposure",
@@ -90,7 +97,7 @@ const steps = [
   {
     num: "03",
     title: "Share one link, track everything",
-    body: "Send the share link and password. Watch opens, signatures, and downloads. Revoke or restore whenever you need to.",
+    body: "Send the share link and password. Watch opens, NDA and document signatures, and downloads. Revoke or restore whenever you need to.",
     icon: Link2,
   },
 ] as const;
@@ -98,6 +105,7 @@ const steps = [
 const comparisonRows = [
   { label: "File access control", token: true, generic: false, esign: false },
   { label: "Optional NDA gate", token: true, generic: false, esign: true },
+  { label: "In-room document signing", token: true, generic: false, esign: true },
   { label: "Open / download tracking", token: true, generic: false, esign: false },
   { label: "Client-side encryption", token: true, generic: false, esign: false },
   { label: "Revoke link instantly", token: true, generic: false, esign: false },
@@ -135,9 +143,9 @@ const faqItems = [
   },
 ] as const;
 
-const homePageTitle = `${SITE_NAME} — Virtual data room & encrypted deal rooms for outsiders`;
+const homePageTitle = `${SITE_NAME} — Encrypted deal rooms, NDA & signing for outsiders`;
 
-const homeOgTitle = `${SITE_NAME} — Virtual data rooms for secure external sharing`;
+const homeOgTitle = `${SITE_NAME} — Virtual data rooms with encryption & document signing`;
 
 export const metadata: Metadata = {
   title: { absolute: homePageTitle },
@@ -193,10 +201,12 @@ function buildHomeJsonLd(origin: string) {
         operatingSystem: "Web browser",
         description: SITE_DESCRIPTION,
         offers: {
-          "@type": "Offer",
-          price: "0",
+          "@type": "AggregateOffer",
           priceCurrency: "USD",
-          description: "Free plan available",
+          lowPrice: "0",
+          highPrice: "29.95",
+          offerCount: 3,
+          description: "Free tier; Personal from $9.95/mo; Pro from $29.95/mo (see pricing)",
         },
       },
     ],
@@ -357,8 +367,8 @@ export default async function Home() {
 
             <p className="mt-4 max-w-[40rem] text-base leading-relaxed text-[var(--tkn-text-support)] sm:text-lg sm:leading-relaxed">
               Token gives outside counsel, investors, and buyers access to one
-              protected room — with optional NDA, password gating, and a clear
-              audit trail.
+              protected room — optional NDA, in-room document signing, password
+              gating, and a clear audit trail.
             </p>
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -374,7 +384,7 @@ export default async function Home() {
             </div>
 
             <p className="mt-3 text-xs text-[var(--tkn-text-fine)]">
-              Free to start. No credit card. Plus from $9.99/mo.
+              Free to start. No credit card. Personal from $9.95/mo · Pro from $29.95/mo.
             </p>
           </div>
 
@@ -403,7 +413,7 @@ export default async function Home() {
       {/* ── Feature cards — main bg ───────────────────── */}
       <section className="py-16 sm:py-24">
         <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
-          <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-5">
             {features.map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
@@ -595,7 +605,7 @@ export default async function Home() {
             </Button>
           </div>
           <p className="mt-3 text-xs text-[var(--tkn-text-fine)]">
-            Free to start · Plus from $9.99/mo
+            Free to start · Personal $9.95/mo · Pro $29.95/mo
           </p>
         </div>
       </section>

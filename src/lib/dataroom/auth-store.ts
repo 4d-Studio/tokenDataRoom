@@ -11,13 +11,15 @@ import {
 import type { WorkspaceRoomSummary } from "@/lib/dataroom/workspace-types";
 import type { VaultEvent } from "@/lib/dataroom/types";
 
+import type { WorkspacePlan } from "@/lib/dataroom/plan-limits";
+
 export type TknUser = {
   id: string;
   email: string;
   createdAt: string;
   lastLoginAt: string;
   workspaceId?: string;
-  plan: "free" | "plus" | "unicorn";
+  plan: WorkspacePlan;
 };
 
 export type WorkspaceRecord = {
@@ -164,15 +166,11 @@ export const verifyLoginCode = async (email: string, code: string) => {
       email: normalizedEmail,
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
-      plan: "plus",
+      plan: "free",
     };
     state.users.push(user);
   } else {
     user.lastLoginAt = new Date().toISOString();
-    /* Launch: everyone on legacy Free gets Plus limits on next sign-in. */
-    if (user.plan === "free") {
-      user.plan = "plus";
-    }
   }
 
   await writeState(state);
@@ -194,43 +192,8 @@ export const updateUserPlan = async (userId: string, plan: TknUser["plan"]) => {
   return user;
 };
 
-export type PlanLimits = {
-  rooms: number;
-  filesPerRoom: number;
-  viewersPerMonth: number;
-  ndaCollectedPerMonth: number;
-  boardRoomMinutes: boolean;
-  customDomain: boolean;
-};
-
-export const PLAN_LIMITS: Record<TknUser["plan"], PlanLimits> = {
-  free: {
-    rooms: 3,
-    filesPerRoom: 10, // pooled across all rooms
-    viewersPerMonth: -1,
-    ndaCollectedPerMonth: 0,
-    boardRoomMinutes: false,
-    customDomain: false,
-  },
-  plus: {
-    rooms: -1, // unlimited
-    filesPerRoom: 500,
-    viewersPerMonth: -1, // unlimited
-    ndaCollectedPerMonth: 100,
-    boardRoomMinutes: false,
-    customDomain: true,
-  },
-  unicorn: {
-    rooms: -1,
-    filesPerRoom: -1,
-    viewersPerMonth: -1,
-    ndaCollectedPerMonth: -1,
-    boardRoomMinutes: true,
-    customDomain: true,
-  },
-};
-
-export const getPlanLimits = (plan: TknUser["plan"]): PlanLimits => PLAN_LIMITS[plan];
+export type { PlanLimits } from "@/lib/dataroom/plan-limits";
+export { PLAN_LIMITS, getPlanLimits } from "@/lib/dataroom/plan-limits";
 
 export const getWorkspaceForUser = async (userId: string) => {
   const state = await readState();

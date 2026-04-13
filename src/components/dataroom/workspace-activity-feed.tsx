@@ -87,6 +87,12 @@ const EVENT_CONFIG: Record<
     label: "File added",
     action: "uploaded a document to",
   },
+  file_replaced: {
+    icon: RefreshCw,
+    color: "text-[var(--color-accent)]",
+    label: "File updated",
+    action: "uploaded a new version in",
+  },
   file_renamed: {
     icon: PencilLine,
     color: "text-muted-foreground",

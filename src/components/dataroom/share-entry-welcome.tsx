@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Clock } from "lucide-react";
+import { Calendar, Clock, Send } from "lucide-react";
 
+import { telegramProfileUrl } from "@/lib/dataroom/helpers";
 import { cn } from "@/lib/utils";
 
 export type ShareEntryBranding = {
@@ -17,6 +18,10 @@ export type ShareEntryBranding = {
   expiresLabel?: string | null;
   /** Optional short note from the owner. */
   roomNote?: string | null;
+  /** Optional HTTPS scheduling link (e.g. Calendly), shown to recipients. */
+  meetingScheduleUrl?: string | null;
+  /** Optional Telegram handle or profile URL. */
+  ownerTelegram?: string | null;
   /** Strip outer card chrome so this sits inside a parent shell (e.g. below secure link). */
   embedInParent?: boolean;
   /** Hide host label when the full URL is shown nearby (secure link row). */
@@ -42,6 +47,8 @@ export function ShareRecipientCompactHeader({
   senderAttribution,
   expiresLabel,
   roomNote,
+  meetingScheduleUrl,
+  ownerTelegram,
   embedInParent = false,
   suppressHostBadge = false,
 }: ShareEntryBranding) {
@@ -51,7 +58,10 @@ export function ShareRecipientCompactHeader({
   const sender = senderAttribution?.trim();
   const note = roomNote?.trim();
   const expiry = expiresLabel?.trim();
-  const hasContext = Boolean(sender || expiry || note);
+  const meeting = meetingScheduleUrl?.trim() ?? "";
+  const telegramRaw = ownerTelegram?.trim() ?? "";
+  const telegramHref = telegramRaw ? telegramProfileUrl(telegramRaw) : null;
+  const hasContext = Boolean(sender || expiry || note || meeting || telegramRaw);
   const showHostBadge = !suppressHostBadge;
   /** Logo mark: larger circle overlap on banner for a clearer “workspace” anchor. */
   const logoOverlap =
@@ -163,30 +173,65 @@ export function ShareRecipientCompactHeader({
 
           {hasContext ? (
             <div className="mt-6 space-y-3 sm:mt-7">
-              <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
-                {sender ? (
-                  <div className="rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      Shared by
-                    </p>
-                    <p className="mt-1.5 text-sm font-medium leading-snug text-foreground">{sender}</p>
-                  </div>
-                ) : null}
-                {expiry ? (
-                  <div className="rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
-                    <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      <Clock className="size-3 opacity-80" aria-hidden />
-                      Expires
-                    </p>
-                    <p className="mt-1.5 text-sm font-medium leading-snug text-foreground">{expiry}</p>
-                  </div>
-                ) : null}
-              </div>
+              {sender || expiry ? (
+                <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+                  {sender ? (
+                    <div className="rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Shared by
+                      </p>
+                      <p className="mt-1.5 text-sm font-medium leading-snug text-foreground">{sender}</p>
+                    </div>
+                  ) : null}
+                  {expiry ? (
+                    <div className="rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        <Clock className="size-3 opacity-80" aria-hidden />
+                        Expires
+                      </p>
+                      <p className="mt-1.5 text-sm font-medium leading-snug text-foreground">{expiry}</p>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               {note ? (
                 <p className="text-pretty rounded-xl border border-dashed border-[color:var(--tkn-panel-border)] bg-muted/20 px-4 py-3 text-xs leading-relaxed text-[color:var(--tkn-text-support)] sm:text-[13px]">
                   <span className="font-semibold text-foreground/80">Note · </span>
                   {note}
                 </p>
+              ) : null}
+              {meeting || telegramRaw ? (
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  {meeting && /^https:\/\//i.test(meeting) ? (
+                    <a
+                      href={meeting}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 px-4 py-3 text-sm font-medium text-[var(--color-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition-colors hover:bg-muted/80"
+                    >
+                      <Calendar className="size-4 shrink-0 opacity-90" aria-hidden />
+                      Book a meeting
+                    </a>
+                  ) : null}
+                  {telegramRaw ? (
+                    telegramHref ? (
+                      <a
+                        href={telegramHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--tkn-panel-border)] bg-[color:var(--color-background-muted)]/65 px-4 py-3 text-sm font-medium text-[var(--color-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition-colors hover:bg-muted/80"
+                      >
+                        <Send className="size-4 shrink-0 opacity-90" aria-hidden />
+                        Telegram
+                      </a>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 rounded-xl border border-dashed border-[color:var(--tkn-panel-border)] px-4 py-3 text-xs text-[color:var(--tkn-text-support)]">
+                        <Send className="size-4 shrink-0 opacity-70" aria-hidden />
+                        Telegram: <span className="font-mono text-foreground">{telegramRaw}</span>
+                      </span>
+                    )
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ) : null}

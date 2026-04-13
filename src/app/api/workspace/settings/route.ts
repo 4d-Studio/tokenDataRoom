@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/dataroom/auth";
 import { getWorkspaceForUser, updateWorkspace } from "@/lib/dataroom/auth-store";
+import { planAllowsWorkspaceLogo } from "@/lib/dataroom/plan-limits";
 
 const patchSchema = z.object({
   ndaTemplate: z.string().max(12_000).optional(),
@@ -32,6 +33,12 @@ export async function PATCH(request: Request) {
 
   // Validate logoUrl is a safe image format
   if (logoUrl !== undefined) {
+    if (logoUrl && !planAllowsWorkspaceLogo(user.plan)) {
+      return NextResponse.json(
+        { error: "Workspace logo is included on Personal and Pro. Upgrade on the pricing page." },
+        { status: 403 },
+      );
+    }
     const isDataUrl = logoUrl.startsWith("data:image/");
     const isHttpUrl =
       logoUrl.startsWith("https://") &&

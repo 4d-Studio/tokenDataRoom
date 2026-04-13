@@ -47,7 +47,7 @@ test.beforeAll(async ({ request }) => {
   const pageUrl = readFileSync(join(e2eDir, ".sign-url"), "utf8").trim();
   const token = new URL(pageUrl).searchParams.get("token");
   const boot = await request.get(
-    `http://127.0.0.1:${port}/api/vaults/fm-e2e00000001/signing/22222222-2222-2222-2222-222222222222?token=${encodeURIComponent(token ?? "")}`,
+    `http://127.0.0.1:${port}/api/vaults/fm-e2e000000010/signing/22222222-2222-2222-2222-222222222222?token=${encodeURIComponent(token ?? "")}`,
   );
   if (!boot.ok()) {
     const body = await boot.text();
@@ -74,8 +74,8 @@ test.describe("Document signing (browser smoke)", () => {
     await page.getByPlaceholder("Jane Doe").fill("Pat E2E Signer");
     await page.getByRole("button", { name: /sign and continue/i }).click();
 
-    await expect(
-      page.getByRole("heading", { name: /signing complete/i }).or(page.getByText(/everyone has signed/i)),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: /signing complete/i })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 });

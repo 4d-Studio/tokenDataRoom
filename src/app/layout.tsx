@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 
 import "./globals.css";
+import { DeployVersionBanner } from "@/components/dataroom/deploy-version-banner";
 import { NavigationProgressDeferred } from "@/components/dataroom/navigation-progress-deferred";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { getAppRelease } from "@/lib/dataroom/app-release";
 import {
   getPublicSiteUrl,
   SITE_DESCRIPTION,
@@ -66,12 +68,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const appRelease = getAppRelease();
   return (
     <html lang="en" className={sansFont.variable}>
       <body>
         <TooltipProvider>
           <NavigationProgressDeferred />
           {children}
+          <DeployVersionBanner initialVersion={appRelease} />
         </TooltipProvider>
       </body>
     </html>

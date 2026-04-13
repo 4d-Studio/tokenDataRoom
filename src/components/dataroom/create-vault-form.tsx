@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -32,6 +32,8 @@ import {
   productFieldClass,
   productTextareaClass,
 } from "@/components/dataroom/product-ui";
+import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
+import { getPlanLimits } from "@/lib/dataroom/plan-limits";
 import { DEFAULT_EXPIRATION_DAYS } from "@/lib/dataroom/types";
 
 type CreationResult = {
@@ -157,13 +159,18 @@ function DetailsStep({
   expiresInDays,
   requiresNda,
   ndaText,
-  defaultNdaText,
+  ndaDisclosingParty,
+  ndaReceivingParty,
+  hasWorkspaceNdaTemplate,
+  previewNdaBody,
   onSenderNameChange,
   onSenderCompanyChange,
   onMessageChange,
   onExpiresChange,
   onRequiresNdaChange,
   onNdaTextChange,
+  onNdaDisclosingPartyChange,
+  onNdaReceivingPartyChange,
   onResetNda,
 }: {
   senderName: string;
@@ -172,13 +179,18 @@ function DetailsStep({
   expiresInDays: number;
   requiresNda: boolean;
   ndaText: string;
-  defaultNdaText: string;
+  ndaDisclosingParty: string;
+  ndaReceivingParty: string;
+  hasWorkspaceNdaTemplate: boolean;
+  previewNdaBody: string;
   onSenderNameChange: (v: string) => void;
   onSenderCompanyChange: (v: string) => void;
   onMessageChange: (v: string) => void;
   onExpiresChange: (v: number) => void;
   onRequiresNdaChange: (v: boolean) => void;
   onNdaTextChange: (v: string) => void;
+  onNdaDisclosingPartyChange: (v: string) => void;
+  onNdaReceivingPartyChange: (v: string) => void;
   onResetNda: () => void;
 }) {
   return (
@@ -264,13 +276,53 @@ function DetailsStep({
         </Field>
       </div>
 
+      {requiresNda && hasWorkspaceNdaTemplate ? (
+        <div className="rounded-lg border border-border/70 bg-muted/15 px-3 py-2 text-sm text-[var(--tkn-text-support)]">
+          This workspace has a saved NDA template. You can edit it for this room only below.
+        </div>
+      ) : null}
+
+      {requiresNda && !hasWorkspaceNdaTemplate ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="step-nda-disclosing">Disclosing party</FieldLabel>
+            <Input
+              id="step-nda-disclosing"
+              autoComplete="organization"
+              className={productFieldClass}
+              placeholder="Legal name you represent (e.g. your company)"
+              value={ndaDisclosingParty}
+              onChange={(e) => onNdaDisclosingPartyChange(e.target.value)}
+              maxLength={200}
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Appears first in the agreement header and intro.
+            </p>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="step-nda-receiving">Other party</FieldLabel>
+            <Input
+              id="step-nda-receiving"
+              className={productFieldClass}
+              placeholder='e.g. "Acme Ventures LLC" or "Prospective investor"'
+              value={ndaReceivingParty}
+              onChange={(e) => onNdaReceivingPartyChange(e.target.value)}
+              maxLength={200}
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Who the recipient acts as in this deal (name or short description).
+            </p>
+          </Field>
+        </div>
+      ) : null}
+
       {requiresNda && (
         <Field>
           <FieldLabel htmlFor="step-nda">NDA text</FieldLabel>
           <Textarea
             id="step-nda"
             className={`${productTextareaClass} min-h-32`}
-            value={ndaText || defaultNdaText}
+            value={ndaText || previewNdaBody}
             onChange={(e) => onNdaTextChange(e.target.value)}
           />
           <Button
@@ -279,7 +331,7 @@ function DetailsStep({
             onClick={onResetNda}
             className="h-auto w-fit p-0 text-sm"
           >
-            Reset to default
+            {hasWorkspaceNdaTemplate ? "Reset to workspace template" : "Reset to generated default"}
           </Button>
         </Field>
       )}
@@ -291,13 +343,14 @@ function DetailsStep({
 export const CreateVaultForm = ({
   userPlan,
   currentRoomCount,
-  defaultNdaText,
+  workspaceNdaTemplate,
   defaultSenderCompany,
   defaultSenderName,
 }: {
   userPlan: "free" | "plus" | "unicorn";
   currentRoomCount: number;
-  defaultNdaText: string;
+  /** When set, new rooms start from this HTML/text template instead of the built-in default. */
+  workspaceNdaTemplate: string | null;
   defaultSenderCompany: string;
   defaultSenderName: string;
 }) => {
@@ -311,6 +364,8 @@ export const CreateVaultForm = ({
   const [expiresInDays, setExpiresInDays] = useState(DEFAULT_EXPIRATION_DAYS);
   const [requiresNda, setRequiresNda] = useState(true);
   const [ndaText, setNdaText] = useState("");
+  const [ndaDisclosingParty, setNdaDisclosingParty] = useState("");
+  const [ndaReceivingParty, setNdaReceivingParty] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<CreationResult | null>(null);
@@ -327,14 +382,43 @@ export const CreateVaultForm = ({
     return () => clearTimeout(t);
   }, [countdown, router, result]);
 
-  const planRoomCap = (() => {
-    const caps: Record<string, number> = { free: 3, plus: -1, unicorn: -1 };
-    return caps[userPlan] ?? -1;
-  })();
-  const isFree = planRoomCap >= 0 && currentRoomCount >= planRoomCap;
+  const planRoomCap = getPlanLimits(userPlan).rooms;
+  const isAtRoomLimit = planRoomCap >= 0 && currentRoomCount >= planRoomCap;
+  const hasWorkspaceNdaTemplate = Boolean(workspaceNdaTemplate?.trim());
+
+  const builtFromParties = useMemo(() => {
+    const d = ndaDisclosingParty.trim() || defaultSenderCompany.trim();
+    const r = ndaReceivingParty.trim();
+    if (d.length >= 2 && r.length >= 2) {
+      return buildDefaultNdaText({ disclosingParty: d, receivingParty: r });
+    }
+    if (d.length >= 2) {
+      return buildDefaultNdaText(d);
+    }
+    return buildDefaultNdaText();
+  }, [ndaDisclosingParty, ndaReceivingParty, defaultSenderCompany]);
+
+  const resolvedPreviewNda = useMemo(() => {
+    if (!requiresNda) return "";
+    if (hasWorkspaceNdaTemplate) {
+      return ndaText.trim() || workspaceNdaTemplate!.trim();
+    }
+    return ndaText.trim() || builtFromParties;
+  }, [
+    requiresNda,
+    hasWorkspaceNdaTemplate,
+    ndaText,
+    workspaceNdaTemplate,
+    builtFromParties,
+  ]);
 
   const canNext = () => {
     if (step === 0) return title.trim().length > 0 && password.length >= 8;
+    if (step === 1 && requiresNda && !hasWorkspaceNdaTemplate) {
+      if (ndaDisclosingParty.trim().length < 2 || ndaReceivingParty.trim().length < 2) {
+        return false;
+      }
+    }
     return true;
   };
 
@@ -350,9 +434,20 @@ export const CreateVaultForm = ({
 
   const submit = async () => {
     setError("");
-    const effSenderName = senderName.trim() || defaultSenderName || "Token workspace";
+    const effSenderName = senderName.trim() || defaultSenderName || "Token.FYI workspace";
     const effSenderCompany = senderCompany.trim() || defaultSenderCompany;
-    const effNdaText = ndaText ? ndaText : defaultNdaText;
+    const effNdaText = requiresNda
+      ? hasWorkspaceNdaTemplate
+        ? ndaText.trim() || workspaceNdaTemplate!.trim()
+        : ndaText.trim() || builtFromParties
+      : "";
+
+    if (requiresNda && !hasWorkspaceNdaTemplate) {
+      if (ndaDisclosingParty.trim().length < 2 || ndaReceivingParty.trim().length < 2) {
+        setError("Enter both party names for the NDA (at least 2 characters each), or paste a full NDA.");
+        return;
+      }
+    }
 
     startTransition(async () => {
       try {
@@ -366,6 +461,8 @@ export const CreateVaultForm = ({
             message,
             requiresNda,
             ndaText: effNdaText,
+            ndaDisclosingParty: ndaDisclosingParty.trim(),
+            ndaReceivingParty: ndaReceivingParty.trim(),
             expiresInDays,
           }),
         );
@@ -384,13 +481,13 @@ export const CreateVaultForm = ({
     });
   };
 
-  // ── Free plan gate ─────────────────────────────────────────────────────
-  if (isFree) {
+  // ── Room cap gate (Free + Personal = 1 room; upgrade to Pro for more) ──
+  if (isAtRoomLimit) {
     return (
       <Card className="rounded-2xl border border-border bg-white p-6">
         <p className="font-semibold text-foreground">Plan limit reached</p>
         <p className="mt-1 text-sm text-[var(--tkn-text-support)]">
-          Your plan allows {planRoomCap} room{planRoomCap === 1 ? "" : "s"} and you&apos;ve used {currentRoomCount}. Upgrade to create more.
+          Your plan allows {planRoomCap} room{planRoomCap === 1 ? "" : "s"} and you&apos;ve used {currentRoomCount}. Upgrade to Pro for unlimited rooms.
         </p>
         <Button asChild size="sm" className="mt-4">
           <Link href="/pricing">View plans</Link>
@@ -474,13 +571,18 @@ export const CreateVaultForm = ({
               expiresInDays={expiresInDays}
               requiresNda={requiresNda}
               ndaText={ndaText}
-              defaultNdaText={defaultNdaText}
+              ndaDisclosingParty={ndaDisclosingParty}
+              ndaReceivingParty={ndaReceivingParty}
+              hasWorkspaceNdaTemplate={hasWorkspaceNdaTemplate}
+              previewNdaBody={resolvedPreviewNda}
               onSenderNameChange={setSenderName}
               onSenderCompanyChange={setSenderCompany}
               onMessageChange={setMessage}
               onExpiresChange={setExpiresInDays}
               onRequiresNdaChange={setRequiresNda}
               onNdaTextChange={setNdaText}
+              onNdaDisclosingPartyChange={setNdaDisclosingParty}
+              onNdaReceivingPartyChange={setNdaReceivingParty}
               onResetNda={() => setNdaText("")}
             />
           )}
@@ -526,9 +628,7 @@ export const CreateVaultForm = ({
             senderCompany={senderCompany}
             message={message}
             requiresNda={requiresNda}
-            ndaText={ndaText}
-            defaultNdaText={defaultNdaText}
-            ndaCustomized={!!ndaText}
+            previewNdaBody={resolvedPreviewNda}
           />
         ) : null}
       </div>

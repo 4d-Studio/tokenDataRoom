@@ -15,7 +15,7 @@ import {
   ProductMetric,
 } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
-import { getPlanLimits } from "@/lib/dataroom/auth-store";
+import { getPlanLimits } from "@/lib/dataroom/plan-limits";
 import { formatDateTime } from "@/lib/dataroom/helpers";
 import { roomManageHref, roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 

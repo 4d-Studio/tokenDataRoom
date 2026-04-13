@@ -27,6 +27,38 @@ export const runtime = "nodejs";
 /** Large PDFs / Office files after client-side encryption */
 export const maxDuration = 120;
 
+type WorkspaceForNda = { companyName: string; ndaTemplate?: string };
+
+function resolveVaultNdaText(
+  requiresNda: boolean,
+  fields: {
+    ndaText: string;
+    ndaDisclosingParty: string;
+    ndaReceivingParty: string;
+    senderCompany: string;
+  },
+  workspace: WorkspaceForNda,
+): { ok: true; ndaText: string | undefined } | { ok: false; error: string } {
+  if (!requiresNda) return { ok: true, ndaText: undefined };
+  const trimmed = fields.ndaText.trim();
+  if (trimmed) return { ok: true, ndaText: trimmed };
+  const template = workspace.ndaTemplate?.trim();
+  if (template) return { ok: true, ndaText: template };
+  const d =
+    fields.ndaDisclosingParty.trim() ||
+    fields.senderCompany.trim() ||
+    workspace.companyName.trim();
+  const r = fields.ndaReceivingParty.trim();
+  if (d.length < 2 || r.length < 2) {
+    return {
+      ok: false,
+      error:
+        "NDA is required: enter both the disclosing party and the other party, or paste a full NDA.",
+    };
+  }
+  return { ok: true, ndaText: buildDefaultNdaText({ disclosingParty: d, receivingParty: r }) };
+}
+
 function emptyRoomPlaceholderFields(): Pick<
   VaultRecord,
   "fileName" | "mimeType" | "fileSize" | "salt" | "iv" | "pbkdf2Iterations"
@@ -83,6 +115,11 @@ export async function POST(request: Request) {
         );
       }
 
+      const ndaResolved = resolveVaultNdaText(parsed.data.requiresNda, parsed.data, workspace);
+      if (!ndaResolved.ok) {
+        return NextResponse.json({ error: ndaResolved.error }, { status: 400 });
+      }
+
       const metadata: VaultRecord = {
         id: crypto.randomUUID(),
         slug,
@@ -94,10 +131,7 @@ export async function POST(request: Request) {
         senderCompany: parsed.data.senderCompany || undefined,
         message: parsed.data.message || undefined,
         requiresNda: parsed.data.requiresNda,
-        ndaText: parsed.data.requiresNda
-          ? parsed.data.ndaText ||
-            buildDefaultNdaText(parsed.data.senderCompany || workspace.companyName)
-          : undefined,
+        ndaText: ndaResolved.ndaText,
         ndaVersion: parsed.data.requiresNda ? "tkn-standard-v1" : "none",
         status: "active",
         createdAt,
@@ -111,7 +145,7 @@ export async function POST(request: Request) {
         slug,
         createEvent("created", {
           actorName: metadata.senderName,
-          note: "Token room created — add a document from owner controls",
+          note: "Token.FYI room created — add a document from owner controls",
           ...getRequestContext(request),
         }),
       );
@@ -144,9 +178,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const ndaResolved = resolveVaultNdaText(parsed.data.requiresNda, parsed.data, workspace);
+    if (!ndaResolved.ok) {
+      return NextResponse.json({ error: ndaResolved.error }, { status: 400 });
+    }
+
     if (!isSupportedFileType(parsed.data.mimeType)) {
       return NextResponse.json(
-        { error: "Token currently supports PDF, Office, image, and text files." },
+        { error: "Token.FYI currently supports PDF, Office, image, and text files." },
         { status: 400 },
       );
     }
@@ -162,10 +201,7 @@ export async function POST(request: Request) {
       senderCompany: parsed.data.senderCompany || undefined,
       message: parsed.data.message || undefined,
       requiresNda: parsed.data.requiresNda,
-      ndaText: parsed.data.requiresNda
-        ? parsed.data.ndaText ||
-          buildDefaultNdaText(parsed.data.senderCompany || workspace.companyName)
-        : undefined,
+      ndaText: ndaResolved.ndaText,
       ndaVersion: parsed.data.requiresNda ? "tkn-standard-v1" : "none",
       status: "active",
       createdAt,
@@ -186,7 +222,7 @@ export async function POST(request: Request) {
       slug,
       createEvent("created", {
         actorName: metadata.senderName,
-        note: "Secure Token room created",
+        note: "Secure Token.FYI room created",
         ...getRequestContext(request),
       }),
     );

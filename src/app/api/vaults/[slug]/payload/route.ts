@@ -22,6 +22,8 @@ import {
   recipientVaultAccessRoleForEmail,
 } from "@/lib/dataroom/vault-recipient-access";
 
+const vaultFileNameKey = (name: string) => name.trim().toLowerCase();
+
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
@@ -148,56 +150,133 @@ export async function POST(
       return NextResponse.json({ error: "Encrypted file is too large." }, { status: 400 });
     }
 
-    const fileId = crypto.randomUUID();
-    const addedAt = new Date().toISOString();
+    const existingList = vaultFilesList(existing);
+    const incomingName = fileMeta.fileName.trim();
+    const nameKey = vaultFileNameKey(incomingName);
+    const matchIdx = existingList.findIndex((f) => vaultFileNameKey(f.name) === nameKey);
 
-    const fileEntry: VaultFileEntry = {
-      id: fileId,
-      name: fileMeta.fileName,
-      mimeType: fileMeta.mimeType,
-      sizeBytes: fileMeta.fileSize,
-      addedAt,
-      salt: fileMeta.salt,
-      iv: fileMeta.iv,
-      pbkdf2Iterations: fileMeta.pbkdf2Iterations,
-      ...(!isOwnerUpload && vaultAccess
-        ? {
-            uploadedBySignerEmail: normalizeRecipientEmail(vaultAccess.signerEmail),
-            uploadedByAcceptanceId: vaultAccess.acceptanceId,
-          }
-        : {}),
-    };
+    const nowIso = new Date().toISOString();
+    let isReplace = false;
+    let targetFileId = crypto.randomUUID();
+    let nextVersion = 1;
+    let fileEntry: VaultFileEntry;
+
+    if (matchIdx !== -1) {
+      const prev = existingList[matchIdx]!;
+      if (!isOwnerUpload) {
+        const contrib = normalizeRecipientEmail(vaultAccess!.signerEmail);
+        const prevUploader = prev.uploadedBySignerEmail
+          ? normalizeRecipientEmail(prev.uploadedBySignerEmail)
+          : null;
+        if (!prevUploader || prevUploader !== contrib) {
+          return NextResponse.json(
+            {
+              error:
+                "A file with this name already exists. Use another name, ask the room owner to remove it, or only the person who uploaded it can publish a new version.",
+              code: "FILE_NAME_CONFLICT",
+            },
+            { status: 409 },
+          );
+        }
+      }
+      isReplace = true;
+      targetFileId = prev.id;
+      nextVersion = (prev.contentVersion ?? 1) + 1;
+      fileEntry = {
+        id: prev.id,
+        name: incomingName,
+        mimeType: fileMeta.mimeType,
+        sizeBytes: fileMeta.fileSize,
+        addedAt: prev.addedAt ?? existing.createdAt,
+        lastReplacedAt: nowIso,
+        contentVersion: nextVersion,
+        category: prev.category,
+        salt: fileMeta.salt,
+        iv: fileMeta.iv,
+        pbkdf2Iterations: fileMeta.pbkdf2Iterations,
+        ...(isOwnerUpload
+          ? { uploadedBySignerEmail: undefined, uploadedByAcceptanceId: undefined }
+          : {
+              uploadedBySignerEmail: normalizeRecipientEmail(vaultAccess!.signerEmail),
+              uploadedByAcceptanceId: vaultAccess!.acceptanceId,
+            }),
+      };
+    } else {
+      fileEntry = {
+        id: targetFileId,
+        name: incomingName,
+        mimeType: fileMeta.mimeType,
+        sizeBytes: fileMeta.fileSize,
+        addedAt: nowIso,
+        contentVersion: 1,
+        salt: fileMeta.salt,
+        iv: fileMeta.iv,
+        pbkdf2Iterations: fileMeta.pbkdf2Iterations,
+        ...(!isOwnerUpload && vaultAccess
+          ? {
+              uploadedBySignerEmail: normalizeRecipientEmail(vaultAccess.signerEmail),
+              uploadedByAcceptanceId: vaultAccess.acceptanceId,
+            }
+          : {}),
+      };
+    }
+
+    const nextFiles = isReplace
+      ? existingList.map((f, i) => (i === matchIdx ? fileEntry : f))
+      : [...existingList, fileEntry];
+    const head = nextFiles[0];
 
     const nextMetadata: VaultRecord = {
       ...existing,
-      // Maintain legacy fields for backward compat with old recipients
       hasEncryptedFile: true,
-      fileName: fileMeta.fileName,
-      mimeType: fileMeta.mimeType,
-      fileSize: fileMeta.fileSize,
-      salt: fileMeta.salt,
-      iv: fileMeta.iv,
-      pbkdf2Iterations: fileMeta.pbkdf2Iterations,
-      // New multi-file array
-      vaultFiles: [...vaultFilesList(existing), fileEntry],
+      fileName: head?.name ?? incomingName,
+      mimeType: head?.mimeType ?? fileMeta.mimeType,
+      fileSize: head?.sizeBytes ?? fileMeta.fileSize,
+      salt: head?.salt ?? fileMeta.salt,
+      iv: head?.iv ?? fileMeta.iv,
+      pbkdf2Iterations: head?.pbkdf2Iterations ?? fileMeta.pbkdf2Iterations,
+      vaultFiles: nextFiles.length ? nextFiles : undefined,
     };
 
-    await storage.addVaultFile(slug, fileId, encryptedBuffer, nextMetadata);
+    await storage.deleteVaultFile(slug, targetFileId);
+    await storage.addVaultFile(slug, targetFileId, encryptedBuffer, nextMetadata);
     await storage.updateVaultMetadata(nextMetadata);
 
     const ctx = getRequestContext(request);
+    const ownerUser =
+      isOwnerUpload && existing.ownerUserId ? await getCurrentUser() : null;
+    const actorFromOwner =
+      ownerUser != null
+        ? {
+            actorName: ownerUser.email.split("@")[0] ?? ownerUser.email,
+            actorEmail: ownerUser.email,
+          }
+        : {};
+    const actorFromRecipient =
+      vaultAccess && !isOwnerUpload
+        ? {
+            actorName: vaultAccess.signerName,
+            actorEmail: vaultAccess.signerEmail,
+            actorCompany: vaultAccess.signerCompany,
+            actorAddress: vaultAccess.signerAddress,
+          }
+        : {};
+    const primaryActorEmail = ownerUser?.email ?? (vaultAccess && !isOwnerUpload ? vaultAccess.signerEmail : undefined);
+
+    const auditTail = [
+      primaryActorEmail ? ` · ${primaryActorEmail}` : "",
+      ctx.ipAddress ? ` · IP ${ctx.ipAddress}` : "",
+      ctx.device ? ` · ${ctx.device}` : "",
+    ].join("");
+
     await storage.appendEvent(
       slug,
-      createEvent("document_attached", {
-        note: `File added: ${fileMeta.fileName}`,
-        ...(vaultAccess && !isOwnerUpload
-          ? {
-              actorName: vaultAccess.signerName,
-              actorEmail: vaultAccess.signerEmail,
-              actorCompany: vaultAccess.signerCompany,
-              actorAddress: vaultAccess.signerAddress,
-            }
-          : {}),
+      createEvent(isReplace ? "file_replaced" : "document_attached", {
+        note: isReplace
+          ? `Version ${nextVersion}: replaced «${incomingName}»${auditTail}`
+          : `Added «${incomingName}»${auditTail}`,
+        ...actorFromOwner,
+        ...actorFromRecipient,
         ...ctx,
       }),
     );

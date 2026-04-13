@@ -15,6 +15,12 @@ function fileKindIcon(mime: string) {
   return FileText;
 }
 
+/** Shown when ciphertext was replaced in place (same file id). */
+function fileVersionSuffix(f: { contentVersion?: number }): string {
+  const v = f.contentVersion ?? 1;
+  return v > 1 ? ` · v${v}` : "";
+}
+
 export function DraggableDecryptedFocusFileRail({
   vaultSlug,
   files,
@@ -167,6 +173,7 @@ export function DraggableDecryptedFocusFileRail({
                       </span>
                       <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
                         {formatMimeLabel(f.mimeType)}
+                        {fileVersionSuffix(f)}
                       </span>
                     </span>
                   </span>
@@ -221,6 +228,7 @@ export function DraggableDecryptedFocusFileRail({
             </span>
             <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
               {formatMimeLabel(f.mimeType)} · {formatBytes(f.sizeBytes)}
+              {fileVersionSuffix(f)}
             </span>
           </span>
         </button>
@@ -277,6 +285,7 @@ export function DraggableDecryptedFocusFileRail({
                         </span>
                         <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
                           {formatMimeLabel(f.mimeType)}
+                          {fileVersionSuffix(f)}
                         </span>
                       </span>
                     </span>

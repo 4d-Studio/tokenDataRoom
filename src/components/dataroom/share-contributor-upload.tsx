@@ -63,10 +63,17 @@ export function ShareContributorUploadStrip({
           });
           const data = (await res.json()) as {
             error?: string;
+            code?: string;
             metadata?: VaultRecord;
             events?: VaultEvent[];
           };
           if (!res.ok || !data.metadata || !data.events) {
+            if (res.status === 409 && data.code === "FILE_NAME_CONFLICT") {
+              throw new Error(
+                data.error ||
+                  "This file name is already used by someone else. Pick a different name, or ask the owner to remove the existing file.",
+              );
+            }
             throw new Error(data.error || "Upload failed.");
           }
           onRoomUpdated({ metadata: data.metadata, events: data.events });

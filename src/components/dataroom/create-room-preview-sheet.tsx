@@ -13,10 +13,6 @@ import { sanitizeHtml } from "@/lib/dataroom/sanitize";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-}
-
 export function CreateRoomPreviewSheet({
   fileName,
   documentLater,
@@ -25,9 +21,7 @@ export function CreateRoomPreviewSheet({
   senderCompany,
   message,
   requiresNda,
-  ndaText,
-  defaultNdaText,
-  ndaCustomized,
+  previewNdaBody,
 }: {
   fileName: string | null;
   /** When true, copy assumes the file is added after room creation. */
@@ -37,17 +31,15 @@ export function CreateRoomPreviewSheet({
   senderCompany: string;
   message: string;
   requiresNda: boolean;
-  ndaText: string;
-  defaultNdaText: string;
-  ndaCustomized: boolean;
+  /** Resolved NDA body (plain text or HTML) as recipients will see it. */
+  previewNdaBody: string;
 }) {
   const [open, setOpen] = useState(false);
 
   const previewTitle = title || fileName || "Board Update Q2";
   const effectiveSenderName = senderName.trim() || "Your name";
   const effectiveCompany = senderCompany.trim() || "Your company";
-  const effectiveNdaText = ndaCustomized ? ndaText : defaultNdaText;
-  const deferredNdaText = useDeferredValue(effectiveNdaText);
+  const deferredNdaText = useDeferredValue(previewNdaBody);
 
   const previewChips = [
     { icon: Lock, label: "Password required before decryption" },

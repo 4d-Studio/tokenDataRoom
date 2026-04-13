@@ -978,6 +978,8 @@ export function ShareExperience({
           senderAttribution={senderAttribution}
           expiresLabel={shareExpiresLabel}
           roomNote={metadata.message?.trim() || null}
+          meetingScheduleUrl={metadata.meetingScheduleUrl?.trim() || null}
+          ownerTelegram={metadata.ownerTelegram?.trim() || null}
         />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_28px_rgba(35,31,26,0.06)]">
@@ -990,6 +992,8 @@ export function ShareExperience({
             senderAttribution={senderAttribution}
             expiresLabel={shareExpiresLabel}
             roomNote={metadata.message?.trim() || null}
+            meetingScheduleUrl={metadata.meetingScheduleUrl?.trim() || null}
+            ownerTelegram={metadata.ownerTelegram?.trim() || null}
             embedInParent
             suppressHostBadge
           />

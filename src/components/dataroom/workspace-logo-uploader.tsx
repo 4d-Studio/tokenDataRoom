@@ -4,13 +4,15 @@ import { useRef, useState } from "react";
 import { ImageIcon, Trash2, UploadCloud } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import type { WorkspacePlan } from "@/lib/dataroom/plan-limits";
+import { planAllowsWorkspaceLogo } from "@/lib/dataroom/plan-limits";
 import { cn } from "@/lib/utils";
 
 interface WorkspaceLogoUploaderProps {
   logoUrl?: string;
   workspaceName: string;
   companyName: string;
+  plan: WorkspacePlan;
 }
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
@@ -20,6 +22,7 @@ export function WorkspaceLogoUploader({
   logoUrl,
   workspaceName,
   companyName,
+  plan,
 }: WorkspaceLogoUploaderProps) {
   // savedLogoUrl tracks the confirmed-saved data URL so it persists across prop updates
   const [savedLogoUrl, setSavedLogoUrl] = useState<string | null>(null);
@@ -28,8 +31,14 @@ export function WorkspaceLogoUploader({
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const canUseLogo = planAllowsWorkspaceLogo(plan);
+
   const handleFile = (file: File) => {
     setError("");
+    if (!canUseLogo) {
+      setError("Personal and Pro include a workspace logo on share pages. See Pricing to upgrade.");
+      return;
+    }
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
       setError("Please upload a PNG, JPG, WebP, or SVG image.");
@@ -106,24 +115,28 @@ export function WorkspaceLogoUploader({
 
   const currentLogo = preview ?? savedLogoUrl ?? logoUrl;
   const displayName = workspaceName || companyName || "My Workspace";
+  const dropInteractive = canUseLogo && !currentLogo;
 
   return (
     <div className="space-y-4">
       <div>
         <div className="label-title">Workspace logo</div>
         <p className="tkn-support mt-1">
-          Upload a logo shown to recipients in your shared rooms. Max 2 MB — PNG, JPG, WebP, or SVG.
+          {canUseLogo
+            ? "Upload a logo shown to recipients in your shared rooms. Max 2 MB — PNG, JPG, WebP, or SVG."
+            : "Personal and Pro show your logo on share pages. Free tier keeps Token branding only — upgrade from Pricing when you’re ready."}
         </p>
       </div>
 
       <div
         className={cn(
           "relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-white transition-colors",
-          currentLogo ? "p-4" : "cursor-pointer p-8 hover:border-[var(--color-accent)]/40",
+          currentLogo ? "p-4" : "p-8",
+          dropInteractive ? "cursor-pointer hover:border-[var(--color-accent)]/40" : "opacity-80",
         )}
-        onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-        onClick={() => !currentLogo && inputRef.current?.click()}
+        onDrop={canUseLogo ? handleDrop : undefined}
+        onDragOver={canUseLogo ? (e) => e.preventDefault() : undefined}
+        onClick={() => dropInteractive && inputRef.current?.click()}
       >
         <input
           ref={inputRef}
@@ -156,7 +169,7 @@ export function WorkspaceLogoUploader({
                   type="button"
                   size="sm"
                   onClick={() => inputRef.current?.click()}
-                  disabled={isPending}
+                  disabled={isPending || !canUseLogo}
                 >
                   <UploadCloud data-icon="inline-start" className="h-4 w-4" />
                   Change logo

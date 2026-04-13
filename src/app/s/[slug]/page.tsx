@@ -11,7 +11,12 @@ const ShareExperience = nextDynamic(
   { loading: () => <ShareExperienceSkeleton /> },
 );
 import { readVaultAccessFromCookies } from "@/lib/dataroom/access";
-import { getWorkspaceById } from "@/lib/dataroom/auth-store";
+import { getUserById, getWorkspaceById } from "@/lib/dataroom/auth-store";
+import {
+  planAllowsWorkspaceLogo,
+  planShowsSharePoweredByToken,
+  type WorkspacePlan,
+} from "@/lib/dataroom/plan-limits";
 import {
   buildDefaultNdaText,
   formatDateTime,
@@ -75,17 +80,25 @@ export default async function SharePage({
     ? await storage.getAcceptance(slug, access.acceptanceId)
     : null;
 
-  const workspace =
-    metadata.workspaceId && metadata.requiresNda
-      ? await getWorkspaceById(metadata.workspaceId)
-      : null;
+  let workspace: Awaited<ReturnType<typeof getWorkspaceById>> = null;
+  let workspaceOwnerPlan: WorkspacePlan | null = null;
+  if (metadata.workspaceId) {
+    workspace = await getWorkspaceById(metadata.workspaceId);
+    if (workspace) {
+      const owner = await getUserById(workspace.userId);
+      workspaceOwnerPlan = owner?.plan ?? "free";
+    }
+  }
+
+  const workspaceForNda =
+    metadata.requiresNda && workspace ? workspace : null;
 
   const useWorkspaceNda = Boolean(
-    metadata.requiresNda && metadata.workspaceId && workspace,
+    metadata.requiresNda && metadata.workspaceId && workspaceForNda,
   );
 
   const workspaceNdaText = useWorkspaceNda
-    ? (workspace!.ndaTemplate || buildDefaultNdaText(workspace!.companyName))
+    ? (workspaceForNda!.ndaTemplate || buildDefaultNdaText(workspaceForNda!.companyName))
     : null;
 
   const workspaceNdaPayload =
@@ -104,7 +117,7 @@ export default async function SharePage({
     ? "Workspace confidentiality agreement"
     : "Non-disclosure agreement";
 
-  const orgLabel = workspace?.companyName ?? "this organization";
+  const orgLabel = workspaceForNda?.companyName ?? "this organization";
   const ndaCardDescription = useWorkspaceNda ? (
     <>
       One signing covers every room shared by{" "}
@@ -151,10 +164,17 @@ export default async function SharePage({
           ndaAcceptSuccessMessage={ndaAcceptSuccessMessage}
           needsBootstrapFromWorkspace={needsBootstrapFromWorkspace}
           shareHostLabel={shareHostLabel}
-          workspaceLogoUrl={workspace?.logoUrl}
+          workspaceLogoUrl={
+            workspace && workspaceOwnerPlan && planAllowsWorkspaceLogo(workspaceOwnerPlan)
+              ? workspace.logoUrl
+              : undefined
+          }
           workspaceCompanyName={workspace?.companyName}
           shareExpiresLabel={shareExpiresLabel}
           recipientShareUrl={recipientShareUrl}
+          showPoweredByToken={
+            workspaceOwnerPlan ? planShowsSharePoweredByToken(workspaceOwnerPlan) : true
+          }
         />
       </div>
     </main>

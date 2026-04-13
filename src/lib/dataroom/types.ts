@@ -34,6 +34,9 @@ export const createVaultRoomSchema = z.object({
   message: z.string().trim().max(240).optional().default(""),
   requiresNda: z.boolean(),
   ndaText: z.string().trim().max(8_000).optional().default(""),
+  /** When using the default NDA (no pasted body, no workspace template), both parties should be set. */
+  ndaDisclosingParty: z.string().trim().max(200).optional().default(""),
+  ndaReceivingParty: z.string().trim().max(200).optional().default(""),
   expiresInDays: z.number().int().min(1).max(90).default(DEFAULT_EXPIRATION_DAYS),
 });
 
@@ -44,6 +47,8 @@ export const createVaultSchema = z.object({
   message: z.string().trim().max(240).optional().default(""),
   requiresNda: z.boolean(),
   ndaText: z.string().trim().max(8_000).optional().default(""),
+  ndaDisclosingParty: z.string().trim().max(200).optional().default(""),
+  ndaReceivingParty: z.string().trim().max(200).optional().default(""),
   expiresInDays: z.number().int().min(1).max(90).default(DEFAULT_EXPIRATION_DAYS),
   fileName: z.string().trim().min(1).max(160),
   mimeType: z.string().trim().min(1).max(160),
@@ -141,6 +146,7 @@ export type VaultEventType =
   | "revoked"
   | "reactivated"
   | "document_attached"
+  | "file_replaced"
   | "file_renamed"
   | "files_reordered"
   | "access_requested"
@@ -205,6 +211,10 @@ export type VaultFileEntry = {
    */
   uploadedBySignerEmail?: string;
   uploadedByAcceptanceId?: string;
+  /** Increments when ciphertext is replaced in-place (same logical file name / stable id). */
+  contentVersion?: number;
+  /** When the ciphertext was last replaced (same display name). */
+  lastReplacedAt?: string;
   /** Base64-encoded random salt for this file's key derivation */
   salt: string;
   /** Base64-encoded random IV for AES-GCM */
@@ -222,6 +232,10 @@ export type VaultRecord = {
   senderName: string;
   senderCompany?: string;
   message?: string;
+  /** Optional HTTPS link (e.g. Calendly) shown on the share page for booking time with the sender. */
+  meetingScheduleUrl?: string;
+  /** Optional Telegram handle or profile URL, shown on the share page. */
+  ownerTelegram?: string;
   /** Owner-only; never shown on the recipient share page. */
   ownerNotes?: string;
   /**

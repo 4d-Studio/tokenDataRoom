@@ -22,7 +22,10 @@ export function __resetVaultStorageSingletonForTests(): void {
 
 export const getVaultStorage = () => {
   if (!storage) {
-    if (isS3VaultConfigured()) {
+    /** Playwright / CI smoke: seed writes under `.dataroom/vaults` — bypass S3/Blob from `.env.local`. */
+    if (process.env.TKN_E2E_FORCE_LOCAL_STORAGE === "1") {
+      storage = new LocalVaultStorage();
+    } else if (isS3VaultConfigured()) {
       storage = new S3VaultStorage();
       if (process.env.NODE_ENV === "production") {
         console.info("[storage] Using S3-compatible bucket (e.g. Railway Bucket) for vault files.");

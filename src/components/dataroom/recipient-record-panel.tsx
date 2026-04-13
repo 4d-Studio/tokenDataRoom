@@ -60,7 +60,7 @@ export function buildRecipientAccessSummaryText(opts: {
     "Note: The sender may add, remove, or replace files, or revoke this link. Save downloads your team, audit, or counsel need while access is active.",
   );
   lines.push("");
-  lines.push("— Token · token.fyi");
+  lines.push("— Token.FYI · token.fyi");
   return lines.join("\n");
 }
 

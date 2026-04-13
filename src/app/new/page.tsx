@@ -6,12 +6,12 @@ import { AuthenticatedShell } from "@/components/dataroom/authenticated-shell";
 import { CreateVaultFormSkeleton } from "@/components/dataroom/route-loading";
 import { ProductBreadcrumb } from "@/components/dataroom/product-ui";
 import { getCurrentUser, getCurrentWorkspace, getWorkspaceActivity, getWorkspaceRooms } from "@/lib/dataroom/auth";
-import { buildDefaultNdaText } from "@/lib/dataroom/helpers";
 import { roomNavItemsFromRooms } from "@/lib/dataroom/workspace-nav";
 
 export const metadata: Metadata = {
   title: "New room",
-  description: "Set up a Token room with NDA and password, then add documents from owner controls.",
+  description:
+    "Set up a Token.FYI room with NDA and password, then add documents from owner controls.",
   robots: { index: false, follow: true },
 };
 
@@ -60,7 +60,7 @@ export default async function NewVaultPage() {
         <CreateVaultForm
           userPlan={user.plan}
           currentRoomCount={rooms.length}
-          defaultNdaText={workspace.ndaTemplate || buildDefaultNdaText(workspace.companyName)}
+          workspaceNdaTemplate={workspace.ndaTemplate?.trim() ? workspace.ndaTemplate : null}
           defaultSenderCompany={workspace.companyName}
           defaultSenderName=""
         />

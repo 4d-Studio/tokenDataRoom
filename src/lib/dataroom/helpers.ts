@@ -1,12 +1,42 @@
 import { DEFAULT_EXPIRATION_DAYS } from "@/lib/dataroom/types";
 
-export const buildDefaultNdaText = (companyName?: string) => {
-  const disclosingCompany = companyName?.trim() || "The disclosing company";
+/** Labels substituted into the default mutual NDA (new room wizard). */
+export type DefaultNdaPartyLabels = {
+  disclosingParty: string;
+  receivingParty: string;
+};
 
-  return `${disclosingCompany}
+const DEFAULT_RECEIVING_ROLE = `the reviewing party identified in the Token.FYI acceptance record below (the "Reviewer")`;
+
+function partyOrFallback(raw: string | undefined, fallback: string): string {
+  const t = (raw ?? "").trim();
+  return t.length >= 2 ? t : fallback;
+}
+
+/**
+ * Builds the standard mutual NDA body.
+ * - Pass `{ disclosingParty, receivingParty }` for new rooms (both should be filled).
+ * - Pass a string for legacy use: treated as the disclosing party only; receiving role uses the standard Reviewer clause.
+ * - Omit arguments for a generic placeholder draft (workspace settings preview, etc.).
+ */
+export function buildDefaultNdaText(opts?: string | DefaultNdaPartyLabels | null): string {
+  let disclosing: string;
+  let receiving: string;
+  if (typeof opts === "string") {
+    disclosing = partyOrFallback(opts, "The disclosing party");
+    receiving = DEFAULT_RECEIVING_ROLE;
+  } else if (opts && typeof opts === "object" && "disclosingParty" in opts) {
+    disclosing = partyOrFallback(opts.disclosingParty, "The disclosing party");
+    receiving = partyOrFallback(opts.receivingParty, DEFAULT_RECEIVING_ROLE);
+  } else {
+    disclosing = "The disclosing party";
+    receiving = DEFAULT_RECEIVING_ROLE;
+  }
+
+  return `${disclosing}
 MUTUAL NON-DISCLOSURE AGREEMENT
 
-This Mutual Non-Disclosure Agreement (the "Agreement") is entered into by and between ${disclosingCompany} and the reviewing party identified in the Token acceptance record below (the "Reviewer"). Each may be referred to individually as a "Party" and collectively as the "Parties." The Parties wish to explore a potential business opportunity of mutual interest (the "Opportunity") and exchange confidential information in connection with that Opportunity.
+This Mutual Non-Disclosure Agreement (the "Agreement") is entered into by and between ${disclosing} and ${receiving}. Each may be referred to individually as a "Party" and collectively as the "Parties." The Parties wish to explore a potential business opportunity of mutual interest (the "Opportunity") and exchange confidential information in connection with that Opportunity.
 
 "Confidential Information" means any non-public information disclosed by one Party (the "Discloser") to the other Party (the "Recipient"), whether directly or indirectly, that is marked confidential or should reasonably be understood to be confidential given the nature of the information and the circumstances of disclosure. Confidential Information does not include information that: (i) is or becomes publicly available without breach of this Agreement; (ii) was already in the Recipient's lawful possession without restriction before disclosure; or (iii) is lawfully obtained from a third party without breach of any duty of confidentiality.
 
@@ -16,12 +46,12 @@ The Recipient may disclose Confidential Information only if legally compelled to
 
 All Confidential Information is provided "AS IS" without warranty of any kind. Nothing in this Agreement grants the Recipient any license or other rights under any patent, copyright, trademark, trade secret, or other intellectual property right of the Discloser except the limited right to review the Confidential Information for the Opportunity. The Recipient acknowledges that unauthorized use or disclosure of Confidential Information may cause irreparable harm, and the Discloser is entitled to seek injunctive relief in addition to any other remedies available at law or in equity.
 
-This Agreement starts on the date the Reviewer accepts it electronically in Filmia and continues for one (1) year. The Recipient's confidentiality obligations continue for three (3) years after termination of this Agreement, except for trade secrets, which must be protected for so long as they remain trade secrets under applicable law. Nothing in this Agreement obligates either Party to proceed with any transaction or relationship.
+This Agreement starts on the date the Reviewer accepts it electronically in Token.FYI and continues for one (1) year. The Recipient's confidentiality obligations continue for three (3) years after termination of this Agreement, except for trade secrets, which must be protected for so long as they remain trade secrets under applicable law. Nothing in this Agreement obligates either Party to proceed with any transaction or relationship.
 
 This Agreement is the complete agreement between the Parties concerning the subject matter above and may be modified only in a signed writing by both Parties. If any provision is held unenforceable, the remaining provisions will remain in full force and effect. This Agreement is governed by the laws of the State of California, without regard to conflicts of law rules, and the Parties consent to the exclusive jurisdiction of the state and federal courts located in San Francisco, California.
 
-By accepting this Agreement in Token, the Reviewer represents that the signer is authorized to bind the reviewing party identified in the acceptance record and agrees that electronic acceptance and electronic delivery of a signed copy of this Agreement are legally effective.`;
-};
+By accepting this Agreement in Token.FYI, the Reviewer represents that the signer is authorized to bind the reviewing party identified in the acceptance record and agrees that electronic acceptance and electronic delivery of a signed copy of this Agreement are legally effective.`;
+}
 
 export const DEFAULT_NDA_TEXT = buildDefaultNdaText();
 
@@ -173,6 +203,33 @@ export function shortenUrlForDisplay(url: string, maxChars = 44): string {
     const half = Math.floor(budget / 2);
     return `${s.slice(0, half)}…${s.slice(-(budget - half))}`;
   }
+}
+
+/** Turn owner-entered Telegram text into an https URL for links, or null if not linkable. */
+/** Preview hostname for owner-entered https URLs; empty input is valid. */
+export function httpsUrlPreview(
+  raw: string,
+): { ok: true; hostname: string } | { ok: false; message: string } {
+  const t = raw.trim();
+  if (!t) return { ok: true, hostname: "" };
+  try {
+    const u = new URL(t);
+    if (u.protocol !== "https:") {
+      return { ok: false, message: "Link must start with https://" };
+    }
+    return { ok: true, hostname: u.hostname };
+  } catch {
+    return { ok: false, message: "Enter a valid https URL" };
+  }
+}
+
+export function telegramProfileUrl(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+  if (/^https?:\/\//i.test(t)) return t;
+  const h = t.replace(/^@+/, "").replace(/^t\.me\//i, "");
+  if (!/^[a-zA-Z0-9_]{4,64}$/.test(h)) return null;
+  return `https://t.me/${h}`;
 }
 
 export const getClientIp = (request: Request) =>

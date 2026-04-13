@@ -2,10 +2,10 @@
  * Canonical public URL for metadata, Open Graph, sitemap, and JSON-LD.
  * Set NEXT_PUBLIC_SITE_URL in production (e.g. https://token.fyi).
  */
-export const SITE_NAME = "Token";
+export const SITE_NAME = "Token.FYI";
 
 export const SITE_DESCRIPTION =
-  "Share sensitive files with outsiders—not your whole drive. Password-protected rooms, optional NDA, encryption in the browser before upload, and a clear activity trail.";
+  "Share sensitive files with outsiders—not your whole drive. Encrypted rooms, optional NDA, document signing, password links, and a clear activity trail. Free to start; Personal and Pro on the pricing page.";
 
 const DEFAULT_PUBLIC_ORIGIN = "https://token.fyi";
 

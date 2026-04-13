@@ -37,6 +37,23 @@ export default defineConfig({
             ...process.env,
             TKN_APP_SECRET: E2E_SECRET,
             SIGNING_E2E_PORT: E2E_PORT,
+            // E2E seed writes under `.dataroom/vaults`. Host `.env.local` may point at S3/Blob;
+            // clear those so Next uses local disk for this run (values override spread).
+            BUCKET: "",
+            AWS_S3_BUCKET: "",
+            ACCESS_KEY_ID: "",
+            AWS_ACCESS_KEY_ID: "",
+            SECRET_ACCESS_KEY: "",
+            AWS_SECRET_ACCESS_KEY: "",
+            ENDPOINT: "",
+            AWS_ENDPOINT_URL: "",
+            AWS_S3_ENDPOINT: "",
+            BLOB_READ_WRITE_TOKEN: "",
+            RAILWAY_ENVIRONMENT: "",
+            // Seed always uses `<repo>/.dataroom/vaults`; clear overrides from host `.env.local`.
+            TKN_LOCAL_VAULT_DIR: "",
+            TKN_LOCAL_DATA_ROOT: "",
+            TKN_E2E_FORCE_LOCAL_STORAGE: "1",
           },
         },
       }

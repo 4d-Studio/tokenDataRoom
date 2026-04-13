@@ -11,23 +11,19 @@ import {
   ExternalLink,
   Link2,
   LockKeyhole,
-  Mail,
   MapPin,
-  Send,
   ShieldCheck,
   Trash2,
-  Users,
 } from "lucide-react";
 
 import { CopyButton } from "@/components/dataroom/copy-button";
+import { RoomShareAccessPanel } from "@/components/dataroom/room-share-access-panel";
 import { VaultOwnerDocumentUpload } from "@/components/dataroom/vault-owner-document-upload";
 import { VaultSigningWorkflows } from "@/components/dataroom/vault-signing-workflows";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Empty,
@@ -36,8 +32,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { formatDateTime, shortenUrlForDisplay } from "@/lib/dataroom/helpers";
+import { formatDateTime, httpsUrlPreview, shortenUrlForDisplay } from "@/lib/dataroom/helpers";
 import {
+  peopleRowsEqualServer,
+  peopleRowsFromServer,
+  serverListsFromPeopleRows,
+} from "@/lib/dataroom/room-access-people";
+import {
+  clampRecipientEmailList,
   MAX_ALLOWED_RECIPIENT_EMAILS,
   MAX_RECIPIENT_INVITES_PER_SEND,
   normalizeRecipientEmailList,
@@ -64,6 +66,7 @@ const EVENT_LABELS: Record<VaultEvent["type"], string> = {
   revoked: "Access revoked",
   reactivated: "Access restored",
   document_attached: "Document updated",
+  file_replaced: "File replaced (new version)",
   file_renamed: "File renamed",
   files_reordered: "File order updated",
   document_signing_created: "Document signing started",
@@ -278,27 +281,6 @@ function OwnerLinkCard({
   );
 }
 
-/** Parse valid emails from pasted text; no cap (use slice when saving). */
-function parseOwnerEmailTokens(raw: string): string[] {
-  const tokens = raw
-    .split(/[\s,;]+/g)
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean);
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const t of tokens) {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) continue;
-    if (seen.has(t)) continue;
-    seen.add(t);
-    out.push(t);
-  }
-  return out;
-}
-
-function parseOwnerEmailList(raw: string): string[] {
-  return parseOwnerEmailTokens(raw).slice(0, MAX_ALLOWED_RECIPIENT_EMAILS);
-}
-
 function SectionShell({
   id,
   title,
@@ -365,6 +347,8 @@ export const VaultOwnerPanel = ({
   const [editMessage, setEditMessage] = useState(initialMetadata.message ?? "");
   const [editSenderName, setEditSenderName] = useState(initialMetadata.senderName ?? "");
   const [editSenderCompany, setEditSenderCompany] = useState(initialMetadata.senderCompany ?? "");
+  const [editMeetingUrl, setEditMeetingUrl] = useState(initialMetadata.meetingScheduleUrl ?? "");
+  const [editTelegram, setEditTelegram] = useState(initialMetadata.ownerTelegram ?? "");
   const [roomSettingsSaved, setRoomSettingsSaved] = useState(false);
 
   const [vanitySlug, setVanitySlug] = useState(initialVanitySlug ?? "");
@@ -377,16 +361,10 @@ export const VaultOwnerPanel = ({
     result: "ok" | "taken" | "invalid";
   } | null>(null);
 
-  const [allowedEmailsDraft, setAllowedEmailsDraft] = useState(() =>
-    (initialMetadata.allowedRecipientEmails ?? []).join("\n"),
-  );
-  const [inviteBatchDraft, setInviteBatchDraft] = useState("");
+  const [peopleRows, setPeopleRows] = useState(() => peopleRowsFromServer(initialMetadata));
   const [inviteFeedback, setInviteFeedback] = useState("");
   /** Same browser session as Room documents password (8+ chars in sessionStorage). */
   const [inviteVaultPasswordReady, setInviteVaultPasswordReady] = useState(false);
-  const [contributorEmailsDraft, setContributorEmailsDraft] = useState(() =>
-    (initialMetadata.contributorRecipientEmails ?? []).join("\n"),
-  );
 
   const [activeSection, setActiveSection] = useState<SectionId>("owner-settings");
 
@@ -398,36 +376,45 @@ export const VaultOwnerPanel = ({
 
   const savedAllowedList = metadata.allowedRecipientEmails ?? [];
   const savedContributorList = metadata.contributorRecipientEmails ?? [];
-  const allowedParsed = useMemo(
-    () => parseOwnerEmailList(allowedEmailsDraft),
-    [allowedEmailsDraft],
+  const peopleServerListSig = useMemo(
+    () =>
+      JSON.stringify({
+        a: normalizeRecipientEmailList(metadata.allowedRecipientEmails ?? []),
+        c: normalizeRecipientEmailList(metadata.contributorRecipientEmails ?? []),
+      }),
+    [metadata.allowedRecipientEmails, metadata.contributorRecipientEmails],
   );
-  const contributorParsed = useMemo(
-    () => parseOwnerEmailList(contributorEmailsDraft),
-    [contributorEmailsDraft],
+  const peopleDirty = useMemo(
+    () => !peopleRowsEqualServer(peopleRows, metadata),
+    [peopleRows, metadata],
   );
-  const contributorListDirty = useMemo(() => {
-    const a = normalizeRecipientEmailList(contributorParsed);
-    const b = normalizeRecipientEmailList(savedContributorList);
-    if (a.length !== b.length) return true;
-    const as = [...a].sort();
-    const bs = [...b].sort();
-    return as.some((v, i) => v !== bs[i]);
-  }, [contributorParsed, savedContributorList]);
-  const inviteTokensUnbounded = useMemo(
-    () => parseOwnerEmailTokens(inviteBatchDraft),
-    [inviteBatchDraft],
-  );
-  const allowedListDirty = useMemo(() => {
-    const a = normalizeRecipientEmailList(allowedParsed);
-    const b = normalizeRecipientEmailList(savedAllowedList);
-    if (a.length !== b.length) return true;
-    const as = [...a].sort();
-    const bs = [...b].sort();
-    return as.some((v, i) => v !== bs[i]);
-  }, [allowedParsed, savedAllowedList]);
   const slotsRemaining = Math.max(0, MAX_ALLOWED_RECIPIENT_EMAILS - savedAllowedList.length);
-  const inviteTooMany = inviteTokensUnbounded.length > MAX_RECIPIENT_INVITES_PER_SEND;
+  const meetingUrlPreview = useMemo(() => httpsUrlPreview(editMeetingUrl), [editMeetingUrl]);
+
+  const roomSettingsDirty = useMemo(() => {
+    const t = (s: string | undefined) => (s ?? "").trim();
+    return (
+      editTitle.trim() !== t(metadata.title) ||
+      editMessage.trim() !== t(metadata.message) ||
+      editSenderName.trim() !== t(metadata.senderName) ||
+      editSenderCompany.trim() !== t(metadata.senderCompany) ||
+      editMeetingUrl.trim() !== t(metadata.meetingScheduleUrl) ||
+      editTelegram.trim() !== t(metadata.ownerTelegram)
+    );
+  }, [
+    editTitle,
+    editMessage,
+    editSenderName,
+    editSenderCompany,
+    editMeetingUrl,
+    editTelegram,
+    metadata.title,
+    metadata.message,
+    metadata.senderName,
+    metadata.senderCompany,
+    metadata.meetingScheduleUrl,
+    metadata.ownerTelegram,
+  ]);
 
   const trimmedVanityInput = vanitySlug.trim().toLowerCase();
   const needsVanityRemoteCheck =
@@ -447,7 +434,28 @@ export const VaultOwnerPanel = ({
     } catch {
       setInviteVaultPasswordReady(false);
     }
-  }, [metadata.slug, activeSection, inviteBatchDraft]);
+  }, [metadata.slug, activeSection]);
+
+  useEffect(() => {
+    setEditMeetingUrl(metadata.meetingScheduleUrl ?? "");
+    setEditTelegram(metadata.ownerTelegram ?? "");
+  }, [metadata.meetingScheduleUrl, metadata.ownerTelegram]);
+
+  // Intentionally keyed by slug only: switching rooms must reset people; other metadata updates use the effect below.
+  useEffect(() => {
+    setPeopleRows((prev) => {
+      const next = peopleRowsFromServer(metadata);
+      return peopleRowsEqualServer(prev, metadata) ? prev : next;
+    });
+  }, [metadata.slug]);
+
+  useEffect(() => {
+    if (peopleDirty) return;
+    setPeopleRows((prev) => {
+      const next = peopleRowsFromServer(metadata);
+      return peopleRowsEqualServer(prev, metadata) ? prev : next;
+    });
+  }, [peopleDirty, peopleServerListSig, metadata]);
 
   const selectSection = useCallback((id: SectionId) => {
     setActiveSection(id);
@@ -578,6 +586,8 @@ export const VaultOwnerPanel = ({
         message: editMessage,
         senderName: editSenderName,
         senderCompany: editSenderCompany,
+        meetingScheduleUrl: editMeetingUrl.trim(),
+        ownerTelegram: editTelegram.trim(),
       }),
     });
     const payload = (await response.json()) as {
@@ -654,13 +664,14 @@ export const VaultOwnerPanel = ({
     }
     setMetadata(payload.metadata);
     setEvents(payload.events);
-    setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
+    setPeopleRows(peopleRowsFromServer(payload.metadata));
   };
 
-  const saveAllowedRecipientEmails = async () => {
+  const saveAllowedRecipientEmails = async (opts?: { quiet?: boolean }) => {
     setError("");
-    setInviteFeedback("");
-    const emails = parseOwnerEmailList(allowedEmailsDraft);
+    if (!opts?.quiet) setInviteFeedback("");
+    const { allowed } = serverListsFromPeopleRows(peopleRows);
+    const emails = clampRecipientEmailList(allowed);
     const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -680,16 +691,18 @@ export const VaultOwnerPanel = ({
     }
     setMetadata(payload.metadata);
     setEvents(payload.events);
-    setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
-    setContributorEmailsDraft((payload.metadata.contributorRecipientEmails ?? []).join("\n"));
-    setInviteFeedback("Saved invited addresses.");
-    setTimeout(() => setInviteFeedback(""), 3000);
+    setPeopleRows(peopleRowsFromServer(payload.metadata));
+    if (!opts?.quiet) {
+      setInviteFeedback("Saved invited addresses.");
+      setTimeout(() => setInviteFeedback(""), 3000);
+    }
   };
 
-  const saveContributorRecipientEmails = async () => {
+  const saveContributorRecipientEmails = async (opts?: { quiet?: boolean }) => {
     setError("");
-    setInviteFeedback("");
-    const emails = parseOwnerEmailList(contributorEmailsDraft);
+    if (!opts?.quiet) setInviteFeedback("");
+    const { contributors } = serverListsFromPeopleRows(peopleRows);
+    const emails = clampRecipientEmailList(contributors);
     const response = await fetch(`/api/vaults/${metadata.slug}/owner`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -709,19 +722,31 @@ export const VaultOwnerPanel = ({
     }
     setMetadata(payload.metadata);
     setEvents(payload.events);
-    setContributorEmailsDraft((payload.metadata.contributorRecipientEmails ?? []).join("\n"));
-    setInviteFeedback("Saved team upload permissions.");
+    setPeopleRows(peopleRowsFromServer(payload.metadata));
+    if (!opts?.quiet) {
+      setInviteFeedback("Saved team upload permissions.");
+      setTimeout(() => setInviteFeedback(""), 4000);
+    }
+  };
+
+  const saveAllPeople = async () => {
+    if (!peopleDirty) return;
+    setError("");
+    setInviteFeedback("");
+    await saveAllowedRecipientEmails({ quiet: true });
+    await saveContributorRecipientEmails({ quiet: true });
+    setInviteFeedback("Saved people and access.");
     setTimeout(() => setInviteFeedback(""), 4000);
   };
 
-  const sendRecipientInvites = async () => {
+  const sendRecipientInvites = async (emails: string[]) => {
     setError("");
     setInviteFeedback("");
-    const emails = parseOwnerEmailTokens(inviteBatchDraft);
-    if (emails.length === 0) {
+    const normalized = normalizeRecipientEmailList(emails);
+    if (normalized.length === 0) {
       throw new Error("Add at least one email address to invite.");
     }
-    if (emails.length > MAX_RECIPIENT_INVITES_PER_SEND) {
+    if (normalized.length > MAX_RECIPIENT_INVITES_PER_SEND) {
       throw new Error(
         `You can invite up to ${MAX_RECIPIENT_INVITES_PER_SEND} people per send. Split into multiple batches or trim the list.`,
       );
@@ -743,7 +768,7 @@ export const VaultOwnerPanel = ({
       body: JSON.stringify({
         ownerKey,
         action: "send_recipient_invites",
-        emails,
+        emails: normalized,
         roomPassword: pw,
         shareUrl: effectiveShareUrl,
       }),
@@ -758,10 +783,10 @@ export const VaultOwnerPanel = ({
     }
     setMetadata(payload.metadata);
     setEvents(payload.events);
-    setAllowedEmailsDraft((payload.metadata.allowedRecipientEmails ?? []).join("\n"));
-    setContributorEmailsDraft((payload.metadata.contributorRecipientEmails ?? []).join("\n"));
-    setInviteBatchDraft("");
-    setInviteFeedback(`Invites completed for ${emails.length} recipient${emails.length === 1 ? "" : "s"}.`);
+    setPeopleRows(peopleRowsFromServer(payload.metadata));
+    setInviteFeedback(
+      `Invites completed for ${normalized.length} recipient${normalized.length === 1 ? "" : "s"}.`,
+    );
     setTimeout(() => setInviteFeedback(""), 5000);
   };
 
@@ -831,14 +856,6 @@ export const VaultOwnerPanel = ({
 
               <div className="flex flex-col gap-2 border-t border-border pt-3">
                 <OwnerLinkCard
-                  role="recipient"
-                  title="Share link"
-                  hint="Send with the room password. Recipients never see owner tools."
-                  url={effectiveShareUrl}
-                  copyLabel="Copy room link"
-                  dense
-                />
-                <OwnerLinkCard
                   role="private"
                   title="Management link"
                   hint="Keep private — same control as this page."
@@ -849,285 +866,60 @@ export const VaultOwnerPanel = ({
                 />
               </div>
 
-              <div className="space-y-4 border-t border-border pt-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="flex gap-2.5">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
-                      <Users className="size-4" aria-hidden />
-                    </div>
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Invite-only access
-                      </p>
-                      <p className="max-w-prose text-[11px] leading-snug text-muted-foreground">
-                        Control who can request a code and download files. Invites add people to the list and email them
-                        the link plus the same room password you use under Room documents (from this browser — we never
-                        store it on our servers). Team uploaders can add encrypted files on the share page with that same
-                        password and may remove only what they upload.
-                      </p>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={metadata.restrictRecipientEmails ? "default" : "secondary"}
-                    className="shrink-0 text-[10px] font-semibold uppercase tracking-wide"
-                  >
-                    {metadata.restrictRecipientEmails ? "Enforced" : "Off"}
-                  </Badge>
-                </div>
+              <p className="border-t border-border pt-3 text-[11px] leading-snug text-muted-foreground">
+                Share link, people table (view vs upload), and email invites are in the card below. Recipients need the
+                room password (the one you use under Room documents).
+              </p>
 
-                {/* — Access list — */}
-                <div className="space-y-3 rounded-xl border border-border/80 bg-muted/15 p-3.5 sm:p-4">
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/80 px-3 py-2">
-                    <label
-                      htmlFor="restrict-recipient-emails"
-                      className="cursor-pointer text-xs font-medium leading-snug text-foreground"
-                    >
-                      Only allow invited addresses
-                    </label>
-                    <Switch
-                      id="restrict-recipient-emails"
-                      checked={Boolean(metadata.restrictRecipientEmails)}
-                      disabled={isPending}
-                      onCheckedChange={(enabled) =>
-                        startTransition(() => {
-                          void setRecipientRestriction(enabled).catch((e: unknown) => {
-                            setError(e instanceof Error ? e.message : "Unable to update setting.");
-                          });
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <FieldLabel htmlFor="allowed-recipient-emails" className="text-xs font-semibold">
-                        Who can access
-                      </FieldLabel>
-                      <span className="text-[10px] tabular-nums text-muted-foreground">
-                        {savedAllowedList.length} saved · {slotsRemaining} slot
-                        {slotsRemaining !== 1 ? "s" : ""} left (cap {MAX_ALLOWED_RECIPIENT_EMAILS})
-                      </span>
-                    </div>
-                    {savedAllowedList.length > 0 ? (
-                      <div className="mt-2 flex max-h-24 flex-wrap gap-1.5 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-2">
-                        {savedAllowedList.map((e) => (
-                          <Badge
-                            key={e}
-                            variant="outline"
-                            className="max-w-full truncate font-mono text-[10px] font-normal"
-                            title={e}
-                          >
-                            {e}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-2 rounded-md border border-dashed border-border/70 bg-background/40 px-2.5 py-2 text-[10px] text-muted-foreground">
-                        No saved addresses yet. Paste below, save, then send invites — or send invites to add people in
-                        one step.
-                      </p>
-                    )}
-                  </div>
-
-                  <Field>
-                    <Textarea
-                      id="allowed-recipient-emails"
-                      aria-label="Edit invited email addresses"
-                      className="min-h-[6rem] resize-y font-mono text-xs leading-relaxed"
-                      value={allowedEmailsDraft}
-                      onChange={(e) => setAllowedEmailsDraft(e.target.value)}
-                      placeholder={
-                        "Paste or type addresses — one per line, or separated by commas.\n" +
-                        "Example: counsel@firm.com, investor@lp.com"
-                      }
-                      maxLength={8000}
-                    />
-                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground">
-                      <span>
-                        <span className="font-medium text-foreground">{allowedParsed.length}</span> valid in editor
-                        {allowedParsed.length > MAX_ALLOWED_RECIPIENT_EMAILS ? (
-                          <span className="text-destructive"> · only first {MAX_ALLOWED_RECIPIENT_EMAILS} will save</span>
-                        ) : null}
-                      </span>
-                      <span>
-                        {metadata.restrictRecipientEmails ? (
-                          <span className="text-foreground">List is enforced</span>
-                        ) : (
-                          <span>Turn on &quot;Only allow invited&quot; to block everyone else</span>
-                        )}
-                      </span>
-                    </div>
-                  </Field>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={allowedListDirty ? "default" : "outline"}
-                      disabled={isPending || !allowedListDirty}
-                      onClick={() =>
-                        startTransition(() => {
-                          void saveAllowedRecipientEmails().catch((e: unknown) => {
-                            setError(e instanceof Error ? e.message : "Unable to save list.");
-                          });
-                        })
-                      }
-                    >
-                      Save list
-                    </Button>
-                    {allowedListDirty ? (
-                      <span className="self-center text-[10px] text-muted-foreground">Unsaved changes</span>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* — Team uploaders — */}
-                <div className="space-y-3 rounded-xl border border-border/80 bg-muted/15 p-3.5 sm:p-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-foreground">Team uploaders</p>
-                    <p className="text-[10px] leading-snug text-muted-foreground">
-                      One address per line (or commas). These people can upload from the recipient page after they
-                      verify their email; invite-only rooms still require their address on the access list above. They
-                      use the same room password as everyone else — it is never sent to our servers.
-                    </p>
-                  </div>
-                  {savedContributorList.length > 0 ? (
-                    <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-2">
-                      {savedContributorList.map((e) => (
-                        <Badge
-                          key={e}
-                          variant="secondary"
-                          className="max-w-full truncate font-mono text-[10px] font-normal"
-                          title={e}
-                        >
-                          {e}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : null}
-                  <Field>
-                    <FieldLabel htmlFor="contributor-recipient-emails" className="text-xs font-semibold">
-                      Team uploaders (emails)
-                    </FieldLabel>
-                    <Textarea
-                      id="contributor-recipient-emails"
-                      className="min-h-[4.5rem] resize-y font-mono text-xs leading-relaxed"
-                      value={contributorEmailsDraft}
-                      onChange={(e) => setContributorEmailsDraft(e.target.value)}
-                      placeholder={"counsel@firm.com\nanalyst@company.com"}
-                      maxLength={8000}
-                    />
-                    <div className="mt-1 text-[10px] text-muted-foreground">
-                      <span className="font-medium text-foreground">{contributorParsed.length}</span> valid in editor
-                    </div>
-                  </Field>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={contributorListDirty ? "default" : "outline"}
-                    disabled={isPending || !contributorListDirty}
-                    onClick={() =>
-                      startTransition(() => {
-                        void saveContributorRecipientEmails().catch((e: unknown) => {
-                          setError(e instanceof Error ? e.message : "Unable to save team uploaders.");
+              <RoomShareAccessPanel
+                effectiveShareUrl={effectiveShareUrl}
+                restrictEnforced={Boolean(metadata.restrictRecipientEmails)}
+                onRestrictChange={(enabled) =>
+                  startTransition(() => {
+                    void setRecipientRestriction(enabled).catch((e: unknown) => {
+                      setError(e instanceof Error ? e.message : "Unable to update setting.");
+                    });
+                  })
+                }
+                isPending={isPending}
+                peopleRows={peopleRows}
+                onPeopleRowsChange={setPeopleRows}
+                peopleDirty={peopleDirty}
+                onSavePeople={() =>
+                  new Promise<void>((resolve, reject) => {
+                    startTransition(() => {
+                      void saveAllPeople()
+                        .then(() => resolve())
+                        .catch((e: unknown) => {
+                          setError(e instanceof Error ? e.message : "Unable to save people.");
+                          reject(e);
                         });
-                      })
-                    }
-                  >
-                    Save team uploaders
-                  </Button>
-                </div>
-
-                {/* — Send invites — */}
-                <div className="space-y-3 rounded-xl border border-dashed border-[var(--color-accent)]/35 bg-[var(--color-accent)]/[0.04] p-3.5 sm:p-4">
-                  <div className="flex gap-2.5">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--color-accent)]/25 bg-background text-[var(--color-accent)]">
-                      <Send className="size-4" aria-hidden />
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-xs font-semibold text-foreground">Send invitation emails</p>
-                      <p className="text-[10px] leading-snug text-muted-foreground">
-                        Each person gets the share link and the room password (the one you entered under Room documents
-                        on this device). They are added to the access list and invite-only is turned on. The email code
-                        only proves their inbox — it does not decrypt files.
-                      </p>
-                      <p className="flex flex-wrap items-center gap-x-1 text-[10px] text-muted-foreground">
-                        <span className="font-medium text-foreground">Link in email:</span>
-                        <code className="max-w-full truncate rounded bg-muted/80 px-1 py-px font-mono text-[10px] text-foreground">
-                          {shortenUrlForDisplay(effectiveShareUrl, 56)}
-                        </code>
-                      </p>
-                    </div>
-                  </div>
-
-                  <Field>
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <FieldLabel htmlFor="invite-batch-emails" className="text-xs">
-                        Recipients (this send)
-                      </FieldLabel>
-                      <span
-                        className={cn(
-                          "text-[10px] tabular-nums",
-                          inviteTooMany ? "font-medium text-destructive" : "text-muted-foreground",
-                        )}
-                      >
-                        {inviteTokensUnbounded.length} address
-                        {inviteTokensUnbounded.length !== 1 ? "es" : ""} · max {MAX_RECIPIENT_INVITES_PER_SEND} per send
-                      </span>
-                    </div>
-                    <Textarea
-                      id="invite-batch-emails"
-                      className="min-h-[4rem] resize-y font-mono text-xs leading-relaxed"
-                      value={inviteBatchDraft}
-                      onChange={(e) => setInviteBatchDraft(e.target.value)}
-                      placeholder={"investor@firm.com\nops@company.com"}
-                    />
-                    {inviteTooMany ? (
-                      <p className="mt-1.5 text-[10px] font-medium text-destructive">
-                        Too many for one batch. Send {MAX_RECIPIENT_INVITES_PER_SEND} or fewer, or run multiple sends.
-                      </p>
-                    ) : null}
-                  </Field>
-                  {!inviteVaultPasswordReady ? (
-                    <p className="rounded-md border border-amber-500/25 bg-amber-500/[0.06] px-2.5 py-2 text-[10px] leading-snug text-amber-950 dark:text-amber-200">
-                      Enter your room password under <strong>Room documents</strong> first (8+ characters, same one you
-                      use to encrypt files). This browser remembers it for previews and invite emails only — not on our
-                      servers.
-                    </p>
-                  ) : (
-                    <p className="text-[10px] text-muted-foreground">
-                      Room password for this send comes from <strong>Room documents</strong> on this device.
-                    </p>
-                  )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    disabled={
-                      isPending ||
-                      inviteTooMany ||
-                      inviteTokensUnbounded.length === 0 ||
-                      !inviteVaultPasswordReady
-                    }
-                    onClick={() =>
-                      startTransition(() => {
-                        void sendRecipientInvites().catch((e: unknown) => {
+                    });
+                  })
+                }
+                savedAllowedCount={savedAllowedList.length}
+                slotsRemaining={slotsRemaining}
+                inviteVaultPasswordReady={inviteVaultPasswordReady}
+                onSendInvites={(emails) =>
+                  new Promise<void>((resolve, reject) => {
+                    startTransition(() => {
+                      void sendRecipientInvites(emails)
+                        .then(() => resolve())
+                        .catch((e: unknown) => {
                           setError(e instanceof Error ? e.message : "Unable to send invites.");
+                          reject(e);
                         });
-                      })
-                    }
-                  >
-                    <Send className="size-3.5" />
-                    Send invites now
-                  </Button>
-                </div>
+                    });
+                  })
+                }
+              />
 
-                {inviteFeedback ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300">
-                    <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                    <span>{inviteFeedback}</span>
-                  </div>
-                ) : null}
-              </div>
+              {inviteFeedback ? (
+                <div className="flex items-start gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300">
+                  <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                  <span>{inviteFeedback}</span>
+                </div>
+              ) : null}
 
               <div className="rounded-lg border border-destructive/20 bg-destructive/[0.04] p-3">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-destructive/90">
@@ -1247,7 +1039,7 @@ export const VaultOwnerPanel = ({
             <SectionShell
               id="owner-settings"
               title="Room settings"
-              description="Name, message, and sender details shown on the share page."
+              description="Name, message, sender, optional meeting link and Telegram — shown on the share page."
             >
               <div className="space-y-4">
                 <p className="text-xs text-muted-foreground">
@@ -1306,11 +1098,57 @@ export const VaultOwnerPanel = ({
                     />
                   </Field>
                 </div>
+                <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="edit-meeting-url">Book a meeting (optional)</FieldLabel>
+                    <Input
+                      id="edit-meeting-url"
+                      type="url"
+                      inputMode="url"
+                      value={editMeetingUrl}
+                      onChange={(e) => setEditMeetingUrl(e.target.value)}
+                      placeholder="https://calendly.com/you/30min"
+                      maxLength={2048}
+                      className="text-sm"
+                    />
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      HTTPS link only. Shown on the share page as &quot;Book a meeting&quot;.
+                    </p>
+                    {editMeetingUrl.trim() ? (
+                      meetingUrlPreview.ok ? (
+                        meetingUrlPreview.hostname ? (
+                          <p className="mt-1 text-[10px] text-muted-foreground">
+                            Recipients will see a link to{" "}
+                            <span className="font-medium text-foreground">{meetingUrlPreview.hostname}</span>.
+                          </p>
+                        ) : null
+                      ) : (
+                        <p className="mt-1 text-[10px] text-amber-800 dark:text-amber-200">
+                          {meetingUrlPreview.message}
+                        </p>
+                      )
+                    ) : null}
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="edit-telegram">Telegram (optional)</FieldLabel>
+                    <Input
+                      id="edit-telegram"
+                      value={editTelegram}
+                      onChange={(e) => setEditTelegram(e.target.value)}
+                      placeholder="@you or https://t.me/you"
+                      maxLength={120}
+                      className="text-sm"
+                    />
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Handle or profile URL. Shown as a Telegram link when we can resolve it.
+                    </p>
+                  </Field>
+                </div>
                 <div className="flex items-center gap-2 border-t border-border pt-3">
                   <Button
                     type="button"
                     size="sm"
-                    disabled={isPending || editTitle.trim().length < 3}
+                    disabled={isPending || editTitle.trim().length < 3 || !roomSettingsDirty}
                     onClick={() =>
                       startTransition(() => {
                         void saveRoomSettings().catch((e: unknown) => {

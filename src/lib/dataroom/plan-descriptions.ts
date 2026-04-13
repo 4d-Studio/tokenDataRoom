@@ -1,10 +1,10 @@
 import type { TknUser } from "@/lib/dataroom/auth-store";
-import { getPlanLimits } from "@/lib/dataroom/auth-store";
+import { getPlanLimits } from "@/lib/dataroom/plan-limits";
 
 const planLabel: Record<TknUser["plan"], string> = {
   free: "Free",
-  plus: "Plus",
-  unicorn: "Unicorn",
+  plus: "Personal",
+  unicorn: "Pro",
 };
 
 /** Human-readable limits for settings / pricing-adjacent UI. */
@@ -16,11 +16,15 @@ export function describePlanForWorkspace(plan: TknUser["plan"]): {
   const bullets: string[] = [];
 
   bullets.push(
-    limits.rooms < 0 ? "Unlimited rooms" : `${limits.rooms} rooms (active at once)`,
+    limits.rooms < 0
+      ? "Unlimited rooms"
+      : limits.rooms === 1
+        ? "1 room"
+        : `${limits.rooms} rooms`,
   );
 
   if (plan === "free") {
-    bullets.push("10 files total, pooled across all rooms");
+    bullets.push("10 files total on your room");
   } else if (limits.filesPerRoom < 0) {
     bullets.push("Unlimited files per room");
   } else {
