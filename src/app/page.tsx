@@ -12,6 +12,8 @@ import {
   Lock,
   Shield,
   ShieldCheck,
+  Sparkles,
+  Users,
   X,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -51,34 +53,35 @@ function GitHubIcon({ className }: { className?: string }) {
 
 const features = [
   {
-    icon: Lock,
-    title: "Invite only what matters",
-    body: "Share a single room, not your full drive. One link, one password, optional NDA.",
+    icon: Sparkles,
+    title: "Fair market price",
+    body: "Free to try, then Personal from $9.95/mo and Pro from $29.95/mo — published on the site, not hidden behind a sales call.",
   },
   {
     icon: Shield,
     title: "Encrypt before upload",
-    body: "Files are encrypted in the browser with AES-256-GCM. We store ciphertext; your password never reaches our servers.",
+    body: "AES-256-GCM in the browser. We store ciphertext; your room password never hits our servers.",
+  },
+  {
+    icon: Users,
+    title: "Links, people, uploads — one flow",
+    body: "Manage the share URL, invited emails, optional upload roles, and email invites from a single owner surface — no enterprise maze.",
   },
   {
     icon: FileSignature,
-    title: "NDA & document signing",
-    body: "Recipients can accept your terms and sign documents in the room — with certificates you can download for your records.",
-  },
-  {
-    icon: Eye,
-    title: "See every open and download",
-    body: "Track access, signatures, and file downloads — then revoke or restore the room anytime.",
+    title: "NDA & in-room signing",
+    body: "Optional NDA on the share page, document signing when you need it, and certificates you can keep for your files.",
   },
 ] as const;
 
 const trustBadges = [
   "Client-side encryption",
+  "Published flat pricing",
   "Optional NDA gate",
-  "Document signing in the room",
+  "In-room document signing",
   "Open / download audit trail",
-  "Revoke access anytime",
-  "No full-drive exposure",
+  "Revoke anytime",
+  "No whole-drive exposure",
 ] as const;
 
 const steps = [
@@ -97,7 +100,7 @@ const steps = [
   {
     num: "03",
     title: "Share one link, track everything",
-    body: "Send the share link and password. Watch opens, NDA and document signatures, and downloads. Revoke or restore whenever you need to.",
+    body: "Send the share link and password. Recipients get a clear share screen; you watch opens, NDAs, signatures, and downloads — revoke or restore in a click.",
     icon: Link2,
   },
 ] as const;
@@ -106,9 +109,11 @@ const comparisonRows = [
   { label: "File access control", token: true, generic: false, esign: false },
   { label: "Optional NDA gate", token: true, generic: false, esign: true },
   { label: "In-room document signing", token: true, generic: false, esign: true },
+  { label: "Optional upload role for recipients", token: true, generic: false, esign: false },
   { label: "Open / download tracking", token: true, generic: false, esign: false },
   { label: "Client-side encryption", token: true, generic: false, esign: false },
   { label: "Revoke link instantly", token: true, generic: false, esign: false },
+  { label: "Pricing visible without a demo", token: true, generic: true, esign: false },
   { label: "Per-envelope pricing", token: false, generic: false, esign: true },
   { label: "Full-drive exposure risk", token: false, generic: true, esign: false },
 ] as const;
@@ -143,9 +148,9 @@ const faqItems = [
   },
 ] as const;
 
-const homePageTitle = `${SITE_NAME} — Encrypted deal rooms, NDA & signing for outsiders`;
+const homePageTitle = `${SITE_NAME} — Lightweight data rooms, fair pricing, encryption & signing`;
 
-const homeOgTitle = `${SITE_NAME} — Virtual data rooms with encryption & document signing`;
+const homeOgTitle = `${SITE_NAME} — Simple virtual data rooms for outsiders`;
 
 export const metadata: Metadata = {
   title: { absolute: homePageTitle },
@@ -155,6 +160,8 @@ export const metadata: Metadata = {
     "virtual data room",
     "VDR",
     "deal room",
+    "simple data room",
+    "affordable data room",
     "secure file sharing",
     "encrypted file sharing",
     "NDA",
@@ -162,6 +169,7 @@ export const metadata: Metadata = {
     "due diligence",
     "client-side encryption",
     "external collaboration",
+    "fair pricing VDR",
   ],
   openGraph: {
     title: homeOgTitle,
@@ -339,6 +347,9 @@ export default async function Home() {
               <GitHubIcon className="size-[1.15rem]" />
             </a>
           </Button>
+          <Button asChild variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex">
+            <Link href="/simple-data-room">Simple room</Link>
+          </Button>
           <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
             <Link href="/pricing">Pricing</Link>
           </Button>
@@ -362,13 +373,13 @@ export default async function Home() {
             </p>
 
             <h1 className="mt-3 font-heading text-[2rem] font-semibold leading-[1.08] tracking-[-0.03em] text-foreground sm:text-[2.65rem]">
-              Share sensitive files without exposing your whole drive
+              Lightweight data rooms — fair price, no theatre
             </h1>
 
             <p className="mt-4 max-w-[40rem] text-base leading-relaxed text-[var(--tkn-text-support)] sm:text-lg sm:leading-relaxed">
-              Token gives outside counsel, investors, and buyers access to one
-              protected room — optional NDA, in-room document signing, password
-              gating, and a clear audit trail.
+              Token is for teams that need a bounded room for outsiders: encrypt files in the browser, share one link,
+              optional NDA and signing, and owner controls that stay simple — at a fair market price you can read
+              before you buy.
             </p>
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -384,7 +395,10 @@ export default async function Home() {
             </div>
 
             <p className="mt-3 text-xs text-[var(--tkn-text-fine)]">
-              Free to start. No credit card. Personal from $9.95/mo · Pro from $29.95/mo.
+              Free to start · no credit card · Personal $9.95/mo · Pro $29.95/mo ·{" "}
+              <Link href="/simple-data-room" className="underline-offset-2 hover:underline">
+                Why we built it this way
+              </Link>
             </p>
           </div>
 
@@ -497,8 +511,12 @@ export default async function Home() {
             How Token compares
           </h2>
           <p className="mx-auto mt-3 max-w-md text-center text-sm leading-relaxed text-[var(--tkn-text-support)] sm:text-base">
-            Built for controlled file sharing, not full signature workflows or
-            internal sync.
+            One job: outsider access with encryption and a trail — not a whole drive, not enterprise VDR pricing games.
+          </p>
+          <p className="mx-auto mt-2 max-w-lg text-center text-xs text-muted-foreground">
+            <Link href="/data-room-alternatives" className="font-medium text-primary underline-offset-4 hover:underline">
+              Longer comparison: VDRs, drives, email, e-sign →
+            </Link>
           </p>
 
           <div className="mx-auto mt-10 max-w-2xl overflow-hidden rounded-2xl border border-[color:var(--tkn-panel-border)] bg-card shadow-[0_2px_28px_rgba(35,31,26,0.06)]">
@@ -617,7 +635,8 @@ export default async function Home() {
             <div className="lg:col-span-2">
               <BrandMark />
               <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--tkn-text-support)]">
-                Password-protected deal rooms for outsiders. Encrypt in the browser, share one link, track every open.
+                Lightweight deal rooms at a fair price. Encrypt in the browser, share one link, manage people and access
+                without the enterprise VDR song-and-dance.
               </p>
             </div>
             <div>
@@ -625,6 +644,12 @@ export default async function Home() {
               <nav className="mt-3 flex flex-col gap-2 text-sm text-[var(--tkn-text-support)]">
                 <Link href="/pricing" className="hover:text-foreground">
                   Pricing
+                </Link>
+                <Link href="/simple-data-room" className="hover:text-foreground">
+                  Simple data room
+                </Link>
+                <Link href="/data-room-alternatives" className="hover:text-foreground">
+                  vs other tools
                 </Link>
                 <Link href="/#how-it-works" className="hover:text-foreground">
                   How it works

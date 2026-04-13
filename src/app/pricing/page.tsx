@@ -211,6 +211,9 @@ export default function PricingPage() {
             <Button asChild variant="ghost" size="sm">
               <Link href="/">Home</Link>
             </Button>
+            <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
+              <Link href="/simple-data-room">Simple room</Link>
+            </Button>
             <Button asChild variant="ghost" size="sm">
               <Link href="/login">Sign in</Link>
             </Button>

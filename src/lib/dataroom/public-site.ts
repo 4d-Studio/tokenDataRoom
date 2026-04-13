@@ -5,7 +5,7 @@
 export const SITE_NAME = "Token.FYI";
 
 export const SITE_DESCRIPTION =
-  "Share sensitive files with outsiders—not your whole drive. Encrypted rooms, optional NDA, document signing, password links, and a clear activity trail. Free to start; Personal and Pro on the pricing page.";
+  "Lightweight virtual data rooms for people who hate enterprise VDRs. Encrypt files in the browser, share one link, manage people and access in one place, optional NDA and in-room signing — at fair, published prices. Free to start.";
 
 const DEFAULT_PUBLIC_ORIGIN = "https://token.fyi";
 
